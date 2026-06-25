@@ -7,6 +7,13 @@ import httpx
 TELEGRAM_MESSAGE_CHAR_LIMIT = 4096
 
 
+def _raise_for_status(response: httpx.Response) -> None:
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        raise RuntimeError(exc.response.text) from exc
+
+
 def send_message(
     token: str,
     chat_id: int | str,
@@ -24,7 +31,7 @@ def send_message(
             f"https://api.telegram.org/bot{token}/sendMessage",
             json=payload,
         )
-        response.raise_for_status()
+        _raise_for_status(response)
 
 
 def send_document(
@@ -55,7 +62,7 @@ def send_document(
                 )
             },
         )
-        response.raise_for_status()
+        _raise_for_status(response)
 
 
 def get_updates(token: str, offset: int | None = None) -> list[dict[str, object]]:
@@ -65,6 +72,6 @@ def get_updates(token: str, offset: int | None = None) -> list[dict[str, object]
             f"https://api.telegram.org/bot{token}/getUpdates",
             params={"offset": offset, "timeout": 10},
         )
-        response.raise_for_status()
+        _raise_for_status(response)
         data: dict[str, Any] = response.json()
         return data.get("result", [])  # type: ignore[no-any-return]
