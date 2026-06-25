@@ -4,6 +4,7 @@ from django.db import models
 class Job(models.Model):
     bot = models.ForeignKey("bots.Bot", on_delete=models.PROTECT)
     reply_target = models.TextField()
+    reply_to_message_id = models.PositiveBigIntegerField(null=True, blank=True)
     raw_input = models.TextField()
     raw_output = models.TextField(null=True, blank=True)
     error = models.TextField(null=True, blank=True)
