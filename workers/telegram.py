@@ -7,7 +7,7 @@ import httpx
 
 def send_message(token: str, chat_id: int | str, text: str) -> None:
     """Send a text message via Telegram Bot API."""
-    with httpx.Client() as client:
+    with httpx.Client(timeout=30.0) as client:
         response = client.post(
             f"https://api.telegram.org/bot{token}/sendMessage",
             json={"chat_id": chat_id, "text": text},
@@ -17,7 +17,7 @@ def send_message(token: str, chat_id: int | str, text: str) -> None:
 
 def get_updates(token: str, offset: int | None = None) -> list[dict[str, object]]:
     """Fetch incoming updates via long-poll."""
-    with httpx.Client() as client:
+    with httpx.Client(timeout=15.0) as client:
         response = client.get(
             f"https://api.telegram.org/bot{token}/getUpdates",
             params={"offset": offset, "timeout": 10},
