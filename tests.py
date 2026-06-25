@@ -653,6 +653,9 @@ class TelegramDeliveryTests(TestCase):
             parse_mode=TELEGRAM_PARSE_MODE_MARKDOWN_V2,
         )
         send_document.assert_not_called()
+        job.refresh_from_db()
+        self.assertIsNotNone(job.sent_at)
+        self.assertIsNone(job.error)
 
     @patch("apps.jobs.tasks.send_document")
     @patch("apps.jobs.tasks.send_message")
@@ -677,6 +680,9 @@ class TelegramDeliveryTests(TestCase):
             parse_mode=TELEGRAM_PARSE_MODE_HTML,
         )
         send_document.assert_not_called()
+        job.refresh_from_db()
+        self.assertIsNotNone(job.sent_at)
+        self.assertIsNone(job.error)
 
     @patch("apps.jobs.tasks.send_message")
     @patch("apps.jobs.tasks.get_updates")
