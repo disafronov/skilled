@@ -76,7 +76,9 @@ class PipelineTaskBranchTests(TestCase):
 
         self.bot.refresh_from_db()
         self.assertEqual(self.bot.telegram_update_offset, 14)
-        self.assertEqual(list(Job.objects.values_list("raw_input", flat=True)), ["hello"])
+        self.assertEqual(
+            list(Job.objects.values_list("raw_input", flat=True)), ["hello"]
+        )
         send_message.assert_called_once()
 
     @patch("apps.jobs.tasks.logger")
