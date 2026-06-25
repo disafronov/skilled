@@ -6,7 +6,7 @@ from .health import liveness, readiness
 app_name = "health"
 
 
-def health_index(request: HttpRequest) -> HttpResponse:
+def health_index(_request: HttpRequest) -> HttpResponse:
     liveness_url = reverse("health:liveness")
     readiness_url = reverse("health:readiness")
     return HttpResponse(

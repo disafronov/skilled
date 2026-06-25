@@ -1,42 +1,82 @@
-/.git/
-/.venv/
+# VCS
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Python environments
+.venv/
+venv/
+env/
+ENV/
 
 # OS / editor junk
 .DS_Store
 **/.DS_Store
 ._*
 *.swp
+*.swo
 *~
 .idea/
 .vscode/
+*.code-workspace
 
 # Python caches
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 
 # Tool caches / artifacts
 .mypy_cache/
 .pytest_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.tox/
+.nox/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
+.hypothesis/
+
+# CI / lint / release tooling
+.pre-commit-config.yaml
+.markdownlint.yaml
+.markdownlintignore
+.releaserc.cjs
+compose.yml
 
 # Packaging artifacts
 build/
 dist/
 *.egg-info/
+pip-wheel-metadata/
 
-# Local database
-/db.sqlite3
+# Runtime/local artifacts
+*.log
+*.pid
+*.sock
+*.sqlite
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
 
-# Example environment files
+# Local environment files
+.env
+.env.*
+!.env.example
 env.example
 env.docker
 
 # Test files (excluded from image, run separately)
+tests/
 **/tests/
 conftest.py
+config/settings_pytest.py
 
-# Environment
-.env
+# Project-local agent/tooling metadata
+.agents/
+.codex/

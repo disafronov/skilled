@@ -36,19 +36,19 @@ class JobAdmin(admin.ModelAdmin):
     )
 
     # Prevent create, edit, delete
-    def has_add_permission(self, request: HttpRequest) -> bool:
+    def has_add_permission(self, _request: HttpRequest) -> bool:
         return False
 
     def has_change_permission(
         self,
-        request: HttpRequest,
+        _request: HttpRequest,
         obj: Job | None = None,
     ) -> bool:
         return False
 
     def has_delete_permission(
         self,
-        request: HttpRequest,
+        _request: HttpRequest,
         obj: Job | None = None,
     ) -> bool:
         return False

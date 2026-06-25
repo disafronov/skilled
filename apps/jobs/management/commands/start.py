@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
     help = "Start qcluster and gunicorn under a common supervisor"
 
-    def handle(self, *args: object, **options: object) -> None:
+    def handle(self, *args: object, **_options: object) -> None:
         """Launch child processes and hand off to the supervisor loop."""
         _supervise(
             [

@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
     help = "Start qcluster and runserver together for local development"
 
-    def handle(self, *args: object, **options: object) -> None:
+    def handle(self, *args: object, **_options: object) -> None:
         """Launch child processes and hand off to the supervisor loop."""
         _supervise(
             [
