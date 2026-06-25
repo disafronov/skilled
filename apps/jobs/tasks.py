@@ -13,13 +13,10 @@ from apps.bots.models import Bot
 from apps.jobs.models import Job
 from workers.llm import call_llm
 from workers.telegram import (
-    TELEGRAM_MESSAGE_CHAR_LIMIT,
     detect_document_format,
-    detect_parse_mode,
     document_format_content_type,
     document_format_filename,
     get_updates,
-    prepare_message_text,
     send_document,
     send_message,
 )
@@ -136,7 +133,6 @@ def llm_worker() -> None:
             job.llm_started_at = timezone.now()
             job.save(update_fields=["llm_started_at", "updated_at"])
 
-        # Transaction commits here — LLM call happens outside the lock
         try:
             bot = job.bot
             raw_output = call_llm(
@@ -177,26 +173,16 @@ def telegram_deliver() -> None:
 
         try:
             raw_output = job.raw_output or ""
-            if len(raw_output) <= TELEGRAM_MESSAGE_CHAR_LIMIT:
-                parse_mode = detect_parse_mode(raw_output)
-                send_message(
-                    job.bot.telegram_api_token,
-                    job.reply_target,
-                    prepare_message_text(raw_output, parse_mode),
-                    reply_to_message_id=job.reply_to_message_id,
-                    parse_mode=parse_mode,
-                )
-            else:
-                document_format = detect_document_format(raw_output)
-                send_document(
-                    job.bot.telegram_api_token,
-                    job.reply_target,
-                    raw_output,
-                    document_format_filename(job.pk, document_format),
-                    document_format_content_type(document_format),
-                    caption="LLM response is attached as a text file.",
-                    reply_to_message_id=job.reply_to_message_id,
-                )
+            document_format = detect_document_format(raw_output)
+            send_document(
+                job.bot.telegram_api_token,
+                job.reply_target,
+                raw_output,
+                document_format_filename(job.pk, document_format),
+                document_format_content_type(document_format),
+                caption="LLM response is attached as a text file.",
+                reply_to_message_id=job.reply_to_message_id,
+            )
             job.sent_at = timezone.now()
         except Exception as exc:
             job.error = str(exc)
