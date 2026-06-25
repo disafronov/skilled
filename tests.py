@@ -2,6 +2,7 @@ from datetime import datetime
 from datetime import timezone as dt_timezone
 from unittest.mock import patch
 
+import httpx
 from django.test import TestCase
 from django_q.models import Schedule
 
@@ -12,6 +13,7 @@ from apps.jobs.apps import create_schedules
 from apps.jobs.tasks import QUEUE_ACK_TEXT, telegram_deliver, telegram_ingest
 from apps.library.models import Skill, Wrapper
 from workers.llm import build_request_body
+from workers.telegram import _raise_for_status
 from workers.telegram import TELEGRAM_MESSAGE_CHAR_LIMIT
 
 
@@ -245,6 +247,21 @@ class OpenAiRequestAssemblyTests(TestCase):
         )
         system_content = body["messages"][0]["content"]
         self.assertIn("You are a helpful assistant.", system_content)
+
+
+class TelegramClientTests(TestCase):
+    """Test Telegram API error handling."""
+
+    def test_http_error_includes_response_body(self):
+        request = httpx.Request("POST", "https://api.telegram.org/botx/sendMessage")
+        response = httpx.Response(
+            400,
+            request=request,
+            text='{"ok":false,"description":"Bad Request: message is too long"}',
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "message is too long"):
+            _raise_for_status(response)
 
 
 class NullableProfileFieldOmissionTests(TestCase):
