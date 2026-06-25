@@ -1,3 +1,9 @@
+## [1.0.0-rc.5](https://github.com/disafronov/skilled/compare/v1.0.0-rc.4...v1.0.0-rc.5) (2026-06-25)
+
+### Features
+
+* redirect to admin ([7c0c4fc](https://github.com/disafronov/skilled/commit/7c0c4fc06a4dc84915b60f70a00ae89a2173a2d6))
+
 ## [1.0.0-rc.4](https://github.com/disafronov/skilled/compare/v1.0.0-rc.3...v1.0.0-rc.4) (2026-06-25)
 
 ### Features
