@@ -3,6 +3,7 @@
 import logging
 import os
 from datetime import timedelta
+from typing import Any, cast
 
 from django.db import transaction
 from django.utils import timezone
@@ -44,10 +45,11 @@ def telegram_ingest() -> None:
                     max_id = bot.telegram_update_offset or 0
                     jobs_to_create = []
                     for update in updates:
-                        message = update.get("message")
+                        message = cast(dict[str, Any] | None, update.get("message"))
                         if not message:
                             continue
-                        max_id = max(max_id, update["update_id"])
+                        update_id = int(cast(Any, update["update_id"]))
+                        max_id = max(max_id, update_id)
                         chat_id = message["chat"]["id"]
                         message_id = message.get("message_id")
                         text = message.get("text", "")
@@ -154,21 +156,22 @@ def telegram_deliver() -> None:
                 return
 
         try:
-            if len(job.raw_output) <= TELEGRAM_MESSAGE_CHAR_LIMIT:
-                parse_mode = detect_parse_mode(job.raw_output)
+            raw_output = job.raw_output or ""
+            if len(raw_output) <= TELEGRAM_MESSAGE_CHAR_LIMIT:
+                parse_mode = detect_parse_mode(raw_output)
                 send_message(
                     job.bot.telegram_api_token,
                     job.reply_target,
-                    prepare_message_text(job.raw_output, parse_mode),
+                    prepare_message_text(raw_output, parse_mode),
                     reply_to_message_id=job.reply_to_message_id,
                     parse_mode=parse_mode,
                 )
             else:
-                document_format = detect_document_format(job.raw_output)
+                document_format = detect_document_format(raw_output)
                 send_document(
                     job.bot.telegram_api_token,
                     job.reply_target,
-                    job.raw_output,
+                    raw_output,
                     document_format_filename(job.pk, document_format),
                     document_format_content_type(document_format),
                     caption="LLM response is attached as a text file.",

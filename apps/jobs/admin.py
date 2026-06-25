@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.http import HttpRequest
 
 from apps.jobs.models import Job
 
@@ -35,11 +36,19 @@ class JobAdmin(admin.ModelAdmin):
     )
 
     # Prevent create, edit, delete
-    def has_add_permission(self, request):
+    def has_add_permission(self, request: HttpRequest) -> bool:
         return False
 
-    def has_change_permission(self, request, obj=None):
+    def has_change_permission(
+        self,
+        request: HttpRequest,
+        obj: Job | None = None,
+    ) -> bool:
         return False
 
-    def has_delete_permission(self, request, obj=None):
+    def has_delete_permission(
+        self,
+        request: HttpRequest,
+        obj: Job | None = None,
+    ) -> bool:
         return False
