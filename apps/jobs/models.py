@@ -2,7 +2,7 @@ from django.db import models
 
 
 class Job(models.Model):
-    bot = models.ForeignKey('bots.Bot', on_delete=models.PROTECT)
+    bot = models.ForeignKey("bots.Bot", on_delete=models.PROTECT)
     reply_target = models.TextField()
     raw_input = models.TextField()
     raw_output = models.TextField(null=True, blank=True)
@@ -17,9 +17,9 @@ class Job(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-received_at']
-        verbose_name = 'Job'
-        verbose_name_plural = 'Jobs'
+        ordering = ["-received_at"]
+        verbose_name = "Job"
+        verbose_name_plural = "Jobs"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Job #{self.pk} [{self.bot.name}]"

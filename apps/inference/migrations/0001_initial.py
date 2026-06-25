@@ -7,47 +7,78 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Profile',
+            name="Profile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255, unique=True)),
-                ('model', models.CharField(max_length=255)),
-                ('temperature', models.FloatField(blank=True, null=True)),
-                ('top_p', models.FloatField(blank=True, null=True)),
-                ('max_output_tokens', models.IntegerField(blank=True, null=True)),
-                ('reasoning_effort', models.CharField(blank=True, max_length=64, null=True)),
-                ('reasoning_summary', models.CharField(blank=True, max_length=64, null=True)),
-                ('text_verbosity', models.CharField(blank=True, max_length=64, null=True)),
-                ('response_format', models.JSONField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("model", models.CharField(max_length=255)),
+                ("temperature", models.FloatField(blank=True, null=True)),
+                ("top_p", models.FloatField(blank=True, null=True)),
+                ("max_output_tokens", models.IntegerField(blank=True, null=True)),
+                (
+                    "reasoning_effort",
+                    models.CharField(blank=True, max_length=64, null=True),
+                ),
+                (
+                    "reasoning_summary",
+                    models.CharField(blank=True, max_length=64, null=True),
+                ),
+                (
+                    "text_verbosity",
+                    models.CharField(blank=True, max_length=64, null=True),
+                ),
+                ("response_format", models.JSONField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'verbose_name': 'Profile',
-                'verbose_name_plural': 'Profiles',
-                'ordering': ['name'],
+                "verbose_name": "Profile",
+                "verbose_name_plural": "Profiles",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Provider',
+            name="Provider",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255, unique=True)),
-                ('api_type', models.CharField(choices=[('openai', 'OpenAI Compatible')], default='openai', max_length=32)),
-                ('base_url', models.URLField()),
-                ('auth_token', models.CharField(max_length=4096)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                (
+                    "api_type",
+                    models.CharField(
+                        choices=[("openai", "OpenAI Compatible")],
+                        default="openai",
+                        max_length=32,
+                    ),
+                ),
+                ("base_url", models.URLField()),
+                ("auth_token", models.CharField(max_length=4096)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'verbose_name': 'Provider',
-                'verbose_name_plural': 'Providers',
-                'ordering': ['name'],
+                "verbose_name": "Provider",
+                "verbose_name_plural": "Providers",
+                "ordering": ["name"],
             },
         ),
     ]
