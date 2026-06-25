@@ -212,10 +212,12 @@ def prepare_message_text(text: str, parse_mode: str | None) -> str:
 def sanitize_markdown_v2(text: str) -> str:
     parts = []
     last_end = 0
+    # fmt: off
     for match in _MARKDOWN_V2_TOKEN_RE.finditer(text):
-        parts.append(_escape_markdown_v2_text(text[last_end : match.start()]))
+        parts.append(_escape_markdown_v2_text(text[last_end:match.start()]))
         parts.append(_sanitize_markdown_v2_token(match))
         last_end = match.end()
+    # fmt: on
     parts.append(_escape_markdown_v2_text(text[last_end:]))
     return "".join(parts)
 
