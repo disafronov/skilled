@@ -1,0 +1,164 @@
+from datetime import datetime
+from datetime import timezone as dt_timezone
+from unittest.mock import patch
+
+from django.test import TestCase
+
+from apps.bots.models import Bot
+from apps.inference.models import Profile, Provider
+from apps.jobs.models import Job
+from apps.jobs.tasks import llm_worker, telegram_deliver, telegram_ingest
+from apps.library.models import Skill, Wrapper
+
+
+class PipelineTaskBranchTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.now = datetime.now(dt_timezone.utc)
+        skill = Skill.objects.create(name="task-skill", content="s")
+        wrapper = Wrapper.objects.create(name="task-wrapper", content="w")
+        provider = Provider.objects.create(
+            name="task-provider",
+            api_type="openai",
+            base_url="https://example.com",
+            auth_token="tok",
+        )
+        profile = Profile.objects.create(name="task-profile", model="gpt-4o")
+        cls.bot = Bot.objects.create(
+            name="task-bot",
+            telegram_api_token="telegram-token",
+            provider=provider,
+            profile=profile,
+            skill=skill,
+            wrapper=wrapper,
+        )
+
+    @patch("apps.jobs.tasks.get_updates", return_value=[])
+    def test_ingest_no_updates_leaves_offset_unchanged(self, get_updates):
+        telegram_ingest()
+
+        self.bot.refresh_from_db()
+        self.assertEqual(self.bot.telegram_update_offset, 0)
+        get_updates.assert_called_once_with("telegram-token", offset=None)
+
+    @patch("apps.jobs.tasks.get_updates", return_value=[{"update_id": 10}])
+    def test_ingest_with_only_non_message_updates_creates_no_jobs(self, get_updates):
+        telegram_ingest()
+
+        self.bot.refresh_from_db()
+        self.assertEqual(self.bot.telegram_update_offset, 1)
+        self.assertFalse(Job.objects.exists())
+
+    @patch("apps.jobs.tasks.logger")
+    @patch("apps.jobs.tasks.send_message", side_effect=RuntimeError("ack down"))
+    @patch(
+        "apps.jobs.tasks.get_updates",
+        return_value=[
+            {"update_id": 10},
+            {
+                "update_id": 11,
+                "message": {"message_id": 7, "chat": {"id": 123}, "text": "hello"},
+            },
+        ],
+    )
+    def test_ingest_skips_non_message_update_and_logs_ack_failure(
+        self,
+        get_updates,
+        send_message,
+        logger,
+    ):
+        telegram_ingest()
+
+        self.assertTrue(Job.objects.filter(raw_input="hello").exists())
+        self.bot.refresh_from_db()
+        self.assertEqual(self.bot.telegram_update_offset, 12)
+        send_message.assert_called_once()
+        logger.error.assert_called_once()
+
+    @patch("apps.jobs.tasks.logger")
+    @patch("apps.jobs.tasks.get_updates", side_effect=RuntimeError("telegram down"))
+    def test_ingest_logs_bot_failure(self, get_updates, logger):
+        telegram_ingest()
+
+        logger.error.assert_called_once()
+
+    @patch("apps.jobs.tasks.logger")
+    @patch("apps.jobs.tasks.Bot.objects.filter", side_effect=RuntimeError("db down"))
+    def test_ingest_logs_global_failure(self, filter_mock, logger):
+        telegram_ingest()
+
+        logger.critical.assert_called_once()
+
+    def test_llm_worker_returns_when_no_job_exists(self):
+        llm_worker()
+
+        self.assertFalse(Job.objects.exists())
+
+    @patch("apps.jobs.tasks.call_llm", return_value="llm output")
+    def test_llm_worker_stores_successful_output(self, call_llm_mock):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="hello",
+            received_at=self.now,
+        )
+
+        llm_worker()
+
+        job.refresh_from_db()
+        self.assertEqual(job.raw_output, "llm output")
+        self.assertIsNone(job.error)
+        self.assertIsNotNone(job.llm_started_at)
+        self.assertIsNotNone(job.llm_finished_at)
+
+    @patch("apps.jobs.tasks.call_llm", side_effect=RuntimeError("llm down"))
+    def test_llm_worker_stores_error(self, call_llm_mock):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="hello",
+            received_at=self.now,
+        )
+
+        llm_worker()
+
+        job.refresh_from_db()
+        self.assertEqual(job.error, "llm down")
+        self.assertIsNone(job.raw_output)
+        self.assertIsNotNone(job.llm_finished_at)
+
+    @patch("apps.jobs.tasks.logger")
+    @patch("apps.jobs.tasks.transaction.atomic", side_effect=RuntimeError("db down"))
+    def test_llm_worker_logs_outer_failure(self, atomic_mock, logger):
+        llm_worker()
+
+        logger.error.assert_called_once()
+
+    @patch("apps.jobs.tasks.send_message", side_effect=RuntimeError("telegram down"))
+    def test_deliver_stores_error_when_send_fails(self, send_message):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="hi",
+            raw_output="short response",
+            received_at=self.now,
+            llm_finished_at=self.now,
+        )
+
+        telegram_deliver()
+
+        job.refresh_from_db()
+        self.assertIsNone(job.sent_at)
+        self.assertEqual(job.error, "telegram down")
+
+    def test_deliver_returns_when_no_job_exists(self):
+        telegram_deliver()
+
+        self.assertFalse(Job.objects.filter(sent_at__isnull=False).exists())
+
+    @patch("apps.jobs.tasks.logger")
+    @patch("apps.jobs.tasks.transaction.atomic", side_effect=RuntimeError("db down"))
+    def test_deliver_logs_outer_failure(self, atomic_mock, logger):
+        telegram_deliver()
+
+        logger.error.assert_called_once()
