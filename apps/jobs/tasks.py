@@ -1,19 +1,32 @@
 """Q2-callable task functions for the core pipeline."""
 
 import logging
+import os
+from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
+from django_q.models import Success
 
 from apps.bots.models import Bot
 from apps.jobs.models import Job
 from workers.llm import call_llm
-from workers.telegram import TELEGRAM_MESSAGE_CHAR_LIMIT, get_updates, send_document
-from workers.telegram import send_message
+from workers.telegram import (
+    TELEGRAM_MESSAGE_CHAR_LIMIT,
+    detect_document_format,
+    detect_parse_mode,
+    document_format_content_type,
+    document_format_filename,
+    get_updates,
+    prepare_message_text,
+    send_document,
+    send_message,
+)
 
 logger = logging.getLogger(__name__)
 
 QUEUE_ACK_TEXT = "Added to the processing queue, please wait..."
+Q2_SUCCESS_RETENTION_SECONDS = 86400
 
 
 def telegram_ingest() -> None:
@@ -142,18 +155,22 @@ def telegram_deliver() -> None:
 
         try:
             if len(job.raw_output) <= TELEGRAM_MESSAGE_CHAR_LIMIT:
+                parse_mode = detect_parse_mode(job.raw_output)
                 send_message(
                     job.bot.telegram_api_token,
                     job.reply_target,
-                    job.raw_output,
+                    prepare_message_text(job.raw_output, parse_mode),
                     reply_to_message_id=job.reply_to_message_id,
+                    parse_mode=parse_mode,
                 )
             else:
+                document_format = detect_document_format(job.raw_output)
                 send_document(
                     job.bot.telegram_api_token,
                     job.reply_target,
                     job.raw_output,
-                    f"response-{job.pk}.md",
+                    document_format_filename(job.pk, document_format),
+                    document_format_content_type(document_format),
                     caption="LLM response is attached as a text file.",
                     reply_to_message_id=job.reply_to_message_id,
                 )
@@ -164,3 +181,15 @@ def telegram_deliver() -> None:
         job.save(update_fields=["sent_at", "error", "updated_at"])
     except Exception as e:
         logger.error(f"telegram_deliver failed: {e}", exc_info=True)
+
+
+def cleanup_q2_successes() -> None:
+    """Delete successful django-q2 task records older than the retention window."""
+    retention_seconds = int(
+        os.environ.get(
+            "Q2_SUCCESS_TASK_RETENTION_SECONDS",
+            str(Q2_SUCCESS_RETENTION_SECONDS),
+        )
+    )
+    cutoff = timezone.now() - timedelta(seconds=retention_seconds)
+    Success.objects.filter(stopped__lt=cutoff).delete()
