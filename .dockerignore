@@ -1,0 +1,46 @@
+/.git/
+/.venv/
+
+# OS / editor junk
+.DS_Store
+**/.DS_Store
+._*
+*.swp
+*~
+.idea/
+.vscode/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Tool caches / artifacts
+.mypy_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# SQLite
+/src/db.sqlite3
+
+# Django translations (compiled)
+**/*.mo
+
+# Example environment files
+env.example
+env.docker
+
+# Test files
+src/**/tests/
+src/conftest.py
+src/sloths_inventory/settings_pytest.py
+
+#
+.env
