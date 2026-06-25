@@ -9,7 +9,6 @@ name: Force Release PR
       - reopened
     branches:
       - release
-      - main
 
 jobs:
   force-release-pr:
