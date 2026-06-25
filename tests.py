@@ -327,22 +327,75 @@ class NullableProfileFieldOmissionTests(TestCase):
 class Q2ScheduleTests(TestCase):
     """Test the pipeline schedule configuration."""
 
-    def test_default_schedules_use_standard_five_field_cron(self):
+    def test_default_schedules_are_hardcoded_with_fixed_ids(self):
         create_schedules(sender=None)
 
         schedules = {
-            schedule.name: schedule
-            for schedule in Schedule.objects.filter(
-                name__in=["telegram_ingest", "llm_worker", "telegram_deliver"]
-            )
+            schedule.id: schedule
+            for schedule in Schedule.objects.filter(id__in=[1, 2, 3])
         }
 
-        self.assertEqual(schedules["telegram_ingest"].schedule_type, Schedule.CRON)
-        self.assertEqual(schedules["telegram_ingest"].cron, "* * * * *")
-        self.assertEqual(schedules["llm_worker"].schedule_type, Schedule.CRON)
-        self.assertEqual(schedules["llm_worker"].cron, "* * * * *")
-        self.assertEqual(schedules["telegram_deliver"].schedule_type, Schedule.CRON)
-        self.assertEqual(schedules["telegram_deliver"].cron, "* * * * *")
+        self.assertEqual(schedules[1].name, "telegram_ingest")
+        self.assertEqual(schedules[1].func, "apps.jobs.tasks.telegram_ingest")
+        self.assertEqual(schedules[1].schedule_type, Schedule.CRON)
+        self.assertEqual(schedules[1].cron, "* * * * *")
+        self.assertEqual(schedules[1].repeats, -1)
+
+        self.assertEqual(schedules[2].name, "llm_worker")
+        self.assertEqual(schedules[2].func, "apps.jobs.tasks.llm_worker")
+        self.assertEqual(schedules[2].schedule_type, Schedule.CRON)
+        self.assertEqual(schedules[2].cron, "* * * * *")
+        self.assertEqual(schedules[2].repeats, -1)
+
+        self.assertEqual(schedules[3].name, "telegram_deliver")
+        self.assertEqual(schedules[3].func, "apps.jobs.tasks.telegram_deliver")
+        self.assertEqual(schedules[3].schedule_type, Schedule.CRON)
+        self.assertEqual(schedules[3].cron, "* * * * *")
+        self.assertEqual(schedules[3].repeats, -1)
+
+    def test_managed_schedule_edits_are_overwritten_on_save(self):
+        create_schedules(sender=None)
+        schedule = Schedule.objects.get(id=1)
+
+        schedule.name = "changed"
+        schedule.func = "changed.func"
+        schedule.schedule_type = Schedule.HOURLY
+        schedule.cron = "0 0 * * *"
+        schedule.repeats = 10
+        schedule.save()
+
+        schedule.refresh_from_db()
+        self.assertEqual(schedule.name, "telegram_ingest")
+        self.assertEqual(schedule.func, "apps.jobs.tasks.telegram_ingest")
+        self.assertEqual(schedule.schedule_type, Schedule.CRON)
+        self.assertEqual(schedule.cron, "* * * * *")
+        self.assertEqual(schedule.repeats, -1)
+
+    def test_managed_schedule_uses_env_cron(self):
+        with patch.dict(os.environ, {"Q2_TELEGRAM_INGEST_CRON": "*/5 * * * *"}):
+            create_schedules(sender=None)
+
+            schedule = Schedule.objects.get(id=1)
+            self.assertEqual(schedule.cron, "*/5 * * * *")
+
+            schedule.cron = "0 0 * * *"
+            schedule.save()
+            schedule.refresh_from_db()
+            self.assertEqual(schedule.cron, "*/5 * * * *")
+
+    def test_duplicate_managed_schedules_are_removed(self):
+        Schedule.objects.create(
+            name="telegram_ingest",
+            func="wrong.func",
+            schedule_type=Schedule.CRON,
+            cron="0 0 * * *",
+            repeats=-1,
+        )
+
+        create_schedules(sender=None)
+
+        self.assertEqual(Schedule.objects.filter(name="telegram_ingest").count(), 1)
+        self.assertEqual(Schedule.objects.get(name="telegram_ingest").id, 1)
 
 
 class TelegramDeliveryTests(TestCase):
