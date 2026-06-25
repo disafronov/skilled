@@ -13,30 +13,21 @@ def create_schedules(sender, **kwargs):
             "name": "telegram_ingest_once",
             "func": "apps.jobs.management.commands.telegram_ingest_once.Command.handle",
             "schedule_type": Schedule.CRON,
-            "cron": os.environ.get(
-                "Q2_TELEGRAM_INGEST_CRON",
-                os.environ.get("Q2_TELEGRAM_INGEST_INTERVAL", "* * * * *"),
-            ),
+            "cron": os.environ.get("Q2_TELEGRAM_INGEST_CRON", "*/30 * * * * *"),
             "repeats": -1,
         },
         {
             "name": "llm_worker_once",
             "func": "apps.jobs.management.commands.llm_worker_once.Command.handle",
             "schedule_type": Schedule.CRON,
-            "cron": os.environ.get(
-                "Q2_LLM_WORKER_CRON",
-                os.environ.get("Q2_LLM_WORKER_INTERVAL", "* * * * *"),
-            ),
+            "cron": os.environ.get("Q2_LLM_WORKER_CRON", "*/15 * * * * *"),
             "repeats": -1,
         },
         {
             "name": "telegram_deliver_once",
             "func": "apps.jobs.management.commands.telegram_deliver_once.Command.handle",
             "schedule_type": Schedule.CRON,
-            "cron": os.environ.get(
-                "Q2_TELEGRAM_DELIVER_CRON",
-                os.environ.get("Q2_TELEGRAM_DELIVER_INTERVAL", "* * * * *"),
-            ),
+            "cron": os.environ.get("Q2_TELEGRAM_DELIVER_CRON", "*/10 * * * * *"),
             "repeats": -1,
         },
     ]
