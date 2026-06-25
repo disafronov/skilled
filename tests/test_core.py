@@ -12,7 +12,7 @@ from django_q.models import Schedule, Task
 
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
-from apps.jobs.apps import create_schedules
+from apps.jobs.apps import create_schedules, protect_managed_schedule
 from apps.jobs.models import Job
 from apps.jobs.tasks import (
     QUEUE_ACK_TEXT,
@@ -459,26 +459,30 @@ class Q2ScheduleTests(TestCase):
 
         self.assertEqual(schedules[1].name, "telegram_ingest")
         self.assertEqual(schedules[1].func, "apps.jobs.tasks.telegram_ingest")
-        self.assertEqual(schedules[1].schedule_type, Schedule.CRON)
-        self.assertEqual(schedules[1].cron, "* * * * *")
+        self.assertEqual(schedules[1].schedule_type, Schedule.MINUTES)
+        self.assertEqual(schedules[1].minutes, 1)
+        self.assertIsNone(schedules[1].cron)
         self.assertEqual(schedules[1].repeats, -1)
 
         self.assertEqual(schedules[2].name, "llm_worker")
         self.assertEqual(schedules[2].func, "apps.jobs.tasks.llm_worker")
-        self.assertEqual(schedules[2].schedule_type, Schedule.CRON)
-        self.assertEqual(schedules[2].cron, "* * * * *")
+        self.assertEqual(schedules[2].schedule_type, Schedule.MINUTES)
+        self.assertEqual(schedules[2].minutes, 1)
+        self.assertIsNone(schedules[2].cron)
         self.assertEqual(schedules[2].repeats, -1)
 
         self.assertEqual(schedules[3].name, "telegram_deliver")
         self.assertEqual(schedules[3].func, "apps.jobs.tasks.telegram_deliver")
-        self.assertEqual(schedules[3].schedule_type, Schedule.CRON)
-        self.assertEqual(schedules[3].cron, "* * * * *")
+        self.assertEqual(schedules[3].schedule_type, Schedule.MINUTES)
+        self.assertEqual(schedules[3].minutes, 1)
+        self.assertIsNone(schedules[3].cron)
         self.assertEqual(schedules[3].repeats, -1)
 
         self.assertEqual(schedules[4].name, "q2_success_cleanup")
         self.assertEqual(schedules[4].func, "apps.jobs.tasks.cleanup_q2_successes")
-        self.assertEqual(schedules[4].schedule_type, Schedule.CRON)
-        self.assertEqual(schedules[4].cron, "0 * * * *")
+        self.assertEqual(schedules[4].schedule_type, Schedule.MINUTES)
+        self.assertEqual(schedules[4].minutes, 60)
+        self.assertIsNone(schedules[4].cron)
         self.assertEqual(schedules[4].repeats, -1)
 
     def test_managed_schedule_edits_are_overwritten_on_save(self):
@@ -488,50 +492,74 @@ class Q2ScheduleTests(TestCase):
         schedule.name = "changed"
         schedule.func = "changed.func"
         schedule.schedule_type = Schedule.HOURLY
-        schedule.cron = "0 0 * * *"
+        schedule.minutes = 15
         schedule.repeats = 10
         schedule.save()
 
         schedule.refresh_from_db()
         self.assertEqual(schedule.name, "telegram_ingest")
         self.assertEqual(schedule.func, "apps.jobs.tasks.telegram_ingest")
-        self.assertEqual(schedule.schedule_type, Schedule.CRON)
-        self.assertEqual(schedule.cron, "* * * * *")
+        self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
+        self.assertEqual(schedule.minutes, 1)
+        self.assertIsNone(schedule.cron)
         self.assertEqual(schedule.repeats, -1)
 
-    def test_managed_schedule_uses_env_cron(self):
+    def test_managed_schedule_uses_env_minutes(self):
         with patch.dict(
             os.environ,
             {
-                "Q2_TELEGRAM_INGEST_CRON": "*/5 * * * *",
-                "Q2_SUCCESS_CLEANUP_CRON": "30 * * * *",
+                "Q2_TELEGRAM_INGEST_MINUTES": "5",
+                "Q2_SUCCESS_CLEANUP_MINUTES": "30",
             },
         ):
             create_schedules(sender=None)
 
             schedule = Schedule.objects.get(id=1)
-            self.assertEqual(schedule.cron, "*/5 * * * *")
+            self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
+            self.assertEqual(schedule.minutes, 5)
+            self.assertIsNone(schedule.cron)
             cleanup_schedule = Schedule.objects.get(id=4)
-            self.assertEqual(cleanup_schedule.cron, "30 * * * *")
+            self.assertEqual(cleanup_schedule.schedule_type, Schedule.MINUTES)
+            self.assertEqual(cleanup_schedule.minutes, 30)
+            self.assertIsNone(cleanup_schedule.cron)
 
-            schedule.cron = "0 0 * * *"
+            schedule.minutes = 1
             schedule.save()
             schedule.refresh_from_db()
-            self.assertEqual(schedule.cron, "*/5 * * * *")
+            self.assertEqual(schedule.minutes, 5)
 
     def test_duplicate_managed_schedules_are_removed(self):
-        Schedule.objects.create(
-            name="telegram_ingest",
-            func="wrong.func",
-            schedule_type=Schedule.CRON,
-            cron="0 0 * * *",
-            repeats=-1,
+        Schedule.objects.bulk_create(
+            [
+                Schedule(
+                    name="telegram_ingest",
+                    func="wrong.func",
+                    schedule_type=Schedule.MINUTES,
+                    minutes=1,
+                    repeats=-1,
+                )
+            ]
         )
 
         create_schedules(sender=None)
 
         self.assertEqual(Schedule.objects.filter(name="telegram_ingest").count(), 1)
         self.assertEqual(Schedule.objects.get(name="telegram_ingest").id, 1)
+
+    def test_unmanaged_schedule_edits_are_ignored(self):
+        schedule = Schedule(
+            id=99,
+            name="custom",
+            func="custom.func",
+            schedule_type=Schedule.MINUTES,
+            minutes=10,
+            repeats=-1,
+        )
+
+        protect_managed_schedule(sender=Schedule, instance=schedule)
+
+        self.assertEqual(schedule.name, "custom")
+        self.assertEqual(schedule.minutes, 10)
 
 
 class Q2SuccessCleanupTests(TestCase):
