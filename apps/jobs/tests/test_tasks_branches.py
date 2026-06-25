@@ -166,8 +166,8 @@ class PipelineTaskBranchTests(TestCase):
 
         logger.error.assert_called_once()
 
-    @patch("apps.jobs.tasks.send_message", side_effect=RuntimeError("telegram down"))
-    def test_deliver_stores_error_when_send_fails(self, send_message):
+    @patch("apps.jobs.tasks.send_document", side_effect=RuntimeError("telegram down"))
+    def test_deliver_stores_error_when_send_fails(self, send_document):
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
