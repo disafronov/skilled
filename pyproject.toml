@@ -70,7 +70,14 @@ exclude_dirs = [ ".venv", "htmlcov", "tests" ]
 
 [tool.coverage.run]
 source = [ "." ]
-omit = [ ".venv/*", "tests/*", "manage.py", "config/wsgi.py" ]
+omit = [
+  ".venv/*",
+  "tests/*",
+  "*/tests/*",
+  "manage.py",
+  "config/settings_pytest.py",
+  "config/wsgi.py"
+]
 branch = true
 parallel = true
 
@@ -95,12 +102,12 @@ directory = "htmlcov"
 [tool.vulture]
 min_confidence = 80
 paths = [ "." ]
-exclude = [ "tests.py", "*/tests/*" ]
+exclude = [ "tests/*", "*/tests/*" ]
 ignore_names = [ "cls", "owner", "UserType", "db", "obj", "args", "kwargs" ]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "config.settings"
-python_files = [ "test_*.py", "tests.py" ]
+DJANGO_SETTINGS_MODULE = "config.settings_pytest"
+python_files = [ "test_*.py" ]
 addopts = "--strict-markers --cov --cov-report=term-missing"
 testpaths = [ "." ]
 filterwarnings = [ "ignore::DeprecationWarning" ]

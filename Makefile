@@ -19,7 +19,7 @@ endif
 TOOLING_SECRET_KEY = unsafe-secret-key-for-tooling
 
 UV = uv run
-PYTEST_CMD = SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python -m pytest -v
+PYTEST_CMD = DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python -m pytest -v
 COVERAGE_OPTS = --cov-report=html
 
 DOCKER_IMAGE = skilled
@@ -55,7 +55,7 @@ lint: ## Run linting tools
 	$(UV) black --check . && \
 	$(UV) isort --check-only . && \
 	$(UV) flake8 . --exclude .venv,htmlcov --max-line-length=88 && \
-	SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) mypy . && \
+	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) mypy . && \
 	$(UV) bandit -r -c pyproject.toml .
 
 audit: ## Check dependencies for known vulnerabilities
@@ -72,11 +72,11 @@ q2: ## Run django-q2 worker
 
 makemigrations: ## Create new migrations
 	@echo "Creating migrations..."
-	SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py makemigrations
+	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py makemigrations
 
 migrate: ## Apply database migrations
 	@echo "Applying migrations..."
-	SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py migrate
+	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py migrate
 
 test: ## Run tests with coverage report
 	@echo "Running tests with coverage..."
@@ -93,7 +93,7 @@ run: migrate ## Apply migrations, create admin, start dev server + qcluster
 	else \
 		echo "Skipping createsuperuser (set DJANGO_SUPERUSER_USERNAME/PASSWORD/EMAIL to enable)."; \
 	fi
-	SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py dev
+	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py dev
 
 clean: ## Clean caches and coverage outputs
 	@echo "Cleaning cache and temporary files..."
