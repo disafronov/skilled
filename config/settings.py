@@ -43,6 +43,8 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "config.urls"
 
+TEST_RUNNER = "config.tests.runner.PytestTestRunner"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
