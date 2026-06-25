@@ -1,13 +1,27 @@
 """LLM provider client — OpenAI-compatible API."""
 
 import os
+from pathlib import Path
 from typing import Any
 
+from django.conf import settings
 from openai import OpenAI
 
 
 def get_global_system_prompt() -> str:
-    return os.environ.get("GLOBAL_SYSTEM_PROMPT", "")
+    path = Path(
+        os.environ.get(
+            "POLICY_FILE",
+            settings.BASE_DIR / "policy.md",
+        )
+    )
+    if not path.is_absolute():
+        path = settings.BASE_DIR / path
+
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return ""
 
 
 def _omit_none(d: dict[str, Any]) -> dict[str, Any]:
@@ -16,12 +30,14 @@ def _omit_none(d: dict[str, Any]) -> dict[str, Any]:
 
 def _build_kwargs(profile) -> dict[str, Any]:
     """Build optional kwargs from profile, omitting null fields."""
-    return _omit_none({
-        "temperature": profile.temperature,
-        "top_p": profile.top_p,
-        "max_completion_tokens": profile.max_output_tokens,
-        "reasoning_effort": profile.reasoning_effort,
-    })
+    return _omit_none(
+        {
+            "temperature": profile.temperature,
+            "top_p": profile.top_p,
+            "max_completion_tokens": profile.max_output_tokens,
+            "reasoning_effort": profile.reasoning_effort,
+        }
+    )
 
 
 def build_request_body(
@@ -33,7 +49,9 @@ def build_request_body(
 ) -> dict[str, Any]:
     """Build an OpenAI-compatible /chat/completions request body."""
 
-    instructions = "\n\n".join(filter(None, [skill.content, wrapper.content, global_system_prompt]))
+    instructions = "\n\n".join(
+        filter(None, [skill.content, wrapper.content, global_system_prompt])
+    )
 
     body: dict[str, Any] = {
         "model": profile.model,
@@ -52,7 +70,9 @@ def build_request_body(
 
 def call_llm(provider, profile, skill, wrapper, raw_input: str) -> str:
     """Execute an LLM call and return the response text."""
-    body = build_request_body(profile, skill, wrapper, raw_input, get_global_system_prompt())
+    body = build_request_body(
+        profile, skill, wrapper, raw_input, get_global_system_prompt()
+    )
 
     client = OpenAI(
         base_url=provider.base_url,

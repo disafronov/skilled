@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from datetime import datetime
 from datetime import timezone as dt_timezone
 from unittest.mock import patch
@@ -12,7 +15,7 @@ from apps.jobs.models import Job
 from apps.jobs.apps import create_schedules
 from apps.jobs.tasks import QUEUE_ACK_TEXT, telegram_deliver, telegram_ingest
 from apps.library.models import Skill, Wrapper
-from workers.llm import build_request_body
+from workers.llm import build_request_body, get_global_system_prompt
 from workers.telegram import _raise_for_status
 from workers.telegram import TELEGRAM_MESSAGE_CHAR_LIMIT
 
@@ -247,6 +250,29 @@ class OpenAiRequestAssemblyTests(TestCase):
         )
         system_content = body["messages"][0]["content"]
         self.assertIn("You are a helpful assistant.", system_content)
+
+    def test_global_system_prompt_loaded_from_file(self):
+        with TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "policy.md"
+            path.write_text("Always be concise.\n", encoding="utf-8")
+
+            with patch.dict(os.environ, {"POLICY_FILE": str(path)}):
+                self.assertEqual(get_global_system_prompt(), "Always be concise.")
+
+    def test_empty_global_system_prompt_file_returns_empty_string(self):
+        with TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "policy.md"
+            path.write_text("", encoding="utf-8")
+
+            with patch.dict(os.environ, {"POLICY_FILE": str(path)}):
+                self.assertEqual(get_global_system_prompt(), "")
+
+    def test_missing_global_system_prompt_file_returns_empty_string(self):
+        with TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "missing.md"
+
+            with patch.dict(os.environ, {"POLICY_FILE": str(path)}):
+                self.assertEqual(get_global_system_prompt(), "")
 
 
 class TelegramClientTests(TestCase):
