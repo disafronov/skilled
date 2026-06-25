@@ -19,7 +19,7 @@ endif
 TOOLING_SECRET_KEY = unsafe-secret-key-for-tooling
 
 UV = uv run
-PYTEST_CMD = DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python -m pytest -v
+PYTEST_CMD = DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python -m pytest -v -n auto
 COVERAGE_OPTS = --cov-report=html
 
 DOCKER_IMAGE = skilled
