@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from django.conf import settings
 from openai import OpenAI
@@ -28,7 +28,7 @@ def _omit_none(d: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in d.items() if v is not None}
 
 
-def _build_kwargs(profile) -> dict[str, Any]:
+def _build_kwargs(profile: Any) -> dict[str, Any]:
     """Build optional kwargs from profile, omitting null fields."""
     return _omit_none(
         {
@@ -41,9 +41,9 @@ def _build_kwargs(profile) -> dict[str, Any]:
 
 
 def build_request_body(
-    profile,
-    skill,
-    wrapper,
+    profile: Any,
+    skill: Any,
+    wrapper: Any,
     raw_input: str,
     global_system_prompt: str,
 ) -> dict[str, Any]:
@@ -68,7 +68,13 @@ def build_request_body(
     return body
 
 
-def call_llm(provider, profile, skill, wrapper, raw_input: str) -> str:
+def call_llm(
+    provider: Any,
+    profile: Any,
+    skill: Any,
+    wrapper: Any,
+    raw_input: str,
+) -> str:
     """Execute an LLM call and return the response text."""
     body = build_request_body(
         profile, skill, wrapper, raw_input, get_global_system_prompt()
@@ -80,4 +86,4 @@ def call_llm(provider, profile, skill, wrapper, raw_input: str) -> str:
     )
 
     response = client.chat.completions.create(**body)
-    return response.choices[0].message.content
+    return cast(str, response.choices[0].message.content)

@@ -8,5 +8,5 @@ from apps.jobs.tasks import telegram_ingest
 class Command(BaseCommand):
     help = "Poll Telegram for updates and create Job records"
 
-    def handle(self, *args, **options):
+    def handle(self, *args: str, **options: str) -> None:
         telegram_ingest()
