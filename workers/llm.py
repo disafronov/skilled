@@ -1,56 +1,93 @@
-import os
+"""LLM provider client — OpenAI-compatible API."""
 
-import requests
+import os
+from typing import Any
+
+import httpx
 
 
 def get_global_system_prompt() -> str:
-    return os.getenv('GLOBAL_SYSTEM_PROMPT', '')
+    return os.environ.get("GLOBAL_SYSTEM_PROMPT", "")
 
 
-def build_request_body(profile, skill, wrapper, raw_input: str, global_system_prompt: str) -> dict:
-    """Build the OpenAI-compatible request body from domain entities."""
-    instructions_parts = [skill.content, wrapper.content]
-    if global_system_prompt:
-        instructions_parts.append(global_system_prompt)
-    instructions = '\n\n'.join(instructions_parts)
+def _omit_none(d: dict[str, Any]) -> dict[str, Any]:
+    return {k: v for k, v in d.items() if v is not None}
 
-    messages = [
-        {'role': 'system', 'content': instructions},
-        {'role': 'user', 'content': raw_input},
-    ]
 
-    body: dict = {
-        'model': profile.model,
-        'messages': messages,
+def build_request_body(
+    profile: Any,
+    skill: Any,
+    wrapper: Any,
+    raw_input: str,
+    global_system_prompt: str,
+) -> dict[str, Any]:
+    """Build an OpenAI-compatible /chat/completions request body."""
+
+    instructions = "\n\n".join(
+        filter(None, [skill.content, wrapper.content, global_system_prompt])
+    )
+
+    profile_params = _omit_none(
+        {
+            "temperature": profile.temperature,
+            "top_p": profile.top_p,
+            "max_completion_tokens": profile.max_output_tokens,
+            "reasoning_effort": profile.reasoning_effort,
+        }
+    )
+
+    body: dict[str, Any] = {
+        "model": profile.model,
+        "messages": [
+            {"role": "system", "content": instructions},
+            {"role": "user", "content": raw_input},
+        ],
+        **profile_params,
     }
 
-    if profile.temperature is not None:
-        body['temperature'] = profile.temperature
-    if profile.top_p is not None:
-        body['top_p'] = profile.top_p
-    if profile.max_output_tokens is not None:
-        body['max_tokens'] = profile.max_output_tokens
-    if profile.reasoning_effort is not None:
-        body['reasoning_effort'] = profile.reasoning_effort
-    if profile.response_format is not None:
-        body['response_format'] = profile.response_format
+    if profile.response_format:
+        body["response_format"] = profile.response_format
 
     return body
 
 
-def call_llm(provider, profile, skill, wrapper, raw_input: str) -> str:
-    """Call an OpenAI-compatible API and return the response text."""
-    global_system_prompt = get_global_system_prompt()
-    body = build_request_body(profile, skill, wrapper, raw_input, global_system_prompt)
+def call_llm(
+    provider: Any, profile: Any, skill: Any, wrapper: Any, raw_input: str
+) -> str:
+    """Execute an LLM call and return the response text."""
+    instructions = "\n\n".join(
+        filter(None, [skill.content, wrapper.content, get_global_system_prompt()])
+    )
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {provider.auth_token}',
+    provider_params = _omit_none(
+        {
+            "temperature": profile.temperature,
+            "top_p": profile.top_p,
+            "max_completion_tokens": profile.max_output_tokens,
+            "reasoning_effort": profile.reasoning_effort,
+        }
+    )
+
+    body: dict[str, Any] = {
+        "model": profile.model,
+        "messages": [
+            {"role": "system", "content": instructions},
+            {"role": "user", "content": raw_input},
+        ],
+        **provider_params,
     }
 
-    url = f"{provider.base_url.rstrip('/')}/chat/completions"
-    response = requests.post(url, headers=headers, json=body, timeout=120)
-    response.raise_for_status()
-    data = response.json()
+    if profile.response_format:
+        body["response_format"] = profile.response_format
 
-    return data['choices'][0]['message']['content']
+    with httpx.Client(base_url=provider.base_url) as client:
+        response = client.post(
+            "/chat/completions",
+            json=body,
+            headers={"Authorization": f"Bearer {provider.auth_token}"},
+        )
+        response.raise_for_status()
+        data = response.json()
+
+    result: str = data["choices"][0]["message"]["content"]
+    return result

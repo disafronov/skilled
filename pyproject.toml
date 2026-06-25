@@ -41,7 +41,7 @@ extend-ignore = [ "E203", "W503" ]
 exclude = [ ".venv", "htmlcov" ]
 
 [tool.mypy]
-exclude = "(^tests/|.*/tests/|.*/migrations/)"
+exclude = "(^tests/|^tests\\.py$|.*/tests/|.*/migrations/|^manage\\.py$)"
 plugins = [ "mypy_django_plugin.main" ]
 warn_return_any = true
 warn_unused_configs = true
@@ -69,6 +69,7 @@ exclude_dirs = [ ".venv", "htmlcov", "tests" ]
 [tool.coverage.run]
 source = [ "." ]
 omit = [
+  ".venv/*",
   "tests/*",
   "manage.py",
   "config/wsgi.py",
@@ -102,7 +103,7 @@ ignore_names = [ "cls", "owner", "UserType", "db", "obj", "args", "kwargs" ]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
-python_files = [ "test_*.py" ]
-addopts = "--strict-markers --cov= --cov-report=term-missing"
+python_files = [ "test_*.py", "tests.py" ]
+addopts = "--strict-markers --cov --cov-report=term-missing"
 testpaths = [ "." ]
 filterwarnings = [ "ignore::DeprecationWarning" ]

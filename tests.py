@@ -1,13 +1,12 @@
-from datetime import datetime, timedelta, timezone as dt_timezone
+from datetime import datetime
+from datetime import timezone as dt_timezone
 
 from django.test import TestCase
 
 from apps.bots.models import Bot
-from apps.jobs.models import Job
 from apps.inference.models import Profile, Provider
-
+from apps.jobs.models import Job
 from apps.library.models import Skill, Wrapper
-
 from workers.llm import build_request_body
 
 
@@ -17,41 +16,59 @@ class JobSelectionPredicatesTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         now = datetime.now(dt_timezone.utc)
-        skill = Skill.objects.create(name='s', content='s')
-        wrapper = Wrapper.objects.create(name='w', content='w')
+        skill = Skill.objects.create(name="s", content="s")
+        wrapper = Wrapper.objects.create(name="w", content="w")
         provider = Provider.objects.create(
-            name='p', api_type='openai',
-            base_url='https://example.com', auth_token='tok',
+            name="p",
+            api_type="openai",
+            base_url="https://example.com",
+            auth_token="tok",
         )
-        profile = Profile.objects.create(name='pr', model='gpt-4o')
+        profile = Profile.objects.create(name="pr", model="gpt-4o")
         bot = Bot.objects.create(
-            name='b', telegram_api_token='tok',
-            provider=provider, profile=profile,
-            skill=skill, wrapper=wrapper,
+            name="b",
+            telegram_api_token="tok",
+            provider=provider,
+            profile=profile,
+            skill=skill,
+            wrapper=wrapper,
         )
 
         # Pending job: received, not started, no error
         cls.pending = Job.objects.create(
-            bot=bot, reply_target='1', raw_input='hi',
+            bot=bot,
+            reply_target="1",
+            raw_input="hi",
             received_at=now,
         )
 
         # In progress: llm_started_at is set
         cls.in_progress = Job.objects.create(
-            bot=bot, reply_target='2', raw_input='hi2',
-            received_at=now, llm_started_at=now,
+            bot=bot,
+            reply_target="2",
+            raw_input="hi2",
+            received_at=now,
+            llm_started_at=now,
         )
 
-        # Completed: llm_finished_at set
+        # Completed: llm_finished_at set, raw_output set, no error
         cls.completed = Job.objects.create(
-            bot=bot, reply_target='3', raw_input='hi3',
-            received_at=now, llm_started_at=now, llm_finished_at=now,
+            bot=bot,
+            reply_target="3",
+            raw_input="hi3",
+            raw_output="some response",
+            received_at=now,
+            llm_started_at=now,
+            llm_finished_at=now,
         )
 
         # Failed: has error
         cls.failed = Job.objects.create(
-            bot=bot, reply_target='4', raw_input='hi4',
-            received_at=now, error='something went wrong',
+            bot=bot,
+            reply_target="4",
+            raw_input="hi4",
+            received_at=now,
+            error="something went wrong",
         )
 
     def test_pending_job_selected(self):
@@ -86,36 +103,54 @@ class DerivedJobStatesTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         now = datetime.now(dt_timezone.utc)
-        skill = Skill.objects.create(name='s', content='s')
-        wrapper = Wrapper.objects.create(name='w', content='w')
+        skill = Skill.objects.create(name="s", content="s")
+        wrapper = Wrapper.objects.create(name="w", content="w")
         provider = Provider.objects.create(
-            name='p', api_type='openai',
-            base_url='https://x.com', auth_token='tok',
+            name="p",
+            api_type="openai",
+            base_url="https://x.com",
+            auth_token="tok",
         )
-        profile = Profile.objects.create(name='pr', model='gpt-4o')
+        profile = Profile.objects.create(name="pr", model="gpt-4o")
         bot = Bot.objects.create(
-            name='b', telegram_api_token='tok',
-            provider=provider, profile=profile,
-            skill=skill, wrapper=wrapper,
+            name="b",
+            telegram_api_token="tok",
+            provider=provider,
+            profile=profile,
+            skill=skill,
+            wrapper=wrapper,
         )
 
         cls.pending = Job.objects.create(
-            bot=bot, reply_target='1', raw_input='hi',
+            bot=bot,
+            reply_target="1",
+            raw_input="hi",
             received_at=now,
         )
         cls.processing = Job.objects.create(
-            bot=bot, reply_target='2', raw_input='hi2',
-            received_at=now, llm_started_at=now,
+            bot=bot,
+            reply_target="2",
+            raw_input="hi2",
+            received_at=now,
+            llm_started_at=now,
         )
         cls.done = Job.objects.create(
-            bot=bot, reply_target='3', raw_input='hi3',
-            received_at=now, llm_started_at=now,
-            llm_finished_at=now, raw_output='resp',
+            bot=bot,
+            reply_target="3",
+            raw_input="hi3",
+            received_at=now,
+            llm_started_at=now,
+            llm_finished_at=now,
+            raw_output="resp",
         )
         cls.failed = Job.objects.create(
-            bot=bot, reply_target='4', raw_input='hi4',
-            received_at=now, llm_started_at=now,
-            llm_finished_at=now, error='fail',
+            bot=bot,
+            reply_target="4",
+            raw_input="hi4",
+            received_at=now,
+            llm_started_at=now,
+            llm_finished_at=now,
+            error="fail",
         )
 
     def assert_state(self, job, pending, processing, completed, failed):
@@ -160,14 +195,16 @@ class OpenAiRequestAssemblyTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.skill = Skill.objects.create(name='translate', content='Translate to French.')
+        cls.skill = Skill.objects.create(
+            name="translate", content="Translate to French."
+        )
         cls.wrapper = Wrapper.objects.create(
-            name='strict',
-            content='Respond in JSON format.',
+            name="strict",
+            content="Respond in JSON format.",
         )
         cls.profile = Profile.objects.create(
-            name='default',
-            model='gpt-4o',
+            name="default",
+            model="gpt-4o",
             temperature=0.7,
             top_p=None,
             max_output_tokens=500,
@@ -176,30 +213,33 @@ class OpenAiRequestAssemblyTests(TestCase):
         )
 
     def test_basic_request_body(self):
-        body = build_request_body(self.profile, self.skill, self.wrapper, 'hello', '')
-        self.assertEqual(body['model'], 'gpt-4o')
-        self.assertEqual(len(body['messages']), 2)
-        self.assertEqual(body['messages'][0]['role'], 'system')
-        self.assertIn('Translate to French.', body['messages'][0]['content'])
-        self.assertIn('Respond in JSON format.', body['messages'][0]['content'])
-        self.assertEqual(body['messages'][1]['role'], 'user')
-        self.assertEqual(body['messages'][1]['content'], 'hello')
+        body = build_request_body(self.profile, self.skill, self.wrapper, "hello", "")
+        self.assertEqual(body["model"], "gpt-4o")
+        self.assertEqual(len(body["messages"]), 2)
+        self.assertEqual(body["messages"][0]["role"], "system")
+        self.assertIn("Translate to French.", body["messages"][0]["content"])
+        self.assertIn("Respond in JSON format.", body["messages"][0]["content"])
+        self.assertEqual(body["messages"][1]["role"], "user")
+        self.assertEqual(body["messages"][1]["content"], "hello")
 
     def test_temperature_included(self):
-        body = build_request_body(self.profile, self.skill, self.wrapper, 'hello', '')
-        self.assertEqual(body['temperature'], 0.7)
+        body = build_request_body(self.profile, self.skill, self.wrapper, "hello", "")
+        self.assertEqual(body["temperature"], 0.7)
 
     def test_max_tokens_mapped(self):
-        body = build_request_body(self.profile, self.skill, self.wrapper, 'hello', '')
-        self.assertEqual(body['max_tokens'], 500)
+        body = build_request_body(self.profile, self.skill, self.wrapper, "hello", "")
+        self.assertEqual(body["max_completion_tokens"], 500)
 
     def test_global_system_prompt_appended(self):
         body = build_request_body(
-            self.profile, self.skill, self.wrapper, 'hello',
-            'You are a helpful assistant.',
+            self.profile,
+            self.skill,
+            self.wrapper,
+            "hello",
+            "You are a helpful assistant.",
         )
-        system_content = body['messages'][0]['content']
-        self.assertIn('You are a helpful assistant.', system_content)
+        system_content = body["messages"][0]["content"]
+        self.assertIn("You are a helpful assistant.", system_content)
 
 
 class NullableProfileFieldOmissionTests(TestCase):
@@ -207,11 +247,11 @@ class NullableProfileFieldOmissionTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.skill = Skill.objects.create(name='s', content='s')
-        cls.wrapper = Wrapper.objects.create(name='w', content='w')
+        cls.skill = Skill.objects.create(name="s", content="s")
+        cls.wrapper = Wrapper.objects.create(name="w", content="w")
         cls.profile_all_null = Profile.objects.create(
-            name='minimal',
-            model='gpt-4o',
+            name="minimal",
+            model="gpt-4o",
             temperature=None,
             top_p=None,
             max_output_tokens=None,
@@ -223,12 +263,16 @@ class NullableProfileFieldOmissionTests(TestCase):
 
     def test_only_model_and_messages(self):
         body = build_request_body(
-            self.profile_all_null, self.skill, self.wrapper, 'hello', '',
+            self.profile_all_null,
+            self.skill,
+            self.wrapper,
+            "hello",
+            "",
         )
-        self.assertEqual(body['model'], 'gpt-4o')
-        self.assertIn('messages', body)
-        self.assertNotIn('temperature', body)
-        self.assertNotIn('top_p', body)
-        self.assertNotIn('max_tokens', body)
-        self.assertNotIn('reasoning_effort', body)
-        self.assertNotIn('response_format', body)
+        self.assertEqual(body["model"], "gpt-4o")
+        self.assertIn("messages", body)
+        self.assertNotIn("temperature", body)
+        self.assertNotIn("top_p", body)
+        self.assertNotIn("max_tokens", body)
+        self.assertNotIn("reasoning_effort", body)
+        self.assertNotIn("response_format", body)
