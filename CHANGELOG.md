@@ -1,3 +1,13 @@
+## [1.0.0-rc.6](https://github.com/disafronov/skilled/compare/v1.0.0-rc.5...v1.0.0-rc.6) (2026-06-25)
+
+### Features
+
+* **jobs:** batch Telegram messages per chat ([2324b58](https://github.com/disafronov/skilled/commit/2324b5853762e8bb0160dc100e0891004281ce86))
+
+### Bug Fixes
+
+* **jobs:** join batched Telegram messages with spaces ([1abce24](https://github.com/disafronov/skilled/commit/1abce2497a3e4a1d534a756c55279160bccc7a47))
+
 ## [1.0.0-rc.5](https://github.com/disafronov/skilled/compare/v1.0.0-rc.4...v1.0.0-rc.5) (2026-06-25)
 
 ### Features
