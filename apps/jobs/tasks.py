@@ -45,14 +45,23 @@ def telegram_ingest() -> None:
                     max_id = bot.telegram_update_offset or 0
                     jobs_to_create = []
                     for update in updates:
+                        update_id = int(cast(Any, update["update_id"]))
+                        max_id = max(max_id, update_id)
+
                         message = cast(dict[str, Any] | None, update.get("message"))
                         if not message:
                             continue
-                        update_id = int(cast(Any, update["update_id"]))
-                        max_id = max(max_id, update_id)
+
+                        text = message.get("text")
+                        if not isinstance(text, str):
+                            continue
+
+                        text = text.strip()
+                        if not text or text.startswith("/"):
+                            continue
+
                         chat_id = message["chat"]["id"]
                         message_id = message.get("message_id")
-                        text = message.get("text", "")
                         jobs_to_create.append(
                             Job(
                                 bot=bot,
