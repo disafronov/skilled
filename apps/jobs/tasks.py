@@ -54,7 +54,7 @@ def telegram_ingest() -> None:
 
                     new_offset = max_id + 1
                     bot.telegram_update_offset = new_offset
-                    bot.save(update_fields=["telegram_update_offset"])
+                    bot.save(update_fields=["telegram_update_offset", "updated_at"])
 
                 for chat_id, message_id in acknowledgements:
                     try:
@@ -99,7 +99,7 @@ def llm_worker() -> None:
                 return
 
             job.llm_started_at = timezone.now()
-            job.save(update_fields=["llm_started_at"])
+            job.save(update_fields=["llm_started_at", "updated_at"])
 
         # Transaction commits here — LLM call happens outside the lock
         try:
@@ -116,7 +116,9 @@ def llm_worker() -> None:
             job.error = str(exc)
         finally:
             job.llm_finished_at = timezone.now()
-            job.save(update_fields=["raw_output", "error", "llm_finished_at"])
+            job.save(
+                update_fields=["raw_output", "error", "llm_finished_at", "updated_at"]
+            )
     except Exception as e:
         logger.error(f"llm_worker failed: {e}", exc_info=True)
 
@@ -138,27 +140,27 @@ def telegram_deliver() -> None:
             if not job:
                 return
 
-            try:
-                if len(job.raw_output) <= TELEGRAM_MESSAGE_CHAR_LIMIT:
-                    send_message(
-                        job.bot.telegram_api_token,
-                        job.reply_target,
-                        job.raw_output,
-                        reply_to_message_id=job.reply_to_message_id,
-                    )
-                else:
-                    send_document(
-                        job.bot.telegram_api_token,
-                        job.reply_target,
-                        job.raw_output,
-                        f"response-{job.pk}.md",
-                        caption="LLM response is attached as a text file.",
-                        reply_to_message_id=job.reply_to_message_id,
-                    )
-                job.sent_at = timezone.now()
-            except Exception as exc:
-                job.error = str(exc)
+        try:
+            if len(job.raw_output) <= TELEGRAM_MESSAGE_CHAR_LIMIT:
+                send_message(
+                    job.bot.telegram_api_token,
+                    job.reply_target,
+                    job.raw_output,
+                    reply_to_message_id=job.reply_to_message_id,
+                )
+            else:
+                send_document(
+                    job.bot.telegram_api_token,
+                    job.reply_target,
+                    job.raw_output,
+                    f"response-{job.pk}.md",
+                    caption="LLM response is attached as a text file.",
+                    reply_to_message_id=job.reply_to_message_id,
+                )
+            job.sent_at = timezone.now()
+        except Exception as exc:
+            job.error = str(exc)
 
-            job.save(update_fields=["sent_at", "error"])
+        job.save(update_fields=["sent_at", "error", "updated_at"])
     except Exception as e:
         logger.error(f"telegram_deliver failed: {e}", exc_info=True)
