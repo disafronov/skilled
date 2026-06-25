@@ -78,7 +78,7 @@ def telegram_ingest() -> None:
                                 bot=bot,
                                 reply_target=chat_id,
                                 reply_to_message_id=message_id,
-                                raw_input="\n\n".join(messages),
+                                raw_input=" ".join(messages),
                                 received_at=timezone.now(),
                             )
                         )
