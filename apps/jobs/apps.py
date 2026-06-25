@@ -11,18 +11,28 @@ MANAGED_SCHEDULES = (
         "name": "telegram_ingest",
         "func": "apps.jobs.tasks.telegram_ingest",
         "cron_env": "Q2_TELEGRAM_INGEST_CRON",
+        "default_cron": "* * * * *",
     },
     {
         "id": 2,
         "name": "llm_worker",
         "func": "apps.jobs.tasks.llm_worker",
         "cron_env": "Q2_LLM_WORKER_CRON",
+        "default_cron": "* * * * *",
     },
     {
         "id": 3,
         "name": "telegram_deliver",
         "func": "apps.jobs.tasks.telegram_deliver",
         "cron_env": "Q2_TELEGRAM_DELIVER_CRON",
+        "default_cron": "* * * * *",
+    },
+    {
+        "id": 4,
+        "name": "q2_success_cleanup",
+        "func": "apps.jobs.tasks.cleanup_q2_successes",
+        "cron_env": "Q2_SUCCESS_CLEANUP_CRON",
+        "default_cron": "0 * * * *",
     },
 )
 
@@ -37,7 +47,7 @@ def _managed_schedule_defaults(schedule, schedule_model):
         "schedule_type": schedule_model.CRON,
         "minutes": None,
         "repeats": -1,
-        "cron": os.environ.get(schedule["cron_env"], "* * * * *"),
+        "cron": os.environ.get(schedule["cron_env"], schedule["default_cron"]),
         "cluster": None,
         "intended_date_kwarg": None,
     }

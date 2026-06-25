@@ -1,23 +1,41 @@
 import os
+from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from datetime import datetime
-from datetime import timezone as dt_timezone
 from unittest.mock import patch
 
 import httpx
 from django.test import TestCase
-from django_q.models import Schedule
+from django.utils import timezone
+from django_q.models import Schedule, Task
 
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
-from apps.jobs.models import Job
 from apps.jobs.apps import create_schedules
-from apps.jobs.tasks import QUEUE_ACK_TEXT, telegram_deliver, telegram_ingest
+from apps.jobs.models import Job
+from apps.jobs.tasks import (
+    QUEUE_ACK_TEXT,
+    cleanup_q2_successes,
+    telegram_deliver,
+    telegram_ingest,
+)
 from apps.library.models import Skill, Wrapper
 from workers.llm import build_request_body, get_global_system_prompt
-from workers.telegram import _raise_for_status
-from workers.telegram import TELEGRAM_MESSAGE_CHAR_LIMIT
+from workers.telegram import (
+    TELEGRAM_DOCUMENT_FORMAT_HTML,
+    TELEGRAM_DOCUMENT_FORMAT_MARKDOWN,
+    TELEGRAM_DOCUMENT_FORMAT_TEXT,
+    TELEGRAM_MESSAGE_CHAR_LIMIT,
+    TELEGRAM_PARSE_MODE_HTML,
+    TELEGRAM_PARSE_MODE_MARKDOWN_V2,
+    _raise_for_status,
+    detect_document_format,
+    detect_parse_mode,
+    document_format_content_type,
+    document_format_filename,
+    prepare_message_text,
+)
 
 
 class JobSelectionPredicatesTests(TestCase):
@@ -278,6 +296,110 @@ class OpenAiRequestAssemblyTests(TestCase):
 class TelegramClientTests(TestCase):
     """Test Telegram API error handling."""
 
+    def test_detects_html_parse_mode(self):
+        self.assertEqual(
+            detect_parse_mode("<b>Hello</b>"),
+            TELEGRAM_PARSE_MODE_HTML,
+        )
+
+    def test_standard_html_has_no_telegram_parse_mode(self):
+        self.assertIsNone(detect_parse_mode("<div>Hello</div>"))
+
+    def test_detects_markdown_parse_mode(self):
+        self.assertEqual(
+            detect_parse_mode("*Hello*"),
+            TELEGRAM_PARSE_MODE_MARKDOWN_V2,
+        )
+
+    def test_standard_markdown_has_no_telegram_parse_mode(self):
+        self.assertIsNone(detect_parse_mode("**Hello**"))
+
+    def test_plain_text_has_no_parse_mode(self):
+        self.assertIsNone(detect_parse_mode("short response"))
+
+    def test_detects_document_formats(self):
+        self.assertEqual(
+            detect_document_format("<b>Hello</b>"),
+            TELEGRAM_DOCUMENT_FORMAT_HTML,
+        )
+        self.assertEqual(
+            detect_document_format("<div>Hello</div>"),
+            TELEGRAM_DOCUMENT_FORMAT_HTML,
+        )
+        self.assertEqual(
+            detect_document_format("**Hello**"),
+            TELEGRAM_DOCUMENT_FORMAT_MARKDOWN,
+        )
+        self.assertEqual(
+            detect_document_format("Hello"),
+            TELEGRAM_DOCUMENT_FORMAT_TEXT,
+        )
+
+    def test_document_format_metadata(self):
+        self.assertEqual(
+            document_format_filename(123, TELEGRAM_DOCUMENT_FORMAT_HTML),
+            "response-123.html",
+        )
+        self.assertEqual(
+            document_format_filename(123, TELEGRAM_DOCUMENT_FORMAT_MARKDOWN),
+            "response-123.md",
+        )
+        self.assertEqual(
+            document_format_filename(123, TELEGRAM_DOCUMENT_FORMAT_TEXT),
+            "response-123.txt",
+        )
+        self.assertEqual(
+            document_format_content_type(TELEGRAM_DOCUMENT_FORMAT_HTML),
+            "text/html",
+        )
+        self.assertEqual(
+            document_format_content_type(TELEGRAM_DOCUMENT_FORMAT_MARKDOWN),
+            "text/markdown",
+        )
+        self.assertEqual(
+            document_format_content_type(TELEGRAM_DOCUMENT_FORMAT_TEXT),
+            "text/plain",
+        )
+
+    def test_markdown_text_is_escaped_for_markdown_v2(self):
+        self.assertEqual(
+            prepare_message_text("*Hello_world*", TELEGRAM_PARSE_MODE_MARKDOWN_V2),
+            r"*Hello\_world*",
+        )
+
+    def test_plain_message_text_removes_control_chars(self):
+        self.assertEqual(
+            prepare_message_text("hello\x00\x08\nworld", None),
+            "hello\nworld",
+        )
+
+    def test_html_message_text_is_sanitized(self):
+        self.assertEqual(
+            prepare_message_text(
+                '<b onclick="x">hello</b><script>alert(1)</script>',
+                TELEGRAM_PARSE_MODE_HTML,
+            ),
+            "<b>hello</b>alert(1)",
+        )
+
+    def test_html_message_text_allows_safe_links(self):
+        self.assertEqual(
+            prepare_message_text(
+                '<a href="https://example.com" onclick="x">site</a>',
+                TELEGRAM_PARSE_MODE_HTML,
+            ),
+            '<a href="https://example.com">site</a>',
+        )
+
+    def test_html_message_text_drops_unsafe_links(self):
+        self.assertEqual(
+            prepare_message_text(
+                '<a href="javascript:alert(1)">site</a>',
+                TELEGRAM_PARSE_MODE_HTML,
+            ),
+            "<a>site</a>",
+        )
+
     def test_http_error_includes_response_body(self):
         request = httpx.Request("POST", "https://api.telegram.org/botx/sendMessage")
         response = httpx.Response(
@@ -332,7 +454,7 @@ class Q2ScheduleTests(TestCase):
 
         schedules = {
             schedule.id: schedule
-            for schedule in Schedule.objects.filter(id__in=[1, 2, 3])
+            for schedule in Schedule.objects.filter(id__in=[1, 2, 3, 4])
         }
 
         self.assertEqual(schedules[1].name, "telegram_ingest")
@@ -353,6 +475,12 @@ class Q2ScheduleTests(TestCase):
         self.assertEqual(schedules[3].cron, "* * * * *")
         self.assertEqual(schedules[3].repeats, -1)
 
+        self.assertEqual(schedules[4].name, "q2_success_cleanup")
+        self.assertEqual(schedules[4].func, "apps.jobs.tasks.cleanup_q2_successes")
+        self.assertEqual(schedules[4].schedule_type, Schedule.CRON)
+        self.assertEqual(schedules[4].cron, "0 * * * *")
+        self.assertEqual(schedules[4].repeats, -1)
+
     def test_managed_schedule_edits_are_overwritten_on_save(self):
         create_schedules(sender=None)
         schedule = Schedule.objects.get(id=1)
@@ -372,11 +500,19 @@ class Q2ScheduleTests(TestCase):
         self.assertEqual(schedule.repeats, -1)
 
     def test_managed_schedule_uses_env_cron(self):
-        with patch.dict(os.environ, {"Q2_TELEGRAM_INGEST_CRON": "*/5 * * * *"}):
+        with patch.dict(
+            os.environ,
+            {
+                "Q2_TELEGRAM_INGEST_CRON": "*/5 * * * *",
+                "Q2_SUCCESS_CLEANUP_CRON": "30 * * * *",
+            },
+        ):
             create_schedules(sender=None)
 
             schedule = Schedule.objects.get(id=1)
             self.assertEqual(schedule.cron, "*/5 * * * *")
+            cleanup_schedule = Schedule.objects.get(id=4)
+            self.assertEqual(cleanup_schedule.cron, "30 * * * *")
 
             schedule.cron = "0 0 * * *"
             schedule.save()
@@ -396,6 +532,47 @@ class Q2ScheduleTests(TestCase):
 
         self.assertEqual(Schedule.objects.filter(name="telegram_ingest").count(), 1)
         self.assertEqual(Schedule.objects.get(name="telegram_ingest").id, 1)
+
+
+class Q2SuccessCleanupTests(TestCase):
+    """Test django-q2 successful task retention cleanup."""
+
+    def test_cleanup_deletes_only_expired_success_tasks(self):
+        now = timezone.now()
+        old = now - timedelta(seconds=120)
+        fresh = now - timedelta(seconds=30)
+
+        old_success = Task.objects.create(
+            id="old_success",
+            name="old_success",
+            func="tests.task",
+            started=old,
+            stopped=old,
+            success=True,
+        )
+        fresh_success = Task.objects.create(
+            id="fresh_success",
+            name="fresh_success",
+            func="tests.task",
+            started=fresh,
+            stopped=fresh,
+            success=True,
+        )
+        old_failure = Task.objects.create(
+            id="old_failure",
+            name="old_failure",
+            func="tests.task",
+            started=old,
+            stopped=old,
+            success=False,
+        )
+
+        with patch.dict(os.environ, {"Q2_SUCCESS_TASK_RETENTION_SECONDS": "60"}):
+            cleanup_q2_successes()
+
+        self.assertFalse(Task.objects.filter(id=old_success.id).exists())
+        self.assertTrue(Task.objects.filter(id=fresh_success.id).exists())
+        self.assertTrue(Task.objects.filter(id=old_failure.id).exists())
 
 
 class TelegramDeliveryTests(TestCase):
@@ -442,11 +619,64 @@ class TelegramDeliveryTests(TestCase):
             "123",
             "short response",
             reply_to_message_id=456,
+            parse_mode=None,
         )
         send_document.assert_not_called()
         job.refresh_from_db()
         self.assertIsNotNone(job.sent_at)
         self.assertIsNone(job.error)
+
+    @patch("apps.jobs.tasks.send_document")
+    @patch("apps.jobs.tasks.send_message")
+    def test_markdown_response_sent_with_markdown_parse_mode(
+        self,
+        send_message,
+        send_document,
+    ):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            reply_to_message_id=456,
+            raw_input="hi",
+            raw_output="*bold*",
+            received_at=self.now,
+            llm_finished_at=self.now,
+        )
+
+        telegram_deliver()
+
+        send_message.assert_called_once_with(
+            "telegram-token",
+            "123",
+            "*bold*",
+            reply_to_message_id=456,
+            parse_mode=TELEGRAM_PARSE_MODE_MARKDOWN_V2,
+        )
+        send_document.assert_not_called()
+
+    @patch("apps.jobs.tasks.send_document")
+    @patch("apps.jobs.tasks.send_message")
+    def test_html_response_sent_with_html_parse_mode(self, send_message, send_document):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            reply_to_message_id=456,
+            raw_input="hi",
+            raw_output="<b>bold</b>",
+            received_at=self.now,
+            llm_finished_at=self.now,
+        )
+
+        telegram_deliver()
+
+        send_message.assert_called_once_with(
+            "telegram-token",
+            "123",
+            "<b>bold</b>",
+            reply_to_message_id=456,
+            parse_mode=TELEGRAM_PARSE_MODE_HTML,
+        )
+        send_document.assert_not_called()
 
     @patch("apps.jobs.tasks.send_message")
     @patch("apps.jobs.tasks.get_updates")
@@ -477,7 +707,41 @@ class TelegramDeliveryTests(TestCase):
     @patch("apps.jobs.tasks.send_document")
     @patch("apps.jobs.tasks.send_message")
     def test_long_response_sent_as_document(self, send_message, send_document):
-        output = "x" * (TELEGRAM_MESSAGE_CHAR_LIMIT + 1)
+        output = ("x" * (TELEGRAM_MESSAGE_CHAR_LIMIT + 1)) + "\x08"
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            reply_to_message_id=456,
+            raw_input="hi",
+            raw_output=output,
+            received_at=self.now,
+            llm_finished_at=self.now,
+        )
+
+        telegram_deliver()
+
+        send_message.assert_not_called()
+        send_document.assert_called_once_with(
+            "telegram-token",
+            "123",
+            output,
+            f"response-{job.pk}.txt",
+            "text/plain",
+            caption="LLM response is attached as a text file.",
+            reply_to_message_id=456,
+        )
+        job.refresh_from_db()
+        self.assertIsNotNone(job.sent_at)
+        self.assertIsNone(job.error)
+
+    @patch("apps.jobs.tasks.send_document")
+    @patch("apps.jobs.tasks.send_message")
+    def test_long_markdown_response_sent_as_markdown_document(
+        self,
+        send_message,
+        send_document,
+    ):
+        output = "**bold**\n" + ("x" * TELEGRAM_MESSAGE_CHAR_LIMIT)
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
@@ -496,9 +760,38 @@ class TelegramDeliveryTests(TestCase):
             "123",
             output,
             f"response-{job.pk}.md",
+            "text/markdown",
             caption="LLM response is attached as a text file.",
             reply_to_message_id=456,
         )
-        job.refresh_from_db()
-        self.assertIsNotNone(job.sent_at)
-        self.assertIsNone(job.error)
+
+    @patch("apps.jobs.tasks.send_document")
+    @patch("apps.jobs.tasks.send_message")
+    def test_long_html_response_sent_as_html_document(
+        self,
+        send_message,
+        send_document,
+    ):
+        output = "<b>bold</b>\n" + ("x" * TELEGRAM_MESSAGE_CHAR_LIMIT)
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            reply_to_message_id=456,
+            raw_input="hi",
+            raw_output=output,
+            received_at=self.now,
+            llm_finished_at=self.now,
+        )
+
+        telegram_deliver()
+
+        send_message.assert_not_called()
+        send_document.assert_called_once_with(
+            "telegram-token",
+            "123",
+            output,
+            f"response-{job.pk}.html",
+            "text/html",
+            caption="LLM response is attached as a text file.",
+            reply_to_message_id=456,
+        )
