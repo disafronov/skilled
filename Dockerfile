@@ -16,7 +16,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 USER ubuntu:ubuntu
-WORKDIR /home/ubuntu/app
+WORKDIR /home/ubuntu/.local
 
 # Create venv (uses .python-version from the build context).
 RUN --mount=from=uv,source=/uv,target=/bin/uv \
@@ -24,7 +24,7 @@ RUN --mount=from=uv,source=/uv,target=/bin/uv \
     --mount=type=bind,source=.python-version,target=.python-version \
     uv venv
 
-ENV PATH="/home/ubuntu/app/.venv/bin:$PATH"
+ENV PATH="/home/ubuntu/.local/.venv/bin:$PATH"
 
 ##########################
 
@@ -40,11 +40,7 @@ RUN --mount=from=uv,source=/uv,target=/bin/uv \
 
 # Copy the project into the image — no src/, files are at root.
 COPY --chown=ubuntu:ubuntu \
-    ./apps/ /home/ubuntu/app/apps/ \
-    ./config/ /home/ubuntu/app/config/ \
-    ./workers/ /home/ubuntu/app/workers/ \
-    ./manage.py /home/ubuntu/app/manage.py \
-    ./README.md /home/ubuntu/app/README.md
+    ./ /home/ubuntu/app/
 
 # Sync the project now that sources exist.
 RUN --mount=from=uv,source=/uv,target=/bin/uv \
@@ -58,7 +54,7 @@ RUN --mount=from=uv,source=/uv,target=/bin/uv \
 FROM base AS runtime
 
 # Copy venv and app files from builder stage.
-COPY --from=builder /home/ubuntu/app/.venv/ /home/ubuntu/app/.venv/
+COPY --from=builder /home/ubuntu/.local/.venv/ /home/ubuntu/.local/.venv/
 COPY --from=builder /home/ubuntu/app/ /home/ubuntu/app/
 
 WORKDIR /home/ubuntu/app
