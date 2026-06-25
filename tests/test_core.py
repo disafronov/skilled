@@ -629,7 +629,7 @@ class TelegramDeliveryTests(TestCase):
 
     @patch("apps.jobs.tasks.send_document")
     @patch("apps.jobs.tasks.send_message")
-    def test_short_response_sent_as_message(self, send_message, send_document):
+    def test_short_response_sent_as_text_document(self, send_message, send_document):
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
@@ -642,21 +642,23 @@ class TelegramDeliveryTests(TestCase):
 
         telegram_deliver()
 
-        send_message.assert_called_once_with(
+        send_message.assert_not_called()
+        send_document.assert_called_once_with(
             "telegram-token",
             "123",
             "short response",
+            f"response-{job.pk}.txt",
+            "text/plain",
+            caption="LLM response is attached as a text file.",
             reply_to_message_id=456,
-            parse_mode=None,
         )
-        send_document.assert_not_called()
         job.refresh_from_db()
         self.assertIsNotNone(job.sent_at)
         self.assertIsNone(job.error)
 
     @patch("apps.jobs.tasks.send_document")
     @patch("apps.jobs.tasks.send_message")
-    def test_markdown_response_sent_with_markdown_parse_mode(
+    def test_markdown_response_sent_as_markdown_document(
         self,
         send_message,
         send_document,
@@ -673,21 +675,23 @@ class TelegramDeliveryTests(TestCase):
 
         telegram_deliver()
 
-        send_message.assert_called_once_with(
+        send_message.assert_not_called()
+        send_document.assert_called_once_with(
             "telegram-token",
             "123",
             "*bold*",
+            f"response-{job.pk}.md",
+            "text/markdown",
+            caption="LLM response is attached as a text file.",
             reply_to_message_id=456,
-            parse_mode=TELEGRAM_PARSE_MODE_MARKDOWN_V2,
         )
-        send_document.assert_not_called()
         job.refresh_from_db()
         self.assertIsNotNone(job.sent_at)
         self.assertIsNone(job.error)
 
     @patch("apps.jobs.tasks.send_document")
     @patch("apps.jobs.tasks.send_message")
-    def test_html_response_sent_with_html_parse_mode(self, send_message, send_document):
+    def test_html_response_sent_as_html_document(self, send_message, send_document):
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
@@ -700,14 +704,16 @@ class TelegramDeliveryTests(TestCase):
 
         telegram_deliver()
 
-        send_message.assert_called_once_with(
+        send_message.assert_not_called()
+        send_document.assert_called_once_with(
             "telegram-token",
             "123",
             "<b>bold</b>",
+            f"response-{job.pk}.html",
+            "text/html",
+            caption="LLM response is attached as a text file.",
             reply_to_message_id=456,
-            parse_mode=TELEGRAM_PARSE_MODE_HTML,
         )
-        send_document.assert_not_called()
         job.refresh_from_db()
         self.assertIsNotNone(job.sent_at)
         self.assertIsNone(job.error)
