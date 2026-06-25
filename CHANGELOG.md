@@ -1,3 +1,10 @@
+## [1.0.0-rc.2](https://github.com/disafronov/skilled/compare/v1.0.0-rc.1...v1.0.0-rc.2) (2026-06-25)
+
+### Bug Fixes
+
+* settings ([e932f48](https://github.com/disafronov/skilled/commit/e932f480aafc44fc0848c023257d02498766bb69))
+* settings ([a11ede1](https://github.com/disafronov/skilled/commit/a11ede1a3bd9d0090780e413d31bf4ca01beb02f))
+
 ## 1.0.0-rc.1 (2026-06-25)
 
 ### Features
