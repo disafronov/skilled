@@ -1,3 +1,13 @@
+## [1.0.0-rc.4](https://github.com/disafronov/skilled/compare/v1.0.0-rc.3...v1.0.0-rc.4) (2026-06-25)
+
+### Features
+
+* **health:** add health check endpoints ([6450939](https://github.com/disafronov/skilled/commit/6450939ad70879c5706b12d2fb118f2bda720774))
+
+### Bug Fixes
+
+* **jobs:** remove cron schedules ([595446f](https://github.com/disafronov/skilled/commit/595446f068fde3b48afaab14b0ba8e82f6c2c638))
+
 ## [1.0.0-rc.3](https://github.com/disafronov/skilled/compare/v1.0.0-rc.2...v1.0.0-rc.3) (2026-06-25)
 
 ### Bug Fixes
