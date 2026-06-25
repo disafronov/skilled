@@ -46,8 +46,38 @@ class PipelineTaskBranchTests(TestCase):
         telegram_ingest()
 
         self.bot.refresh_from_db()
-        self.assertEqual(self.bot.telegram_update_offset, 1)
+        self.assertEqual(self.bot.telegram_update_offset, 11)
         self.assertFalse(Job.objects.exists())
+
+    @patch("apps.jobs.tasks.send_message")
+    @patch(
+        "apps.jobs.tasks.get_updates",
+        return_value=[
+            {
+                "update_id": 10,
+                "message": {"message_id": 7, "chat": {"id": 123}, "text": "/start"},
+            },
+            {
+                "update_id": 11,
+                "message": {"message_id": 8, "chat": {"id": 123}, "text": "   "},
+            },
+            {
+                "update_id": 12,
+                "message": {"message_id": 9, "chat": {"id": 123}, "sticker": {}},
+            },
+            {
+                "update_id": 13,
+                "message": {"message_id": 10, "chat": {"id": 123}, "text": "hello"},
+            },
+        ],
+    )
+    def test_ingest_ignores_non_prompt_messages(self, get_updates, send_message):
+        telegram_ingest()
+
+        self.bot.refresh_from_db()
+        self.assertEqual(self.bot.telegram_update_offset, 14)
+        self.assertEqual(list(Job.objects.values_list("raw_input", flat=True)), ["hello"])
+        send_message.assert_called_once()
 
     @patch("apps.jobs.tasks.logger")
     @patch("apps.jobs.tasks.send_message", side_effect=RuntimeError("ack down"))
