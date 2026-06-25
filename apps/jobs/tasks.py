@@ -43,7 +43,7 @@ def telegram_ingest() -> None:
                         continue
 
                     max_id = bot.telegram_update_offset or 0
-                    jobs_to_create = []
+                    message_batches: dict[str, dict[str, Any]] = {}
                     for update in updates:
                         update_id = int(cast(Any, update["update_id"]))
                         max_id = max(max_id, update_id)
@@ -60,18 +60,29 @@ def telegram_ingest() -> None:
                         if not text or text.startswith("/"):
                             continue
 
-                        chat_id = message["chat"]["id"]
+                        chat_id = str(message["chat"]["id"])
                         message_id = message.get("message_id")
+                        batch = message_batches.setdefault(
+                            chat_id,
+                            {"messages": [], "reply_to_message_id": None},
+                        )
+                        cast(list[str], batch["messages"]).append(text)
+                        batch["reply_to_message_id"] = message_id
+
+                    jobs_to_create = []
+                    for chat_id, batch in message_batches.items():
+                        messages = cast(list[str], batch["messages"])
+                        message_id = cast(int | None, batch["reply_to_message_id"])
                         jobs_to_create.append(
                             Job(
                                 bot=bot,
-                                reply_target=str(chat_id),
+                                reply_target=chat_id,
                                 reply_to_message_id=message_id,
-                                raw_input=text,
+                                raw_input="\n\n".join(messages),
                                 received_at=timezone.now(),
                             )
                         )
-                        acknowledgements.append((str(chat_id), message_id))
+                        acknowledgements.append((chat_id, message_id))
 
                     if jobs_to_create:
                         Job.objects.bulk_create(jobs_to_create)
