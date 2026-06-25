@@ -25,6 +25,10 @@ class Bot(models.Model):
     enabled = models.BooleanField(
         default=True, help_text="Is this bot active for message processing?"
     )
+    telegram_update_offset = models.IntegerField(
+        default=0,
+        help_text="Last processed Telegram update_id",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

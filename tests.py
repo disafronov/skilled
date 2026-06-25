@@ -256,8 +256,6 @@ class NullableProfileFieldOmissionTests(TestCase):
             top_p=None,
             max_output_tokens=None,
             reasoning_effort=None,
-            reasoning_summary=None,
-            text_verbosity=None,
             response_format=None,
         )
 
