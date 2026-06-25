@@ -100,7 +100,7 @@ directory = "htmlcov"
 [tool.vulture]
 min_confidence = 80
 paths = [ "." ]
-exclude = [ "*/tests/*" ]
+exclude = [ "tests.py", "*/tests/*" ]
 ignore_names = [ "cls", "owner", "UserType", "db", "obj", "args", "kwargs" ]
 
 [tool.pytest.ini_options]
