@@ -49,3 +49,12 @@ make run
 | `telegram_deliver_once` | Deliver one completed Job to Telegram |
 | `dev` | qcluster + runserver (development) |
 | `start` | qcluster + gunicorn (production) |
+
+## Health Checks
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/health/liveness/` | Process is running |
+| `/health/readiness/` | Process can reach critical dependencies |
+
+The Docker image uses `/health/readiness/` for its `HEALTHCHECK`.
