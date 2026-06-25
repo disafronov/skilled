@@ -11,29 +11,29 @@ MANAGED_SCHEDULES = (
         "id": 1,
         "name": "telegram_ingest",
         "func": "apps.jobs.tasks.telegram_ingest",
-        "cron_env": "Q2_TELEGRAM_INGEST_CRON",
-        "default_cron": "* * * * *",
+        "minutes_env": "Q2_TELEGRAM_INGEST_MINUTES",
+        "default_minutes": 1,
     },
     {
         "id": 2,
         "name": "llm_worker",
         "func": "apps.jobs.tasks.llm_worker",
-        "cron_env": "Q2_LLM_WORKER_CRON",
-        "default_cron": "* * * * *",
+        "minutes_env": "Q2_LLM_WORKER_MINUTES",
+        "default_minutes": 1,
     },
     {
         "id": 3,
         "name": "telegram_deliver",
         "func": "apps.jobs.tasks.telegram_deliver",
-        "cron_env": "Q2_TELEGRAM_DELIVER_CRON",
-        "default_cron": "* * * * *",
+        "minutes_env": "Q2_TELEGRAM_DELIVER_MINUTES",
+        "default_minutes": 1,
     },
     {
         "id": 4,
         "name": "q2_success_cleanup",
         "func": "apps.jobs.tasks.cleanup_q2_successes",
-        "cron_env": "Q2_SUCCESS_CLEANUP_CRON",
-        "default_cron": "0 * * * *",
+        "minutes_env": "Q2_SUCCESS_CLEANUP_MINUTES",
+        "default_minutes": 60,
     },
 )
 
@@ -48,10 +48,12 @@ def _managed_schedule_defaults(
         "hook": None,
         "args": None,
         "kwargs": None,
-        "schedule_type": schedule_model.CRON,
-        "minutes": None,
+        "schedule_type": schedule_model.MINUTES,
+        "minutes": int(
+            os.environ.get(schedule["minutes_env"], schedule["default_minutes"])
+        ),
         "repeats": -1,
-        "cron": os.environ.get(schedule["cron_env"], schedule["default_cron"]),
+        "cron": None,
         "cluster": None,
         "intended_date_kwarg": None,
     }
