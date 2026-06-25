@@ -7,10 +7,13 @@ from django.utils import timezone
 
 from apps.bots.models import Bot
 from apps.jobs.models import Job
-from workers.telegram import get_updates, send_message
 from workers.llm import call_llm
+from workers.telegram import TELEGRAM_MESSAGE_CHAR_LIMIT, get_updates, send_document
+from workers.telegram import send_message
 
 logger = logging.getLogger(__name__)
+
+QUEUE_ACK_TEXT = "Added to the processing queue, please wait..."
 
 
 def telegram_ingest() -> None:
@@ -18,6 +21,7 @@ def telegram_ingest() -> None:
     try:
         for bot in Bot.objects.filter(enabled=True):
             try:
+                acknowledgements = []
                 with transaction.atomic():
                     offset = bot.telegram_update_offset or None
                     updates = get_updates(bot.telegram_api_token, offset=offset)
@@ -32,15 +36,18 @@ def telegram_ingest() -> None:
                             continue
                         max_id = max(max_id, update["update_id"])
                         chat_id = message["chat"]["id"]
+                        message_id = message.get("message_id")
                         text = message.get("text", "")
                         jobs_to_create.append(
                             Job(
                                 bot=bot,
                                 reply_target=str(chat_id),
+                                reply_to_message_id=message_id,
                                 raw_input=text,
                                 received_at=timezone.now(),
                             )
                         )
+                        acknowledgements.append((str(chat_id), message_id))
 
                     if jobs_to_create:
                         Job.objects.bulk_create(jobs_to_create)
@@ -48,6 +55,20 @@ def telegram_ingest() -> None:
                     new_offset = max_id + 1
                     bot.telegram_update_offset = new_offset
                     bot.save(update_fields=["telegram_update_offset"])
+
+                for chat_id, message_id in acknowledgements:
+                    try:
+                        send_message(
+                            bot.telegram_api_token,
+                            chat_id,
+                            QUEUE_ACK_TEXT,
+                            reply_to_message_id=message_id,
+                        )
+                    except Exception as exc:
+                        logger.error(
+                            f"Bot {bot.id} queue acknowledgement failed: {exc}",
+                            exc_info=True,
+                        )
 
             except Exception as e:
                 logger.error(f"Bot {bot.id} ingest failed: {e}", exc_info=True)
@@ -60,8 +81,7 @@ def llm_worker() -> None:
     try:
         with transaction.atomic():
             job = (
-                Job.objects
-                .select_for_update(skip_locked=True)
+                Job.objects.select_for_update(skip_locked=True)
                 .filter(
                     received_at__isnull=False,
                     llm_started_at__isnull=True,
@@ -106,8 +126,7 @@ def telegram_deliver() -> None:
     try:
         with transaction.atomic():
             job = (
-                Job.objects
-                .select_for_update(skip_locked=True)
+                Job.objects.select_for_update(skip_locked=True)
                 .filter(
                     llm_finished_at__isnull=False,
                     raw_output__isnull=False,
@@ -120,11 +139,22 @@ def telegram_deliver() -> None:
                 return
 
             try:
-                send_message(
-                    job.bot.telegram_api_token,
-                    job.reply_target,
-                    job.raw_output,
-                )
+                if len(job.raw_output) <= TELEGRAM_MESSAGE_CHAR_LIMIT:
+                    send_message(
+                        job.bot.telegram_api_token,
+                        job.reply_target,
+                        job.raw_output,
+                        reply_to_message_id=job.reply_to_message_id,
+                    )
+                else:
+                    send_document(
+                        job.bot.telegram_api_token,
+                        job.reply_target,
+                        job.raw_output,
+                        f"response-{job.pk}.md",
+                        caption="LLM response is attached as a text file.",
+                        reply_to_message_id=job.reply_to_message_id,
+                    )
                 job.sent_at = timezone.now()
             except Exception as exc:
                 job.error = str(exc)

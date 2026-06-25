@@ -1,13 +1,18 @@
 from datetime import datetime
 from datetime import timezone as dt_timezone
+from unittest.mock import patch
 
 from django.test import TestCase
+from django_q.models import Schedule
 
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
 from apps.jobs.models import Job
+from apps.jobs.apps import create_schedules
+from apps.jobs.tasks import QUEUE_ACK_TEXT, telegram_deliver, telegram_ingest
 from apps.library.models import Skill, Wrapper
 from workers.llm import build_request_body
+from workers.telegram import TELEGRAM_MESSAGE_CHAR_LIMIT
 
 
 class JobSelectionPredicatesTests(TestCase):
@@ -274,3 +279,130 @@ class NullableProfileFieldOmissionTests(TestCase):
         self.assertNotIn("max_tokens", body)
         self.assertNotIn("reasoning_effort", body)
         self.assertNotIn("response_format", body)
+
+
+class Q2ScheduleTests(TestCase):
+    """Test the pipeline schedule configuration."""
+
+    def test_default_schedules_use_standard_five_field_cron(self):
+        create_schedules(sender=None)
+
+        schedules = {
+            schedule.name: schedule
+            for schedule in Schedule.objects.filter(
+                name__in=["telegram_ingest", "llm_worker", "telegram_deliver"]
+            )
+        }
+
+        self.assertEqual(schedules["telegram_ingest"].schedule_type, Schedule.CRON)
+        self.assertEqual(schedules["telegram_ingest"].cron, "* * * * *")
+        self.assertEqual(schedules["llm_worker"].schedule_type, Schedule.CRON)
+        self.assertEqual(schedules["llm_worker"].cron, "* * * * *")
+        self.assertEqual(schedules["telegram_deliver"].schedule_type, Schedule.CRON)
+        self.assertEqual(schedules["telegram_deliver"].cron, "* * * * *")
+
+
+class TelegramDeliveryTests(TestCase):
+    """Test Telegram delivery method selection."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.now = datetime.now(dt_timezone.utc)
+        skill = Skill.objects.create(name="delivery-skill", content="s")
+        wrapper = Wrapper.objects.create(name="delivery-wrapper", content="w")
+        provider = Provider.objects.create(
+            name="delivery-provider",
+            api_type="openai",
+            base_url="https://example.com",
+            auth_token="tok",
+        )
+        profile = Profile.objects.create(name="delivery-profile", model="gpt-4o")
+        cls.bot = Bot.objects.create(
+            name="delivery-bot",
+            telegram_api_token="telegram-token",
+            provider=provider,
+            profile=profile,
+            skill=skill,
+            wrapper=wrapper,
+        )
+
+    @patch("apps.jobs.tasks.send_document")
+    @patch("apps.jobs.tasks.send_message")
+    def test_short_response_sent_as_message(self, send_message, send_document):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            reply_to_message_id=456,
+            raw_input="hi",
+            raw_output="short response",
+            received_at=self.now,
+            llm_finished_at=self.now,
+        )
+
+        telegram_deliver()
+
+        send_message.assert_called_once_with(
+            "telegram-token",
+            "123",
+            "short response",
+            reply_to_message_id=456,
+        )
+        send_document.assert_not_called()
+        job.refresh_from_db()
+        self.assertIsNotNone(job.sent_at)
+        self.assertIsNone(job.error)
+
+    @patch("apps.jobs.tasks.send_message")
+    @patch("apps.jobs.tasks.get_updates")
+    def test_ingest_stores_reply_message_id(self, get_updates, send_message):
+        get_updates.return_value = [
+            {
+                "update_id": 100,
+                "message": {
+                    "message_id": 456,
+                    "chat": {"id": 123},
+                    "text": "hello",
+                },
+            }
+        ]
+
+        telegram_ingest()
+
+        job = Job.objects.get(raw_input="hello")
+        self.assertEqual(job.reply_target, "123")
+        self.assertEqual(job.reply_to_message_id, 456)
+        send_message.assert_called_once_with(
+            "telegram-token",
+            "123",
+            QUEUE_ACK_TEXT,
+            reply_to_message_id=456,
+        )
+
+    @patch("apps.jobs.tasks.send_document")
+    @patch("apps.jobs.tasks.send_message")
+    def test_long_response_sent_as_document(self, send_message, send_document):
+        output = "x" * (TELEGRAM_MESSAGE_CHAR_LIMIT + 1)
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            reply_to_message_id=456,
+            raw_input="hi",
+            raw_output=output,
+            received_at=self.now,
+            llm_finished_at=self.now,
+        )
+
+        telegram_deliver()
+
+        send_message.assert_not_called()
+        send_document.assert_called_once_with(
+            "telegram-token",
+            "123",
+            output,
+            f"response-{job.pk}.md",
+            caption="LLM response is attached as a text file.",
+            reply_to_message_id=456,
+        )
+        job.refresh_from_db()
+        self.assertIsNotNone(job.sent_at)
+        self.assertIsNone(job.error)
