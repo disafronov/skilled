@@ -17,14 +17,14 @@ def check_database() -> tuple[bool, str]:
         return False, "Database connection failed"
 
 
-def liveness(request: HttpRequest) -> JsonResponse:
+def liveness(_request: HttpRequest) -> JsonResponse:
     """
     Liveness probe checks that the application process is running.
     """
     return JsonResponse({"status": "ok"})
 
 
-def readiness(request: HttpRequest) -> JsonResponse:
+def readiness(_request: HttpRequest) -> JsonResponse:
     """
     Readiness probe checks that the application is ready to accept traffic.
 
