@@ -27,20 +27,16 @@ build/
 dist/
 *.egg-info/
 
-# SQLite
-/src/db.sqlite3
-
-# Django translations (compiled)
-**/*.mo
+# Local database
+/db.sqlite3
 
 # Example environment files
 env.example
 env.docker
 
-# Test files
-src/**/tests/
-src/conftest.py
-src/sloths_inventory/settings_pytest.py
+# Test files (excluded from image, run separately)
+**/tests/
+conftest.py
 
-#
+# Environment
 .env

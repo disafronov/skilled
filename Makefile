@@ -1,17 +1,7 @@
-PYTHONPATH = src
-
 # Python version is pinned via `.python-version` (used by uv and CI).
 PYTHON_VERSION := $(shell tr -d '[:space:]' < .python-version)
 
-# Include environment files (same pattern as other repos).
-#
-# Important: in CI, environment variables passed by the runner must win over
-# defaults from `env.example`, but GNU make gives Makefile assignments higher
-# priority than the environment. Therefore we only auto-include env files for
-# local development (when `CI` is not set).
-#
-# - `env.example` provides defaults and documents available settings.
-# - `.env` (if present) overrides `env.example` for local development.
+# Include env files for local development (not in CI).
 ifeq ($(strip $(CI)),)
     ifneq (,$(wildcard .env))
         ifneq (,$(wildcard env.example))
@@ -26,20 +16,14 @@ ifeq ($(strip $(CI)),)
     export
 endif
 
-# Tooling-only SECRET_KEY used for local checks.
-#
-# Django settings require SECRET_KEY when DEBUG is disabled. Both pytest-django and
-# django-stubs (mypy) import Django settings during initialization, so we provide a
-# deterministic fake key for local tooling via Makefile targets.
 TOOLING_SECRET_KEY = unsafe-secret-key-for-tooling
 
-UV = PYTHONPATH=$(PYTHONPATH) uv run
+UV = uv run
 PYTEST_CMD = SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python -m pytest -v
 COVERAGE_OPTS = --cov-report=html
 
-DOCKER_IMAGE = sloths-inventory
+DOCKER_IMAGE = skilled
 
-# Common flags for all docker run invocations (no port — added only for the server step).
 DOCKER_RUN_OPTS = --rm \
 	--read-only \
 	--tmpfs /tmp \
@@ -48,7 +32,7 @@ DOCKER_RUN_OPTS = --rm \
 	$(if $(wildcard env.docker),--env-file env.docker,) \
 	$(if $(wildcard .env),--env-file .env,)
 
-.PHONY: all audit clean dead-code dev docker docker-build docker-run format help install lint locale makemigrations migrate q2 run test
+.PHONY: all audit clean dead-code dev docker docker-build docker-run format help install lint makemigrations migrate q2 run test
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -82,44 +66,28 @@ dead-code: ## Check for dead code using vulture
 	@echo "Checking for dead code..."
 	uv run vulture
 
-locale: ## Make & compile locale messages
-	@echo "Make translation messages..."
-	SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python src/manage.py makemessages --no-obsolete --all --ignore=".venv/*" --ignore="*/tests/*" --ignore="conftest.py"
-	@echo "Compile translation messages..."
-	SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python src/manage.py compilemessages --ignore=".venv/*"
+q2: ## Run django-q2 worker
+	@echo "Running django-q2 worker..."
+	$(UV) python manage.py qcluster
 
 makemigrations: ## Create new migrations
 	@echo "Creating migrations..."
-	SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python src/manage.py makemigrations
+	SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py makemigrations
 
 migrate: ## Apply database migrations
 	@echo "Applying migrations..."
-	$(UV) python src/manage.py migrate
+	SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py migrate
 
-test: locale ## Run tests with coverage report
+test: ## Run tests with coverage report
 	@echo "Running tests with coverage..."
 	$(PYTEST_CMD) $(COVERAGE_OPTS)
 
-all: lint test dead-code ## Run all checks (no mutations)
+all: lint test dead-code ## Run all checks
 	@echo "All checks completed successfully!"
 
-dev: locale migrate ## Run qcluster + runserver together (manage.py dev)
-	@echo "Running qcluster + dev server..."
-	$(UV) python src/manage.py dev
-
-q2: ## Run django-q2 worker (qcluster) without the web server
-	@echo "Running django-q2 worker..."
-	$(UV) python src/manage.py qcluster
-
-run: locale migrate ## Run dev server + qcluster locally (mirrors Docker entrypoint)
-	@echo "Running Django dev server + qcluster locally..."
-	@if [ -n "$$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$$DJANGO_SUPERUSER_PASSWORD" ] && [ -n "$$DJANGO_SUPERUSER_EMAIL" ]; then \
-		echo "Ensuring Django superuser exists..."; \
-		$(UV) python src/manage.py createsuperuser --noinput || true; \
-	else \
-		echo "Skipping createsuperuser (set DJANGO_SUPERUSER_USERNAME/PASSWORD/EMAIL to enable)."; \
-	fi
-	$(UV) python src/manage.py runserver 0.0.0.0:8000
+run: migrate ## Run dev server + qcluster
+	@echo "Starting qcluster + dev server..."
+	SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py dev
 
 clean: ## Clean caches and coverage outputs
 	@echo "Cleaning cache and temporary files..."
@@ -131,15 +99,9 @@ docker-build: ## Build Docker image
 	@echo "Building Docker image..."
 	docker build -t $(DOCKER_IMAGE) .
 
-docker-run: ## Run Docker container (migrate → createsuperuser → start)
+docker-run: ## Run Docker container (migrate → start)
 	@echo "Running migrations..."
 	docker run $(DOCKER_RUN_OPTS) $(DOCKER_IMAGE) migrate
-	@if [ -n "$$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$$DJANGO_SUPERUSER_PASSWORD" ] && [ -n "$$DJANGO_SUPERUSER_EMAIL" ]; then \
-		echo "Ensuring Django superuser exists..."; \
-		docker run $(DOCKER_RUN_OPTS) $(DOCKER_IMAGE) createsuperuser --noinput || true; \
-	else \
-		echo "Skipping createsuperuser (set DJANGO_SUPERUSER_USERNAME/PASSWORD/EMAIL to enable)."; \
-	fi
 	@echo "Starting server..."
 	docker run $(DOCKER_RUN_OPTS) -p 8000:8000 $(DOCKER_IMAGE)
 
