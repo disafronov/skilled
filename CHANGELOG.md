@@ -1,3 +1,9 @@
+## [1.0.0-rc.3](https://github.com/disafronov/skilled/compare/v1.0.0-rc.2...v1.0.0-rc.3) (2026-06-25)
+
+### Bug Fixes
+
+* static ([a945b1f](https://github.com/disafronov/skilled/commit/a945b1f0185db748682c4305dd59806f06f266a4))
+
 ## [1.0.0-rc.2](https://github.com/disafronov/skilled/compare/v1.0.0-rc.1...v1.0.0-rc.2) (2026-06-25)
 
 ### Bug Fixes
