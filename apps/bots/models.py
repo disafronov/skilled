@@ -6,29 +6,33 @@ class Bot(models.Model):
     telegram_api_token = models.CharField(max_length=255)
 
     provider = models.ForeignKey(
-        'inference.Provider',
+        "inference.Provider",
         on_delete=models.PROTECT,
     )
     profile = models.ForeignKey(
-        'inference.Profile',
+        "inference.Profile",
         on_delete=models.PROTECT,
     )
     skill = models.ForeignKey(
-        'library.Skill',
+        "library.Skill",
         on_delete=models.PROTECT,
     )
     wrapper = models.ForeignKey(
-        'library.Wrapper',
+        "library.Wrapper",
         on_delete=models.PROTECT,
+    )
+
+    enabled = models.BooleanField(
+        default=True, help_text="Is this bot active for message processing?"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['name']
-        verbose_name = 'Bot'
-        verbose_name_plural = 'Bots'
+        ordering = ["name"]
+        verbose_name = "Bot"
+        verbose_name_plural = "Bots"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name

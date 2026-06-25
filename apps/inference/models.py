@@ -2,7 +2,7 @@ from django.db import models
 
 
 class ApiType(models.TextChoices):
-    OPENAI = 'openai', 'OpenAI Compatible'
+    OPENAI = "openai", "OpenAI Compatible"
 
 
 class Provider(models.Model):
@@ -19,11 +19,11 @@ class Provider(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['name']
-        verbose_name = 'Provider'
-        verbose_name_plural = 'Providers'
+        ordering = ["name"]
+        verbose_name = "Provider"
+        verbose_name_plural = "Providers"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -43,9 +43,9 @@ class Profile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['name']
-        verbose_name = 'Profile'
-        verbose_name_plural = 'Profiles'
+        ordering = ["name"]
+        verbose_name = "Profile"
+        verbose_name_plural = "Profiles"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name

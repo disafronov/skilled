@@ -9,28 +9,59 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('inference', '0001_initial'),
-        ('library', '0001_initial'),
+        ("inference", "0001_initial"),
+        ("library", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Bot',
+            name="Bot",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255, unique=True)),
-                ('telegram_api_token', models.CharField(max_length=255)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('profile', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='inference.profile')),
-                ('provider', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='inference.provider')),
-                ('skill', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='library.skill')),
-                ('wrapper', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='library.wrapper')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("telegram_api_token", models.CharField(max_length=255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "profile",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="inference.profile",
+                    ),
+                ),
+                (
+                    "provider",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="inference.provider",
+                    ),
+                ),
+                (
+                    "skill",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT, to="library.skill"
+                    ),
+                ),
+                (
+                    "wrapper",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="library.wrapper",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Bot',
-                'verbose_name_plural': 'Bots',
-                'ordering': ['name'],
+                "verbose_name": "Bot",
+                "verbose_name_plural": "Bots",
+                "ordering": ["name"],
             },
         ),
     ]
