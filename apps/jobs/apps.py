@@ -10,22 +10,22 @@ def create_schedules(sender, **kwargs):
 
     tasks = [
         {
-            "name": "telegram_ingest_once",
-            "func": "apps.jobs.management.commands.telegram_ingest_once.Command.handle",
+            "name": "telegram_ingest",
+            "func": "apps.jobs.tasks.telegram_ingest",
             "schedule_type": Schedule.CRON,
             "cron": os.environ.get("Q2_TELEGRAM_INGEST_CRON", "*/30 * * * * *"),
             "repeats": -1,
         },
         {
-            "name": "llm_worker_once",
-            "func": "apps.jobs.management.commands.llm_worker_once.Command.handle",
+            "name": "llm_worker",
+            "func": "apps.jobs.tasks.llm_worker",
             "schedule_type": Schedule.CRON,
             "cron": os.environ.get("Q2_LLM_WORKER_CRON", "*/15 * * * * *"),
             "repeats": -1,
         },
         {
-            "name": "telegram_deliver_once",
-            "func": "apps.jobs.management.commands.telegram_deliver_once.Command.handle",
+            "name": "telegram_deliver",
+            "func": "apps.jobs.tasks.telegram_deliver",
             "schedule_type": Schedule.CRON,
             "cron": os.environ.get("Q2_TELEGRAM_DELIVER_CRON", "*/10 * * * * *"),
             "repeats": -1,
@@ -33,7 +33,15 @@ def create_schedules(sender, **kwargs):
     ]
 
     for task in tasks:
-        Schedule.objects.get_or_create(name=task["name"], defaults=task)
+        Schedule.objects.update_or_create(
+            name=task["name"],
+            defaults={
+                "func": task["func"],
+                "schedule_type": task["schedule_type"],
+                "cron": task["cron"],
+                "repeats": task["repeats"],
+            },
+        )
 
 
 class JobsConfig(AppConfig):
