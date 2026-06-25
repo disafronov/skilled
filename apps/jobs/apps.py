@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 from django.apps import AppConfig
 from django.core.management.color import no_style
@@ -37,7 +38,10 @@ MANAGED_SCHEDULES = (
 )
 
 
-def _managed_schedule_defaults(schedule, schedule_model):
+def _managed_schedule_defaults(
+    schedule: dict[str, Any],
+    schedule_model: Any,
+) -> dict[str, Any]:
     return {
         "name": schedule["name"],
         "func": schedule["func"],
@@ -53,7 +57,11 @@ def _managed_schedule_defaults(schedule, schedule_model):
     }
 
 
-def protect_managed_schedule(sender, instance, **kwargs):
+def protect_managed_schedule(
+    sender: Any,
+    instance: Any,
+    **kwargs: Any,
+) -> None:
     """Force managed django-q schedules back to their code-defined values."""
     schedules_by_id = {schedule["id"]: schedule for schedule in MANAGED_SCHEDULES}
     schedule = schedules_by_id.get(instance.pk)
@@ -64,7 +72,7 @@ def protect_managed_schedule(sender, instance, **kwargs):
         setattr(instance, field, value)
 
 
-def create_schedules(sender, **kwargs):
+def create_schedules(sender: Any, **kwargs: Any) -> None:
     """Ensure core pipeline schedules exist in django-q2."""
     from django_q.models import Schedule
 

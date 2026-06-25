@@ -8,5 +8,5 @@ from apps.jobs.tasks import llm_worker
 class Command(BaseCommand):
     help = "Process one pending Job via LLM"
 
-    def handle(self, *args, **options):
+    def handle(self, *args: str, **options: str) -> None:
         llm_worker()
