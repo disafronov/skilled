@@ -1,3 +1,34 @@
+## 1.0.0 (2026-06-25)
+
+### Features
+
+* cron ([c8f1a80](https://github.com/disafronov/skilled/commit/c8f1a800b34aaffe3bf9c1d3260d4a56366f3bcb))
+* **health:** add health check endpoints ([f7134bf](https://github.com/disafronov/skilled/commit/f7134bff944c5a1270638632912564d1cfa6d252))
+* initial ([b442c2c](https://github.com/disafronov/skilled/commit/b442c2c9594094ee6303e334cb77256e5c0d12b4))
+* **jobs:** batch Telegram messages per chat ([f2b71f8](https://github.com/disafronov/skilled/commit/f2b71f86fb18822ca2c5f4474b3ebdd11b5ff764))
+* **llm:** load global policy from file ([2e68192](https://github.com/disafronov/skilled/commit/2e68192a34940d5baef7be7ea1b68cad8593bb63))
+* redirect to admin ([1363c94](https://github.com/disafronov/skilled/commit/1363c94b39b3014b05ca0119d95df87855819a7b))
+* **telegram:** acknowledge queueing and reply with results ([baa1905](https://github.com/disafronov/skilled/commit/baa190520bd2a11594c99407d690a70860846d7e))
+* update ([1bc40bb](https://github.com/disafronov/skilled/commit/1bc40bb3362e85a90649ae12c826a2fba6a54e6c))
+* update ([910629a](https://github.com/disafronov/skilled/commit/910629a775292ddd2d07fe3b5a70eda9e739aa72))
+
+### Bug Fixes
+
+* add typing to q2 operational code ([465c2d2](https://github.com/disafronov/skilled/commit/465c2d2bf05164174e1e5473794d814fc16196ca))
+* explicit httpx timeouts + error handling + atomic offset persistence ([61e308f](https://github.com/disafronov/skilled/commit/61e308fe1e5af5ebbd392cbf0eac32c81aaebf45))
+* harden q2 scheduling and telegram delivery ([a307e9e](https://github.com/disafronov/skilled/commit/a307e9ef7384387888f9bbddc2e22a0d3b88f6c6))
+* **jobs:** join batched Telegram messages with spaces ([c21beda](https://github.com/disafronov/skilled/commit/c21beda958266be3b9d3d1ae44e355e916f4fbb4))
+* **jobs:** refresh audit timestamps on state updates ([2b8eb9b](https://github.com/disafronov/skilled/commit/2b8eb9bd4836c33e84631a8fdb8e101f53327064))
+* **jobs:** remove cron schedules ([303ae65](https://github.com/disafronov/skilled/commit/303ae657d673eba1129e2ea40d340ef1b51fbf61))
+* **scheduler:** enforce managed q2 schedules ([e91e338](https://github.com/disafronov/skilled/commit/e91e3388690f80e31bceba397ab2c8799c015540))
+* settings ([45ff78f](https://github.com/disafronov/skilled/commit/45ff78fc075e567a7187dbe9fc6541854064c876))
+* settings ([25b282f](https://github.com/disafronov/skilled/commit/25b282f1f6a6d63f4913c5c140ddd4d0e2def7bf))
+* silence flake8 in telegram markdown sanitization ([4c10c25](https://github.com/disafronov/skilled/commit/4c10c25c91cd5a2b0db955c5e89a314742f3e0f3))
+* static ([ef90c47](https://github.com/disafronov/skilled/commit/ef90c476bd91020027145fc5129619bb3cf035e6))
+* tasks ([29652f5](https://github.com/disafronov/skilled/commit/29652f5359008f3b205eb555257a7ae6db9411c2))
+* **telegram:** surface api error response bodies ([aa21857](https://github.com/disafronov/skilled/commit/aa2185749032ea0971287c72c0ad06693d430b51))
+* use standard cron schedule expressions ([767a335](https://github.com/disafronov/skilled/commit/767a3358758a7ba05be802fec12c26f67bd25bb4))
+
 ## [1.0.0-rc.7](https://github.com/disafronov/skilled/compare/v1.0.0-rc.6...v1.0.0-rc.7) (2026-06-25)
 
 ## [1.0.0-rc.6](https://github.com/disafronov/skilled/compare/v1.0.0-rc.5...v1.0.0-rc.6) (2026-06-25)
