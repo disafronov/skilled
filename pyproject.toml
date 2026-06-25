@@ -1,10 +1,108 @@
 [project]
 name = "skilled"
 version = "0.1.0"
-description = "Add your description here"
+description = "Skill-driven AI bot runtime"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.14,<3.15"
 dependencies = [
-    "django==5.2.15",
-    "requests==2.32.3",
+    "django>=5.2.15,<6.0",
+    "django-q2>=1.0.0,<2.0.0",
+    "gunicorn>=26.0.0,<27.0.0",
+    "psycopg2-binary>=2.9.12,<3.0.0",
+    "httpx>=0.28.0,<1.0.0",
 ]
+
+[dependency-groups]
+dev = [
+    "black>=26.5.1",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "pytest>=9.1.0",
+    "pytest-django>=4.8.0",
+    "pytest-cov>=4.1.0",
+    "mypy",
+    "django-stubs[compatible-mypy]>=5.2,<5.3",
+    "bandit>=1.7.5",
+    "pre-commit>=4.6.0",
+    "vulture>=2.16",
+    "pip-audit>=2.10.1",
+]
+
+[tool.black]
+line-length = 88
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = [ "E203", "W503" ]
+exclude = [ ".venv", "htmlcov" ]
+
+[tool.mypy]
+exclude = "(^tests/|.*/tests/|.*/migrations/)"
+plugins = [ "mypy_django_plugin.main" ]
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+  [[tool.mypy.overrides]]
+  module = [ "django_q", "django_q.*" ]
+  ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings"
+
+[tool.bandit]
+exclude_dirs = [ ".venv", "htmlcov", "tests" ]
+
+[tool.coverage.run]
+source = [ "." ]
+omit = [
+  "tests/*",
+  "manage.py",
+  "config/wsgi.py",
+]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+fail_under = 100
+exclude_lines = [
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+  "@(abc\\.)?abstractmethod",
+  "@overload",
+  "\\.\\.\\.$",
+  "pragma: no cover"
+]
+show_missing = true
+skip_covered = false
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.vulture]
+min_confidence = 80
+paths = [ "." ]
+exclude = [ "*/tests/*" ]
+ignore_names = [ "cls", "owner", "UserType", "db", "obj", "args", "kwargs" ]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = [ "test_*.py" ]
+addopts = "--strict-markers --cov= --cov-report=term-missing"
+testpaths = [ "." ]
+filterwarnings = [ "ignore::DeprecationWarning" ]
