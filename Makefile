@@ -85,8 +85,14 @@ test: ## Run tests with coverage report
 all: lint test dead-code ## Run all checks
 	@echo "All checks completed successfully!"
 
-run: migrate ## Run dev server + qcluster
-	@echo "Starting qcluster + dev server..."
+run: migrate ## Apply migrations, create admin, start dev server + qcluster
+	@echo "Running Django dev server + qcluster..."
+	@if [ -n "$$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$$DJANGO_SUPERUSER_PASSWORD" ] && [ -n "$$DJANGO_SUPERUSER_EMAIL" ]; then \
+		echo "Ensuring Django superuser exists..."; \
+		$(UV) python manage.py createsuperuser --noinput || true; \
+	else \
+		echo "Skipping createsuperuser (set DJANGO_SUPERUSER_USERNAME/PASSWORD/EMAIL to enable)."; \
+	fi
 	SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py dev
 
 clean: ## Clean caches and coverage outputs
@@ -99,9 +105,15 @@ docker-build: ## Build Docker image
 	@echo "Building Docker image..."
 	docker build -t $(DOCKER_IMAGE) .
 
-docker-run: ## Run Docker container (migrate → start)
+docker-run: ## Run Docker container (migrate → createsuperuser → start)
 	@echo "Running migrations..."
 	docker run $(DOCKER_RUN_OPTS) $(DOCKER_IMAGE) migrate
+	@if [ -n "$$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$$DJANGO_SUPERUSER_PASSWORD" ] && [ -n "$$DJANGO_SUPERUSER_EMAIL" ]; then \
+		echo "Ensuring Django superuser exists..."; \
+		docker run $(DOCKER_RUN_OPTS) $(DOCKER_IMAGE) createsuperuser --noinput || true; \
+	else \
+		echo "Skipping createsuperuser (set DJANGO_SUPERUSER_USERNAME/PASSWORD/EMAIL to enable)."; \
+	fi
 	@echo "Starting server..."
 	docker run $(DOCKER_RUN_OPTS) -p 8000:8000 $(DOCKER_IMAGE)
 
