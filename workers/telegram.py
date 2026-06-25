@@ -8,10 +8,11 @@ import httpx
 def send_message(token: str, chat_id: int | str, text: str) -> None:
     """Send a text message via Telegram Bot API."""
     with httpx.Client() as client:
-        client.post(
+        response = client.post(
             f"https://api.telegram.org/bot{token}/sendMessage",
             json={"chat_id": chat_id, "text": text},
         )
+        response.raise_for_status()
 
 
 def get_updates(token: str, offset: int | None = None) -> list[dict[str, object]]:

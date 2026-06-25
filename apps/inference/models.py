@@ -35,8 +35,6 @@ class Profile(models.Model):
     top_p = models.FloatField(null=True, blank=True)
     max_output_tokens = models.IntegerField(null=True, blank=True)
     reasoning_effort = models.CharField(max_length=64, null=True, blank=True)
-    reasoning_summary = models.CharField(max_length=64, null=True, blank=True)
-    text_verbosity = models.CharField(max_length=64, null=True, blank=True)
     response_format = models.JSONField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
