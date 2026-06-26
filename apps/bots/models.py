@@ -5,10 +5,6 @@ class Bot(models.Model):
     name = models.CharField(max_length=255, unique=True)
     telegram_api_token = models.CharField(max_length=255)
 
-    provider = models.ForeignKey(
-        "inference.Provider",
-        on_delete=models.PROTECT,
-    )
     profile = models.ForeignKey(
         "inference.Profile",
         on_delete=models.PROTECT,

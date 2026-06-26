@@ -28,7 +28,12 @@ class Provider(models.Model):
 
 
 class Profile(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    provider = models.ForeignKey(
+        Provider,
+        on_delete=models.PROTECT,
+        related_name="profiles",
+    )
+    name = models.CharField(max_length=255)
 
     model = models.CharField(max_length=255)
     temperature = models.FloatField(null=True, blank=True)
@@ -44,6 +49,12 @@ class Profile(models.Model):
         ordering = ["name"]
         verbose_name = "Profile"
         verbose_name_plural = "Profiles"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["provider", "name"],
+                name="unique_profile_name_per_provider",
+            )
+        ]
 
     def __str__(self) -> str:
         return self.name
