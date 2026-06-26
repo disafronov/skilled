@@ -28,12 +28,12 @@ class Provider(models.Model):
 
 
 class Profile(models.Model):
+    name = models.CharField(max_length=255)
     provider = models.ForeignKey(
         Provider,
         on_delete=models.PROTECT,
         related_name="profiles",
     )
-    name = models.CharField(max_length=255)
 
     model = models.CharField(max_length=255)
     temperature = models.FloatField(null=True, blank=True)
