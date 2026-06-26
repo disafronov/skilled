@@ -16,7 +16,7 @@ class PipelineTaskBranchTests(TestCase):
     def setUpTestData(cls):
         cls.now = datetime.now(dt_timezone.utc)
         skill = Skill.objects.create(name="task-skill", content="s")
-        wrapper = Wrapper.objects.create(name="task-wrapper", content="w")
+        wrapper = Wrapper.objects.create(name="task-wrapper", skill=skill, content="w")
         provider = Provider.objects.create(
             name="task-provider",
             api_type="openai",
@@ -32,7 +32,6 @@ class PipelineTaskBranchTests(TestCase):
             name="task-bot",
             telegram_api_token="telegram-token",
             profile=profile,
-            skill=skill,
             wrapper=wrapper,
         )
 

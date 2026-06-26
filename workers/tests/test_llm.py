@@ -14,7 +14,11 @@ class LlmCallTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.skill = Skill.objects.create(name="llm-skill", content="s")
-        cls.wrapper = Wrapper.objects.create(name="llm-wrapper", content="w")
+        cls.wrapper = Wrapper.objects.create(
+            name="llm-wrapper",
+            skill=cls.skill,
+            content="w",
+        )
         cls.provider = Provider.objects.create(
             name="llm-provider",
             api_type="openai",

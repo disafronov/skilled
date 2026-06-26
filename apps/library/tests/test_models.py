@@ -10,6 +10,11 @@ class LibraryModelTests(TestCase):
         self.assertEqual(str(skill), "skill-name")
 
     def test_wrapper_string_is_name(self):
-        wrapper = Wrapper.objects.create(name="wrapper-name", content="w")
+        skill = Skill.objects.create(name="skill-name", content="s")
+        wrapper = Wrapper.objects.create(
+            name="wrapper-name",
+            skill=skill,
+            content="w",
+        )
 
         self.assertEqual(str(wrapper), "wrapper-name")

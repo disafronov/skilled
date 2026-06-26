@@ -10,7 +10,7 @@ from apps.library.models import Skill, Wrapper
 class JobModelTests(TestCase):
     def test_job_string_includes_id_and_bot_name(self):
         skill = Skill.objects.create(name="s", content="s")
-        wrapper = Wrapper.objects.create(name="w", content="w")
+        wrapper = Wrapper.objects.create(name="w", skill=skill, content="w")
         provider = Provider.objects.create(
             name="p",
             api_type="openai",
@@ -22,7 +22,6 @@ class JobModelTests(TestCase):
             name="bot-name",
             telegram_api_token="telegram-token",
             profile=profile,
-            skill=skill,
             wrapper=wrapper,
         )
         job = Job.objects.create(

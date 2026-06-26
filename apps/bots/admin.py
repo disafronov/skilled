@@ -31,5 +31,5 @@ class BotAdmin(admin.ModelAdmin):
         Bot,
         exclude=("telegram_api_token",),
     )
-    list_select_related = ["skill", "wrapper", "profile"]
+    list_select_related = ["wrapper", "profile"]
     search_fields = ["name"]
