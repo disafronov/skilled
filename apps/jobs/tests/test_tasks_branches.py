@@ -8,7 +8,7 @@ from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
 from apps.jobs.models import Job
 from apps.jobs.tasks import (
-    LLM_STALE_JOB_SECONDS,
+    Q2_LLM_STALE_JOB_SECONDS,
     llm_worker,
     telegram_deliver,
     telegram_ingest,
@@ -168,7 +168,7 @@ class PipelineTaskBranchTests(TestCase):
 
     @patch("apps.jobs.tasks.call_llm", return_value="requeued output")
     def test_llm_worker_requeues_stale_started_job(self, call_llm_mock):
-        stale_started_at = self.now - timedelta(seconds=LLM_STALE_JOB_SECONDS + 1)
+        stale_started_at = self.now - timedelta(seconds=Q2_LLM_STALE_JOB_SECONDS + 1)
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
