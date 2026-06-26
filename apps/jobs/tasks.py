@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 QUEUE_ACK_TEXT = "Added to the processing queue, please wait..."
 Q2_SUCCESS_RETENTION_SECONDS = 86400
-LLM_STALE_JOB_SECONDS = 3600
+Q2_LLM_STALE_JOB_SECONDS = 3600
 
 
 def telegram_ingest() -> None:
@@ -115,8 +115,8 @@ def llm_worker() -> None:
         with transaction.atomic():
             stale_seconds = int(
                 os.environ.get(
-                    "LLM_STALE_JOB_SECONDS",
-                    str(LLM_STALE_JOB_SECONDS),
+                    "Q2_LLM_STALE_JOB_SECONDS",
+                    str(Q2_LLM_STALE_JOB_SECONDS),
                 )
             )
             stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
