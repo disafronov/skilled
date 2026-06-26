@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from datetime import timezone as dt_timezone
 from unittest.mock import patch
 
@@ -7,7 +7,12 @@ from django.test import TestCase
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
 from apps.jobs.models import Job
-from apps.jobs.tasks import llm_worker, telegram_deliver, telegram_ingest
+from apps.jobs.tasks import (
+    LLM_STALE_JOB_SECONDS,
+    llm_worker,
+    telegram_deliver,
+    telegram_ingest,
+)
 from apps.library.models import Skill, Wrapper
 
 
@@ -160,6 +165,26 @@ class PipelineTaskBranchTests(TestCase):
         self.assertEqual(job.error, "llm down")
         self.assertIsNone(job.raw_output)
         self.assertIsNotNone(job.llm_finished_at)
+
+    @patch("apps.jobs.tasks.call_llm", return_value="requeued output")
+    def test_llm_worker_requeues_stale_started_job(self, call_llm_mock):
+        stale_started_at = self.now - timedelta(seconds=LLM_STALE_JOB_SECONDS + 1)
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="hello",
+            received_at=self.now,
+            llm_started_at=stale_started_at,
+        )
+
+        llm_worker()
+
+        job.refresh_from_db()
+        self.assertEqual(job.raw_output, "requeued output")
+        self.assertIsNone(job.error)
+        self.assertIsNotNone(job.llm_finished_at)
+        self.assertGreater(job.llm_started_at, stale_started_at)
+        call_llm_mock.assert_called_once()
 
     @patch("apps.jobs.tasks.logger")
     @patch("apps.jobs.tasks.transaction.atomic", side_effect=RuntimeError("db down"))
