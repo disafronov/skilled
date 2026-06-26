@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 QUEUE_ACK_TEXT = "Added to the processing queue, please wait..."
 Q2_SUCCESS_RETENTION_SECONDS = 86400
+LLM_STALE_JOB_SECONDS = 3600
 
 
 def telegram_ingest() -> None:
@@ -112,6 +113,20 @@ def llm_worker() -> None:
     """Process one pending Job via LLM."""
     try:
         with transaction.atomic():
+            stale_seconds = int(
+                os.environ.get(
+                    "LLM_STALE_JOB_SECONDS",
+                    str(LLM_STALE_JOB_SECONDS),
+                )
+            )
+            stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
+            Job.objects.select_for_update(skip_locked=True).filter(
+                received_at__isnull=False,
+                llm_started_at__lt=stale_cutoff,
+                llm_finished_at__isnull=True,
+                error__isnull=True,
+            ).update(llm_started_at=None, updated_at=timezone.now())
+
             job = (
                 Job.objects.select_for_update(skip_locked=True)
                 .filter(
