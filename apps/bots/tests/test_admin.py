@@ -9,6 +9,64 @@ from apps.bots.models import Bot
 
 
 class BotAdminTests(SimpleTestCase):
+    def test_bot_admin_order_comes_from_model(self):
+        admin = BotAdmin(Bot, AdminSite())
+
+        self.assertEqual(
+            admin.fields,
+            (
+                "name",
+                "telegram_api_token",
+                "profile",
+                "skill",
+                "wrapper",
+                "enabled",
+                "telegram_update_offset",
+                "updated_at",
+                "created_at",
+            ),
+        )
+        self.assertEqual(admin.readonly_fields, ("updated_at", "created_at"))
+        self.assertEqual(
+            admin.list_display,
+            (
+                "name",
+                "profile",
+                "skill",
+                "wrapper",
+                "enabled",
+                "telegram_update_offset",
+                "updated_at",
+            ),
+        )
+
+    def test_bot_form_orders_name_first_and_uses_acronym_label(self):
+        admin = BotAdmin(Bot, AdminSite())
+        form_class = admin.get_form(MagicMock())
+        form = form_class()
+
+        self.assertEqual(
+            list(form.fields),
+            [
+                "name",
+                "telegram_api_token",
+                "profile",
+                "skill",
+                "wrapper",
+                "enabled",
+                "telegram_update_offset",
+            ],
+        )
+        self.assertEqual(
+            form.fields["telegram_api_token"].label,
+            "Telegram API credential",
+        )
+        self.assertEqual(
+            form.fields["name"].widget.attrs["style"],
+            "width: 32rem; max-width: 100%;",
+        )
+        self.assertNotIn("style", form.fields["enabled"].widget.attrs)
+
     def test_telegram_api_token_uses_non_rendering_password_widget(self):
         bot = Bot(
             name="bot",
