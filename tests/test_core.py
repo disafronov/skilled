@@ -52,11 +52,10 @@ class JobSelectionPredicatesTests(TestCase):
             base_url="https://example.com",
             auth_token="tok",
         )
-        profile = Profile.objects.create(name="pr", model="gpt-4o")
+        profile = Profile.objects.create(provider=provider, name="pr", model="gpt-4o")
         bot = Bot.objects.create(
             name="b",
             telegram_api_token="tok",
-            provider=provider,
             profile=profile,
             skill=skill,
             wrapper=wrapper,
@@ -139,11 +138,10 @@ class DerivedJobStatesTests(TestCase):
             base_url="https://x.com",
             auth_token="tok",
         )
-        profile = Profile.objects.create(name="pr", model="gpt-4o")
+        profile = Profile.objects.create(provider=provider, name="pr", model="gpt-4o")
         bot = Bot.objects.create(
             name="b",
             telegram_api_token="tok",
-            provider=provider,
             profile=profile,
             skill=skill,
             wrapper=wrapper,
@@ -230,7 +228,14 @@ class OpenAiRequestAssemblyTests(TestCase):
             name="strict",
             content="Respond in JSON format.",
         )
+        cls.provider = Provider.objects.create(
+            name="openai-request-provider",
+            api_type="openai",
+            base_url="https://example.com",
+            auth_token="tok",
+        )
         cls.profile = Profile.objects.create(
+            provider=cls.provider,
             name="default",
             model="gpt-4o",
             temperature=0.7,
@@ -419,7 +424,14 @@ class NullableProfileFieldOmissionTests(TestCase):
     def setUpTestData(cls):
         cls.skill = Skill.objects.create(name="s", content="s")
         cls.wrapper = Wrapper.objects.create(name="w", content="w")
+        cls.provider = Provider.objects.create(
+            name="nullable-profile-provider",
+            api_type="openai",
+            base_url="https://example.com",
+            auth_token="tok",
+        )
         cls.profile_all_null = Profile.objects.create(
+            provider=cls.provider,
             name="minimal",
             model="gpt-4o",
             temperature=None,
@@ -617,11 +629,14 @@ class TelegramDeliveryTests(TestCase):
             base_url="https://example.com",
             auth_token="tok",
         )
-        profile = Profile.objects.create(name="delivery-profile", model="gpt-4o")
+        profile = Profile.objects.create(
+            provider=provider,
+            name="delivery-profile",
+            model="gpt-4o",
+        )
         cls.bot = Bot.objects.create(
             name="delivery-bot",
             telegram_api_token="telegram-token",
-            provider=provider,
             profile=profile,
             skill=skill,
             wrapper=wrapper,

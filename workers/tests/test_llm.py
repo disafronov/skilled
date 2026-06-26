@@ -22,6 +22,7 @@ class LlmCallTests(TestCase):
             auth_token="tok",
         )
         cls.profile = Profile.objects.create(
+            provider=cls.provider,
             name="llm-profile",
             model="gpt-4o",
             response_format={"type": "json_object"},

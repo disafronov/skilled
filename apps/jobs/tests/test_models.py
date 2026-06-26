@@ -17,11 +17,10 @@ class JobModelTests(TestCase):
             base_url="https://example.com",
             auth_token="tok",
         )
-        profile = Profile.objects.create(name="pr", model="gpt-4o")
+        profile = Profile.objects.create(provider=provider, name="pr", model="gpt-4o")
         bot = Bot.objects.create(
             name="bot-name",
             telegram_api_token="telegram-token",
-            provider=provider,
             profile=profile,
             skill=skill,
             wrapper=wrapper,

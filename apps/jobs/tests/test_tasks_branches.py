@@ -23,11 +23,14 @@ class PipelineTaskBranchTests(TestCase):
             base_url="https://example.com",
             auth_token="tok",
         )
-        profile = Profile.objects.create(name="task-profile", model="gpt-4o")
+        profile = Profile.objects.create(
+            provider=provider,
+            name="task-profile",
+            model="gpt-4o",
+        )
         cls.bot = Bot.objects.create(
             name="task-bot",
             telegram_api_token="telegram-token",
-            provider=provider,
             profile=profile,
             skill=skill,
             wrapper=wrapper,

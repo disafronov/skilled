@@ -122,8 +122,7 @@ def llm_worker() -> None:
                 .select_related(
                     "bot__skill",
                     "bot__wrapper",
-                    "bot__provider",
-                    "bot__profile",
+                    "bot__profile__provider",
                 )
                 .first()
             )
@@ -136,7 +135,7 @@ def llm_worker() -> None:
         try:
             bot = job.bot
             raw_output = call_llm(
-                provider=bot.provider,
+                provider=bot.profile.provider,
                 profile=bot.profile,
                 skill=bot.skill,
                 wrapper=bot.wrapper,
