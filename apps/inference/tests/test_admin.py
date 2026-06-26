@@ -4,11 +4,45 @@ from django import forms
 from django.contrib.admin.sites import AdminSite
 from django.test import SimpleTestCase
 
-from apps.inference.admin import ProviderAdmin
-from apps.inference.models import Provider
+from apps.inference.admin import ProfileAdmin, ProviderAdmin
+from apps.inference.models import Profile, Provider
 
 
 class ProviderAdminTests(SimpleTestCase):
+    def test_provider_admin_order_comes_from_model(self):
+        admin = ProviderAdmin(Provider, AdminSite())
+
+        self.assertEqual(
+            admin.fields,
+            ("name", "api_type", "base_url", "auth_token", "updated_at", "created_at"),
+        )
+        self.assertEqual(admin.readonly_fields, ("updated_at", "created_at"))
+        self.assertEqual(
+            admin.list_display,
+            ("name", "api_type", "base_url", "updated_at"),
+        )
+
+    def test_provider_form_orders_name_first_and_uses_acronym_labels(self):
+        admin = ProviderAdmin(Provider, AdminSite())
+        form_class = admin.get_form(MagicMock())
+        form = form_class()
+
+        self.assertEqual(
+            list(form.fields),
+            ["name", "api_type", "base_url", "auth_token"],
+        )
+        self.assertEqual(form.fields["api_type"].label, "API type")
+        self.assertEqual(form.fields["base_url"].label, "Base URL")
+        self.assertIsInstance(form.fields["base_url"].widget, forms.URLInput)
+        self.assertEqual(
+            form.fields["name"].widget.attrs["style"],
+            "width: 32rem; max-width: 100%;",
+        )
+        self.assertEqual(
+            form.fields["api_type"].widget.attrs["style"],
+            "width: 32rem; max-width: 100%;",
+        )
+
     def test_auth_token_uses_non_rendering_password_widget(self):
         provider = Provider(
             name="provider",
@@ -76,3 +110,62 @@ class ProviderAdminTests(SimpleTestCase):
         form.cleaned_data = {"auth_token": "new-value"}
 
         self.assertEqual(form.clean()["auth_token"], "new-value")
+
+
+class ProfileAdminTests(SimpleTestCase):
+    def test_profile_admin_order_comes_from_model(self):
+        admin = ProfileAdmin(Profile, AdminSite())
+
+        self.assertEqual(
+            admin.fields,
+            (
+                "name",
+                "provider",
+                "model",
+                "temperature",
+                "top_p",
+                "max_output_tokens",
+                "reasoning_effort",
+                "response_format",
+                "updated_at",
+                "created_at",
+            ),
+        )
+        self.assertEqual(admin.readonly_fields, ("updated_at", "created_at"))
+        self.assertEqual(
+            admin.list_display,
+            (
+                "name",
+                "provider",
+                "model",
+                "temperature",
+                "top_p",
+                "max_output_tokens",
+                "reasoning_effort",
+                "updated_at",
+            ),
+        )
+
+    def test_profile_form_orders_name_first(self):
+        admin = ProfileAdmin(Profile, AdminSite())
+        form_class = admin.get_form(MagicMock())
+        form = form_class()
+
+        self.assertEqual(
+            list(form.fields),
+            [
+                "name",
+                "provider",
+                "model",
+                "temperature",
+                "top_p",
+                "max_output_tokens",
+                "reasoning_effort",
+                "response_format",
+            ],
+        )
+        self.assertEqual(
+            form.fields["name"].widget.attrs["style"],
+            "width: 32rem; max-width: 100%;",
+        )
+        self.assertNotIn("style", form.fields["response_format"].widget.attrs)

@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
-from apps.jobs.admin import JobAdmin
+from apps.jobs.admin import JOB_PREVIEW_LENGTH, JobAdmin, preview_text
 from apps.jobs.models import Job
 from apps.library.models import Skill, Wrapper
 
@@ -44,3 +44,67 @@ class JobAdminTests(TestCase):
         self.assertFalse(admin.has_add_permission(request))
         self.assertFalse(admin.has_change_permission(request, self.job))
         self.assertFalse(admin.has_delete_permission(request, self.job))
+
+    def test_job_admin_order_comes_from_model(self):
+        admin = JobAdmin(Job, AdminSite())
+
+        self.assertEqual(
+            admin.list_display,
+            (
+                "id",
+                "bot",
+                "reply_target",
+                "reply_to_message_id",
+                "raw_input_preview",
+                "raw_output_preview",
+                "error_preview",
+                "received_at",
+                "llm_started_at",
+                "llm_finished_at",
+                "sent_at",
+                "updated_at",
+            ),
+        )
+        self.assertEqual(
+            admin.fields,
+            (
+                "id",
+                "bot",
+                "reply_target",
+                "reply_to_message_id",
+                "raw_input",
+                "raw_output",
+                "error",
+                "received_at",
+                "llm_started_at",
+                "llm_finished_at",
+                "sent_at",
+                "updated_at",
+                "created_at",
+            ),
+        )
+        self.assertEqual(admin.readonly_fields, admin.fields)
+        self.assertNotIn("raw_input", admin.list_display)
+        self.assertNotIn("raw_output", admin.list_display)
+        self.assertNotIn("error", admin.list_display)
+
+    def test_job_admin_text_preview_truncates_long_values(self):
+        long_text = "x" * (JOB_PREVIEW_LENGTH + 20)
+        preview = preview_text(long_text)
+
+        self.assertLess(len(preview), len(long_text))
+        self.assertTrue(preview.startswith("x" * (JOB_PREVIEW_LENGTH - 4)))
+
+    def test_job_admin_preview_methods_handle_empty_values(self):
+        admin = JobAdmin(Job, AdminSite())
+
+        self.assertEqual(admin.raw_output_preview(self.job), "")
+        self.assertEqual(admin.error_preview(self.job), "")
+
+    def test_job_admin_preview_methods_use_common_truncation(self):
+        admin = JobAdmin(Job, AdminSite())
+        self.job.raw_input = "x" * (JOB_PREVIEW_LENGTH + 20)
+
+        self.assertEqual(
+            admin.raw_input_preview(self.job), preview_text(self.job.raw_input)
+        )
