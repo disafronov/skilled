@@ -1,3 +1,16 @@
+## [1.0.1](https://github.com/disafronov/skilled/compare/v1.0.0...v1.0.1) (2026-06-26)
+
+### Bug Fixes
+
+* **admin:** derive field order from models ([c433e21](https://github.com/disafronov/skilled/commit/c433e211fd750fe9791c544091448df3e3de58bc))
+* **admin:** mask token fields ([4cd6de3](https://github.com/disafronov/skilled/commit/4cd6de3ddd38cf70d37b91e49b6f23bee481aa4a))
+* **jobs:** prefix stale llm timeout setting ([6e70d74](https://github.com/disafronov/skilled/commit/6e70d7450b186a340f5ce0b60d4ea108288f1097))
+* **jobs:** requeue stale llm jobs ([89d43af](https://github.com/disafronov/skilled/commit/89d43af027c0f2e5fe4d7942690cb670cb6c0e6f))
+
+### Performance Improvements
+
+* **jobs:** preload bot for telegram delivery ([29d7ec5](https://github.com/disafronov/skilled/commit/29d7ec58f1e9cbf33c408801eb579046150da919))
+
 ## [1.0.1-rc.3](https://github.com/disafronov/skilled/compare/v1.0.1-rc.2...v1.0.1-rc.3) (2026-06-26)
 
 ### Bug Fixes
