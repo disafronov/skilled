@@ -9,10 +9,6 @@ class Bot(models.Model):
         "inference.Profile",
         on_delete=models.PROTECT,
     )
-    skill = models.ForeignKey(
-        "library.Skill",
-        on_delete=models.PROTECT,
-    )
     wrapper = models.ForeignKey(
         "library.Wrapper",
         on_delete=models.PROTECT,

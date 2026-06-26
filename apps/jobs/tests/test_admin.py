@@ -15,7 +15,7 @@ class JobAdminTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         skill = Skill.objects.create(name="s", content="s")
-        wrapper = Wrapper.objects.create(name="w", content="w")
+        wrapper = Wrapper.objects.create(name="w", skill=skill, content="w")
         provider = Provider.objects.create(
             name="p",
             api_type="openai",
@@ -27,7 +27,6 @@ class JobAdminTests(TestCase):
             name="b",
             telegram_api_token="telegram-token",
             profile=profile,
-            skill=skill,
             wrapper=wrapper,
         )
         cls.job = Job.objects.create(

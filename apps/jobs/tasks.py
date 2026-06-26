@@ -120,8 +120,7 @@ def llm_worker() -> None:
                     error__isnull=True,
                 )
                 .select_related(
-                    "bot__skill",
-                    "bot__wrapper",
+                    "bot__wrapper__skill",
                     "bot__profile__provider",
                 )
                 .first()
@@ -137,7 +136,7 @@ def llm_worker() -> None:
             raw_output = call_llm(
                 provider=bot.profile.provider,
                 profile=bot.profile,
-                skill=bot.skill,
+                skill=bot.wrapper.skill,
                 wrapper=bot.wrapper,
                 raw_input=job.raw_input,
             )

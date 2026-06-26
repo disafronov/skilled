@@ -45,7 +45,7 @@ class JobSelectionPredicatesTests(TestCase):
     def setUpTestData(cls):
         now = datetime.now(dt_timezone.utc)
         skill = Skill.objects.create(name="s", content="s")
-        wrapper = Wrapper.objects.create(name="w", content="w")
+        wrapper = Wrapper.objects.create(name="w", skill=skill, content="w")
         provider = Provider.objects.create(
             name="p",
             api_type="openai",
@@ -57,7 +57,6 @@ class JobSelectionPredicatesTests(TestCase):
             name="b",
             telegram_api_token="tok",
             profile=profile,
-            skill=skill,
             wrapper=wrapper,
         )
 
@@ -131,7 +130,7 @@ class DerivedJobStatesTests(TestCase):
     def setUpTestData(cls):
         now = datetime.now(dt_timezone.utc)
         skill = Skill.objects.create(name="s", content="s")
-        wrapper = Wrapper.objects.create(name="w", content="w")
+        wrapper = Wrapper.objects.create(name="w", skill=skill, content="w")
         provider = Provider.objects.create(
             name="p",
             api_type="openai",
@@ -143,7 +142,6 @@ class DerivedJobStatesTests(TestCase):
             name="b",
             telegram_api_token="tok",
             profile=profile,
-            skill=skill,
             wrapper=wrapper,
         )
 
@@ -226,6 +224,7 @@ class OpenAiRequestAssemblyTests(TestCase):
         )
         cls.wrapper = Wrapper.objects.create(
             name="strict",
+            skill=cls.skill,
             content="Respond in JSON format.",
         )
         cls.provider = Provider.objects.create(
@@ -423,7 +422,11 @@ class NullableProfileFieldOmissionTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.skill = Skill.objects.create(name="s", content="s")
-        cls.wrapper = Wrapper.objects.create(name="w", content="w")
+        cls.wrapper = Wrapper.objects.create(
+            name="w",
+            skill=cls.skill,
+            content="w",
+        )
         cls.provider = Provider.objects.create(
             name="nullable-profile-provider",
             api_type="openai",
@@ -622,7 +625,11 @@ class TelegramDeliveryTests(TestCase):
     def setUpTestData(cls):
         cls.now = datetime.now(dt_timezone.utc)
         skill = Skill.objects.create(name="delivery-skill", content="s")
-        wrapper = Wrapper.objects.create(name="delivery-wrapper", content="w")
+        wrapper = Wrapper.objects.create(
+            name="delivery-wrapper",
+            skill=skill,
+            content="w",
+        )
         provider = Provider.objects.create(
             name="delivery-provider",
             api_type="openai",
@@ -638,7 +645,6 @@ class TelegramDeliveryTests(TestCase):
             name="delivery-bot",
             telegram_api_token="telegram-token",
             profile=profile,
-            skill=skill,
             wrapper=wrapper,
         )
 
