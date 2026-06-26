@@ -1,3 +1,5 @@
+## [1.0.1-rc.1](https://github.com/disafronov/skilled/compare/v1.0.0...v1.0.1-rc.1) (2026-06-26)
+
 ## 1.0.0 (2026-06-25)
 
 ### Features
