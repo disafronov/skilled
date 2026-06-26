@@ -11,5 +11,14 @@ class ProviderAdmin(admin.ModelAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ["name", "model", "temperature", "max_output_tokens", "created_at"]
-    search_fields = ["name"]
+    list_display = [
+        "name",
+        "provider",
+        "model",
+        "temperature",
+        "max_output_tokens",
+        "created_at",
+    ]
+    list_select_related = ["provider"]
+    search_fields = ["name", "provider__name"]
+    list_filter = ["provider"]
