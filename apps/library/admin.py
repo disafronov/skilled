@@ -35,4 +35,5 @@ class WrapperAdmin(admin.ModelAdmin):
     fields = model_admin_fields(Wrapper)
     readonly_fields = ("updated_at", "created_at")
     list_display = model_admin_list_display(Wrapper, exclude=("content",))
+    list_select_related = ["skill"]
     search_fields = ["name"]

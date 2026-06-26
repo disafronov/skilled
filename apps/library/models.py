@@ -18,7 +18,12 @@ class Skill(models.Model):
 
 
 class Wrapper(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
+    skill = models.ForeignKey(
+        Skill,
+        on_delete=models.PROTECT,
+        related_name="wrappers",
+    )
     content = models.TextField()
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -28,6 +33,12 @@ class Wrapper(models.Model):
         ordering = ["name"]
         verbose_name = "Wrapper"
         verbose_name_plural = "Wrappers"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["skill", "name"],
+                name="unique_wrapper_name_per_skill",
+            )
+        ]
 
     def __str__(self) -> str:
         return self.name

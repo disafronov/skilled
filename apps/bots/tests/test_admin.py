@@ -18,7 +18,6 @@ class BotAdminTests(SimpleTestCase):
                 "name",
                 "telegram_api_token",
                 "profile",
-                "skill",
                 "wrapper",
                 "enabled",
                 "telegram_update_offset",
@@ -32,7 +31,6 @@ class BotAdminTests(SimpleTestCase):
             (
                 "name",
                 "profile",
-                "skill",
                 "wrapper",
                 "enabled",
                 "telegram_update_offset",
@@ -51,7 +49,6 @@ class BotAdminTests(SimpleTestCase):
                 "name",
                 "telegram_api_token",
                 "profile",
-                "skill",
                 "wrapper",
                 "enabled",
                 "telegram_update_offset",
