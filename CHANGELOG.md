@@ -1,3 +1,10 @@
+## [1.0.1-rc.2](https://github.com/disafronov/skilled/compare/v1.0.1-rc.1...v1.0.1-rc.2) (2026-06-26)
+
+### Bug Fixes
+
+* **admin:** derive field order from models ([2ae8d70](https://github.com/disafronov/skilled/commit/2ae8d703759cc086d0d3573407553347d9dec51e))
+* **admin:** mask token fields ([2273878](https://github.com/disafronov/skilled/commit/22738784dbc12b1ddbec67cc6c5c6ea9fee0c38f))
+
 ## [1.0.1-rc.1](https://github.com/disafronov/skilled/compare/v1.0.0...v1.0.1-rc.1) (2026-06-26)
 
 ## 1.0.0 (2026-06-25)
