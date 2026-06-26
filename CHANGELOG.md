@@ -2,6 +2,17 @@
 
 ### Bug Fixes
 
+* **jobs:** prefix stale llm timeout setting ([51706e2](https://github.com/disafronov/skilled/commit/51706e2e773c3c2505193846ba890015db475d5d))
+* **jobs:** requeue stale llm jobs ([79f2436](https://github.com/disafronov/skilled/commit/79f24362ab17055917a07f4502f895a5322cbe91))
+
+### Performance Improvements
+
+* **jobs:** preload bot for telegram delivery ([bfc45dc](https://github.com/disafronov/skilled/commit/bfc45dc74ac08743f8df6aa7beb9c5decf299dfb))
+
+## [1.0.1-rc.3](https://github.com/disafronov/skilled/compare/v1.0.1-rc.2...v1.0.1-rc.3) (2026-06-26)
+
+### Bug Fixes
+
 * **jobs:** requeue stale llm jobs ([79f2436](https://github.com/disafronov/skilled/commit/79f24362ab17055917a07f4502f895a5322cbe91))
 
 ### Performance Improvements
