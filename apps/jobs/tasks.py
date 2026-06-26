@@ -179,6 +179,7 @@ def telegram_deliver() -> None:
                     sent_at__isnull=True,
                     error__isnull=True,
                 )
+                .select_related("bot")
                 .first()
             )
             if not job:
