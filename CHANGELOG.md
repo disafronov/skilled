@@ -1,3 +1,23 @@
+## [1.1.0](https://github.com/disafronov/skilled/compare/v1.0.1...v1.1.0) (2026-06-27)
+
+### Features
+
+* **jobs:** add admin retry actions ([73401d6](https://github.com/disafronov/skilled/commit/73401d638a26670da2987a4d3159b27659ea32b5))
+
+### Bug Fixes
+
+* dead code ([0aa76db](https://github.com/disafronov/skilled/commit/0aa76db62fdd9d87c8c0a828535fcdb6d49dba70))
+* encrypt tokens at rest using EncryptedCharField ([cd815be](https://github.com/disafronov/skilled/commit/cd815be71399ace10ecea684581850508cc3063f))
+* handle None content from LLM response instead of cast ([c9ab7db](https://github.com/disafronov/skilled/commit/c9ab7db48e3d8f6bf42dc58d0c1bebbb7032900d))
+* **jobs:** backfill invalid finished jobs before constraints ([5d2b06b](https://github.com/disafronov/skilled/commit/5d2b06bed4791de5c07d2e82f6e08ad45b3eac81))
+* **jobs:** make delivery selection safe and ordered ([7e9d9c3](https://github.com/disafronov/skilled/commit/7e9d9c35f0fe8559e3cd5d7ef1b6ea05bf037726))
+* **telegram:** avoid leaking bot token in error tracebacks ([9c098dd](https://github.com/disafronov/skilled/commit/9c098ddbd11097b3cd4b7f3bdedee74590f6e64f))
+* widen Q2 timeout/retry defaults for LLM latency ([cef455e](https://github.com/disafronov/skilled/commit/cef455ecce0d772f80e592fca5e036c7a91a3ed6))
+
+### Performance Improvements
+
+* **jobs:** add worker selection indexes ([d4dc119](https://github.com/disafronov/skilled/commit/d4dc11905ddf99be4d0cc6652ae3a07ef4850a3f))
+
 ## [1.1.0-rc.4](https://github.com/disafronov/skilled/compare/v1.1.0-rc.3...v1.1.0-rc.4) (2026-06-27)
 
 ### Bug Fixes
