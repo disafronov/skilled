@@ -24,6 +24,8 @@ _STANDARD_MARKDOWN_PATTERNS = (
     re.compile(r"\[[^\]\n]+\]\([^) \n]+\)"),
 )
 
+_http = httpx.Client(timeout=60.0)
+
 
 def _raise_for_status(response: httpx.Response) -> None:
     try:
@@ -73,12 +75,11 @@ def send_message(
     if parse_mode:
         payload["parse_mode"] = parse_mode
 
-    with httpx.Client(timeout=30.0) as client:
-        response = client.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            json=payload,
-        )
-        _raise_for_status(response)
+    response = _http.post(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        json=payload,
+    )
+    _raise_for_status(response)
 
 
 def send_document(
@@ -98,28 +99,27 @@ def send_document(
         data["reply_to_message_id"] = str(reply_to_message_id)
         data["allow_sending_without_reply"] = "true"
 
-    with httpx.Client(timeout=60.0) as client:
-        response = client.post(
-            f"https://api.telegram.org/bot{token}/sendDocument",
-            data=data,
-            files={
-                "document": (
-                    filename,
-                    content.encode("utf-8"),
-                    content_type,
-                )
-            },
-        )
-        _raise_for_status(response)
+    response = _http.post(
+        f"https://api.telegram.org/bot{token}/sendDocument",
+        data=data,
+        files={
+            "document": (
+                filename,
+                content.encode("utf-8"),
+                content_type,
+            )
+        },
+    )
+    _raise_for_status(response)
 
 
-def get_updates(token: str, offset: int | None = None) -> list[dict[str, object]]:
+def get_updates(token: str, offset: int | None = None) -> list[dict[str, Any]]:
     """Fetch incoming updates via long-poll."""
-    with httpx.Client(timeout=15.0) as client:
-        response = client.get(
-            f"https://api.telegram.org/bot{token}/getUpdates",
-            params={"offset": offset, "timeout": 10},
-        )
-        _raise_for_status(response)
-        data: dict[str, Any] = response.json()
-        return data.get("result", [])  # type: ignore[no-any-return]
+    response = _http.get(
+        f"https://api.telegram.org/bot{token}/getUpdates",
+        params={"offset": offset, "timeout": 10},
+    )
+    _raise_for_status(response)
+    data: dict[str, Any] = response.json()
+    results: list[dict[str, Any]] = data.get("result", [])
+    return results
