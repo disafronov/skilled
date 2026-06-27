@@ -395,8 +395,9 @@ class TelegramClientTests(TestCase):
             text='{"ok":false,"description":"Bad Request: message is too long"}',
         )
 
-        with self.assertRaisesRegex(RuntimeError, "message is too long"):
+        with self.assertRaisesRegex(RuntimeError, "message is too long") as context:
             _raise_for_status(response)
+        self.assertIsNone(context.exception.__cause__)
 
 
 class NullableProfileFieldOmissionTests(TestCase):

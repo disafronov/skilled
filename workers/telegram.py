@@ -140,7 +140,7 @@ def _raise_for_status(response: httpx.Response) -> None:
     try:
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
-        raise RuntimeError(exc.response.text) from exc
+        raise RuntimeError(exc.response.text) from None
 
 
 def _is_safe_link(value: str) -> bool:
