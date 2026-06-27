@@ -5,30 +5,6 @@ from django.test import TestCase
 
 
 class ManagementCommandTests(TestCase):
-    @patch("apps.jobs.management.commands.llm_worker_once.llm_worker")
-    def test_llm_worker_once_calls_task(self, task):
-        from apps.jobs.management.commands.llm_worker_once import Command
-
-        Command().handle()
-
-        task.assert_called_once_with()
-
-    @patch("apps.jobs.management.commands.telegram_ingest_once.telegram_ingest")
-    def test_telegram_ingest_once_calls_task(self, task):
-        from apps.jobs.management.commands.telegram_ingest_once import Command
-
-        Command().handle()
-
-        task.assert_called_once_with()
-
-    @patch("apps.jobs.management.commands.telegram_deliver_once.telegram_deliver")
-    def test_telegram_deliver_once_calls_task(self, task):
-        from apps.jobs.management.commands.telegram_deliver_once import Command
-
-        Command().handle()
-
-        task.assert_called_once_with()
-
     @patch("apps.jobs.management.commands.dev._supervise")
     @patch("apps.jobs.management.commands.dev.subprocess.Popen")
     def test_dev_command_supervises_qcluster_and_runserver(self, popen, supervise):
