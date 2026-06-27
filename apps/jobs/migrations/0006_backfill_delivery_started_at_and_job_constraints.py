@@ -2,9 +2,24 @@
 
 from django.db import migrations, models
 
+MISSING_LLM_RESULT_ERROR = "Missing LLM result before job state constraint migration."
 
-def backfill_delivery_started_at(apps, schema_editor):
+
+def backfill_job_state_for_constraints(apps, schema_editor):
     job_model = apps.get_model("jobs", "Job")
+
+    job_model.objects.filter(
+        sent_at__isnull=False,
+        raw_output__isnull=True,
+    ).update(raw_output="")
+
+    job_model.objects.filter(
+        sent_at__isnull=True,
+        llm_finished_at__isnull=False,
+        raw_output__isnull=True,
+        error__isnull=True,
+    ).update(error=MISSING_LLM_RESULT_ERROR)
+
     job_model.objects.filter(
         sent_at__isnull=False,
         delivery_started_at__isnull=True,
@@ -19,7 +34,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(
-            backfill_delivery_started_at,
+            backfill_job_state_for_constraints,
             migrations.RunPython.noop,
         ),
         migrations.AddConstraint(

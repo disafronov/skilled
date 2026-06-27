@@ -19,38 +19,61 @@ class AppsStub:
 
 
 class JobQuerySetStub:
-    def __init__(self):
-        self.updated_fields = None
+    def __init__(self, manager, filtered_kwargs):
+        self.manager = manager
+        self.filtered_kwargs = filtered_kwargs
 
     def update(self, **kwargs):
-        self.updated_fields = kwargs
+        self.manager.update_calls.append((self.filtered_kwargs, kwargs))
 
 
 class JobManagerStub:
     def __init__(self):
-        self.filtered_kwargs = None
-        self.queryset = JobQuerySetStub()
+        self.update_calls = []
 
     def filter(self, **kwargs):
-        self.filtered_kwargs = kwargs
-        return self.queryset
+        return JobQuerySetStub(self, kwargs)
 
 
 class MigrationTests(TestCase):
-    def test_backfill_delivery_started_at_uses_sent_at(self):
+    def test_backfill_job_state_for_constraints(self):
         manager = JobManagerStub()
         job_model = type("JobStub", (), {"objects": manager})
         apps = AppsStub(job_model)
 
-        migration.backfill_delivery_started_at(apps, None)
+        migration.backfill_job_state_for_constraints(apps, None)
 
+        self.assertEqual(len(manager.update_calls), 3)
         self.assertEqual(
-            manager.filtered_kwargs,
+            manager.update_calls[0],
+            (
+                {
+                    "sent_at__isnull": False,
+                    "raw_output__isnull": True,
+                },
+                {"raw_output": ""},
+            ),
+        )
+        self.assertEqual(
+            manager.update_calls[1],
+            (
+                {
+                    "sent_at__isnull": True,
+                    "llm_finished_at__isnull": False,
+                    "raw_output__isnull": True,
+                    "error__isnull": True,
+                },
+                {"error": migration.MISSING_LLM_RESULT_ERROR},
+            ),
+        )
+        filtered_kwargs, updated_fields = manager.update_calls[2]
+        self.assertEqual(
+            filtered_kwargs,
             {
                 "sent_at__isnull": False,
                 "delivery_started_at__isnull": True,
             },
         )
-        delivery_started_at = manager.queryset.updated_fields["delivery_started_at"]
+        delivery_started_at = updated_fields["delivery_started_at"]
         self.assertIsInstance(delivery_started_at, models.F)
         self.assertEqual(delivery_started_at.name, "sent_at")
