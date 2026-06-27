@@ -32,7 +32,7 @@ class JobAdmin(admin.ModelAdmin):
         "llm_started_at",
         "llm_finished_at",
         "delivery_started_at",
-        "sent_at",
+        "delivery_finished_at",
     )
     fields = model_admin_fields(Job, include_pk=True)
     readonly_fields = fields

@@ -102,7 +102,7 @@ class JobSelectionPredicatesTests(TestCase):
         self.assertNotIn(self.failed, qs)
 
     def test_deliverable_job_selected(self):
-        """Deliverable: llm_finished_at set, raw_output set, sent_at null, no error."""
+        """Deliverable: llm_finished_at set, raw_output set, delivery not finished."""
         qs = Job.objects.ready_for_delivery()
         self.assertIn(self.completed, qs)
         self.assertNotIn(self.pending, qs)
@@ -657,7 +657,7 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
         )
         job.refresh_from_db()
-        self.assertIsNotNone(job.sent_at)
+        self.assertIsNotNone(job.delivery_finished_at)
         self.assertIsNone(job.error)
 
     @patch("apps.jobs.tasks.send_document")
@@ -689,7 +689,7 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
         )
         job.refresh_from_db()
-        self.assertIsNotNone(job.sent_at)
+        self.assertIsNotNone(job.delivery_finished_at)
         self.assertIsNone(job.error)
 
     @patch("apps.jobs.tasks.send_document")
@@ -717,7 +717,7 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
         )
         job.refresh_from_db()
-        self.assertIsNotNone(job.sent_at)
+        self.assertIsNotNone(job.delivery_finished_at)
         self.assertIsNone(job.error)
 
     @patch("apps.jobs.tasks.send_message")
@@ -772,7 +772,7 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
         )
         job.refresh_from_db()
-        self.assertIsNotNone(job.sent_at)
+        self.assertIsNotNone(job.delivery_finished_at)
         self.assertIsNone(job.error)
 
     @patch("apps.jobs.tasks.send_document")
