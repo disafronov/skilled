@@ -58,7 +58,7 @@ class JobAdminTests(TestCase):
                 "llm_started_at",
                 "llm_finished_at",
                 "delivery_started_at",
-                "sent_at",
+                "delivery_finished_at",
                 "updated_at",
             ),
         )
@@ -75,7 +75,7 @@ class JobAdminTests(TestCase):
                 "llm_started_at",
                 "llm_finished_at",
                 "delivery_started_at",
-                "sent_at",
+                "delivery_finished_at",
                 "updated_at",
                 "created_at",
             ),

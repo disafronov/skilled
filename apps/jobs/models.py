@@ -21,7 +21,7 @@ class JobQuerySet(models.QuerySet["Job"]):
     def stale_delivery(self, cutoff: datetime) -> "JobQuerySet":
         return self.filter(
             delivery_started_at__lt=cutoff,
-            sent_at__isnull=True,
+            delivery_finished_at__isnull=True,
             error__isnull=True,
         )
 
@@ -30,7 +30,7 @@ class JobQuerySet(models.QuerySet["Job"]):
             llm_finished_at__isnull=False,
             raw_output__isnull=False,
             delivery_started_at__isnull=True,
-            sent_at__isnull=True,
+            delivery_finished_at__isnull=True,
             error__isnull=True,
         )
 
@@ -46,7 +46,7 @@ class Job(models.Model):
     llm_started_at = models.DateTimeField(null=True, blank=True)
     llm_finished_at = models.DateTimeField(null=True, blank=True)
     delivery_started_at = models.DateTimeField(null=True, blank=True)
-    sent_at = models.DateTimeField(null=True, blank=True)
+    delivery_finished_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -82,7 +82,7 @@ class Job(models.Model):
                 condition=models.Q(
                     llm_finished_at__isnull=False,
                     raw_output__isnull=False,
-                    sent_at__isnull=True,
+                    delivery_finished_at__isnull=True,
                     error__isnull=True,
                 ),
             ),
@@ -115,13 +115,13 @@ class Job(models.Model):
             ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(sent_at__isnull=True)
+                    models.Q(delivery_finished_at__isnull=True)
                     | (
                         models.Q(delivery_started_at__isnull=False)
                         & models.Q(error__isnull=True)
                     )
                 ),
-                name="job_sent_requires_delivery_started_without_error",
+                name="job_delivery_finished_requires_started_without_error",
             ),
         ]
 
