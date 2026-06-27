@@ -201,11 +201,11 @@ def telegram_deliver() -> None:
                 caption="LLM response is attached as a text file.",
                 reply_to_message_id=job.reply_to_message_id,
             )
-            job.sent_at = timezone.now()
+            job.delivery_finished_at = timezone.now()
         except Exception as exc:
             job.error = str(exc)
 
-        job.save(update_fields=["sent_at", "error", "updated_at"])
+        job.save(update_fields=["delivery_finished_at", "error", "updated_at"])
     except Exception as e:
         logger.error(f"telegram_deliver failed: {e}", exc_info=True)
 

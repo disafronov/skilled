@@ -259,7 +259,7 @@ class PipelineTaskBranchTests(TestCase):
         telegram_deliver()
 
         job.refresh_from_db()
-        self.assertIsNone(job.sent_at)
+        self.assertIsNone(job.delivery_finished_at)
         self.assertEqual(job.error, "telegram down")
 
     @patch("apps.jobs.tasks.send_document")
@@ -283,8 +283,8 @@ class PipelineTaskBranchTests(TestCase):
 
         older.refresh_from_db()
         newer.refresh_from_db()
-        self.assertIsNotNone(older.sent_at)
-        self.assertIsNone(newer.sent_at)
+        self.assertIsNotNone(older.delivery_finished_at)
+        self.assertIsNone(newer.delivery_finished_at)
         send_document.assert_called_once()
         self.assertEqual(send_document.call_args.args[2], "older response")
 
@@ -310,8 +310,8 @@ class PipelineTaskBranchTests(TestCase):
 
         in_progress.refresh_from_db()
         ready.refresh_from_db()
-        self.assertIsNone(in_progress.sent_at)
-        self.assertIsNotNone(ready.sent_at)
+        self.assertIsNone(in_progress.delivery_finished_at)
+        self.assertIsNotNone(ready.delivery_finished_at)
         send_document.assert_called_once()
         self.assertEqual(send_document.call_args.args[2], "ready response")
 
@@ -332,7 +332,7 @@ class PipelineTaskBranchTests(TestCase):
         telegram_deliver()
 
         job.refresh_from_db()
-        self.assertIsNotNone(job.sent_at)
+        self.assertIsNotNone(job.delivery_finished_at)
         self.assertGreater(job.delivery_started_at, stale_started_at)
         send_document.assert_called_once()
         self.assertEqual(send_document.call_args.args[2], "stale response")
@@ -340,7 +340,9 @@ class PipelineTaskBranchTests(TestCase):
     def test_deliver_returns_when_no_job_exists(self):
         telegram_deliver()
 
-        self.assertFalse(Job.objects.filter(sent_at__isnull=False).exists())
+        self.assertFalse(
+            Job.objects.filter(delivery_finished_at__isnull=False).exists()
+        )
 
     @patch("apps.jobs.tasks.logger")
     @patch("apps.jobs.tasks.transaction.atomic", side_effect=RuntimeError("db down"))
