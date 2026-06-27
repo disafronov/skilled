@@ -7,10 +7,13 @@ from django.test import TestCase
 
 from apps.inference.models import Profile, Provider
 from apps.library.models import Skill, Wrapper
-from workers.llm import call_llm, get_global_system_prompt
+from workers.llm import _get_openai_client, call_llm, get_global_system_prompt
 
 
 class LlmCallTests(TestCase):
+    def setUp(self):
+        _get_openai_client.cache_clear()
+
     @classmethod
     def setUpTestData(cls):
         cls.skill = Skill.objects.create(name="llm-skill", content="s")
