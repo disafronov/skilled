@@ -41,6 +41,18 @@ def _raise_for_status(response: httpx.Response) -> None:
             msg = f"Telegram API error ({exc.response.status_code})"
         raise RuntimeError(msg) from None
 
+    try:
+        body = response.json()
+        if not body.get("ok", True):
+            description = body.get("description", "")
+            if len(description) > 120:
+                description = description[:117] + "..."
+            raise RuntimeError(f"Telegram API error: {description}")
+    except RuntimeError:
+        raise
+    except Exception:
+        pass  # nosec B110
+
 
 def detect_document_format(text: str) -> str:
     """Detect the best file format for long text responses."""

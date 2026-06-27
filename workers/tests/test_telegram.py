@@ -87,6 +87,55 @@ class TelegramHttpClientTests(TestCase):
             files={"document": ("response.txt", b"content", "text/plain")},
         )
 
+    @patch("workers.telegram._http.post")
+    def test_send_message_raises_on_api_error(self, mock_post):
+        from workers.telegram import send_message
+
+        mock_post.return_value = httpx.Response(
+            200,
+            request=self._request("POST"),
+            json={"ok": False, "description": "Bad Request: can't parse entities"},
+        )
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            r"Telegram API error: Bad Request: can't parse entities",
+        ):
+            send_message("token", "chat", "text")
+
+    @patch("workers.telegram._http.post")
+    def test_send_message_raises_with_truncated_description(self, mock_post):
+        from workers.telegram import send_message
+
+        long_desc = "x" * 200
+        mock_post.return_value = httpx.Response(
+            200,
+            request=self._request("POST"),
+            json={"ok": False, "description": long_desc},
+        )
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            r"Telegram API error: x{117}\.\.\.",
+        ):
+            send_message("token", "chat", "text")
+
+    @patch("workers.telegram._http.get")
+    def test_get_updates_raises_on_api_error(self, mock_get):
+        from workers.telegram import get_updates
+
+        mock_get.return_value = httpx.Response(
+            200,
+            request=self._request("GET"),
+            json={"ok": False, "description": "Unauthorized: invalid token"},
+        )
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            r"Telegram API error: Unauthorized: invalid token",
+        ):
+            get_updates("bad-token")
+
     @patch("workers.telegram._http.get")
     def test_get_updates_returns_result(self, mock_get):
         from workers.telegram import get_updates
