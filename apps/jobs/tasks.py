@@ -18,6 +18,7 @@ from workers.telegram import (
     document_format_content_type,
     document_format_filename,
     get_updates,
+    sanitize_error,
     send_document,
     send_message,
 )
@@ -173,7 +174,7 @@ def llm_worker() -> None:
         job.raw_output = raw_output
     except Exception as exc:
         job.llm_finished_at = timezone.now()
-        job.error = str(exc)
+        job.error = sanitize_error(str(exc))
         job.save(update_fields=["raw_output", "llm_finished_at", "error", "updated_at"])
         raise
 
@@ -219,7 +220,7 @@ def telegram_deliver() -> None:
             )
         job.delivery_finished_at = timezone.now()
     except Exception as exc:
-        job.error = str(exc)
+        job.error = sanitize_error(str(exc))
         job.save(update_fields=["error", "updated_at"])
         raise
 
