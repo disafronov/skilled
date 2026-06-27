@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import logging
 from functools import cache
 from typing import Any, cast
 
@@ -9,6 +10,7 @@ from django.core.signing import BadSignature, Signer
 from django.db import models
 
 _OLD_SIGNER = Signer(salt="skilled.encrypted_field")
+logger = logging.getLogger(__name__)
 
 
 @cache
@@ -41,6 +43,7 @@ class EncryptedCharField(models.CharField):
         try:
             return cast(str, _OLD_SIGNER.unsign_object(value))
         except BadSignature:
+            logger.warning("Unable to decrypt encrypted field value — keeping raw")
             return value
 
     def to_python(self, value: Any) -> str | None:
@@ -54,4 +57,5 @@ class EncryptedCharField(models.CharField):
         try:
             return cast(str, _OLD_SIGNER.unsign_object(raw))
         except BadSignature:
+            logger.warning("Unable to decrypt encrypted field value — keeping raw")
             return raw
