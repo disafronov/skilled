@@ -60,6 +60,24 @@ class LlmCallTests(TestCase):
             {"type": "json_object"},
         )
 
+    @patch("workers.llm.get_global_system_prompt", return_value="policy")
+    @patch("workers.llm.OpenAI")
+    def test_call_llm_raises_when_content_is_none(self, openai, get_prompt):
+        client = openai.return_value
+        client.chat.completions.create.return_value = SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content=None),
+                    finish_reason="stop",
+                )
+            ]
+        )
+
+        with self.assertRaises(RuntimeError) as ctx:
+            call_llm(self.provider, self.profile, self.skill, self.wrapper, "hello")
+
+        self.assertIn("finish_reason: stop", str(ctx.exception))
+
     def test_global_system_prompt_resolves_relative_policy_file(self):
         with TemporaryDirectory() as tmpdir:
             base_dir = Path(tmpdir)
