@@ -110,54 +110,51 @@ def telegram_ingest() -> None:
 
 def llm_worker() -> None:
     """Process one pending Job via LLM."""
+    with transaction.atomic():
+        stale_seconds = int(
+            os.environ.get(
+                "Q2_LLM_STALE_JOB_SECONDS",
+                str(Q2_LLM_STALE_JOB_SECONDS),
+            )
+        )
+        stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
+        Job.objects.select_for_update(skip_locked=True).stale_llm(stale_cutoff).update(
+            llm_started_at=None, updated_at=timezone.now()
+        )
+
+        job = (
+            Job.objects.select_for_update(skip_locked=True)
+            .ready_for_llm()
+            .select_related(
+                "bot__wrapper__skill",
+                "bot__profile__provider",
+            )
+            .order_by("created_at", "id")
+            .first()
+        )
+        if job is None:
+            return
+
+        job.llm_started_at = timezone.now()
+        job.save(update_fields=["llm_started_at", "updated_at"])
+
     try:
-        with transaction.atomic():
-            stale_seconds = int(
-                os.environ.get(
-                    "Q2_LLM_STALE_JOB_SECONDS",
-                    str(Q2_LLM_STALE_JOB_SECONDS),
-                )
-            )
-            stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
-            Job.objects.select_for_update(skip_locked=True).stale_llm(
-                stale_cutoff
-            ).update(llm_started_at=None, updated_at=timezone.now())
+        bot = job.bot
+        raw_output = call_llm(
+            provider=bot.profile.provider,
+            profile=bot.profile,
+            skill=bot.wrapper.skill,
+            wrapper=bot.wrapper,
+            raw_input=job.raw_input,
+        )
+        job.raw_output = raw_output
+    except Exception as exc:
+        job.error = str(exc)
+        job.save(update_fields=["raw_output", "error", "updated_at"])
+        raise
 
-            job = (
-                Job.objects.select_for_update(skip_locked=True)
-                .ready_for_llm()
-                .select_related(
-                    "bot__wrapper__skill",
-                    "bot__profile__provider",
-                )
-                .order_by("created_at", "id")
-                .first()
-            )
-            if job is None:
-                return
-
-            job.llm_started_at = timezone.now()
-            job.save(update_fields=["llm_started_at", "updated_at"])
-
-        try:
-            bot = job.bot
-            raw_output = call_llm(
-                provider=bot.profile.provider,
-                profile=bot.profile,
-                skill=bot.wrapper.skill,
-                wrapper=bot.wrapper,
-                raw_input=job.raw_input,
-            )
-            job.raw_output = raw_output
-        except Exception as exc:
-            job.error = str(exc)
-        finally:
-            job.llm_finished_at = timezone.now()
-            job.save(
-                update_fields=["raw_output", "error", "llm_finished_at", "updated_at"]
-            )
-    except Exception as e:
-        logger.error(f"llm_worker failed: {e}", exc_info=True)
+    job.llm_finished_at = timezone.now()
+    job.save(update_fields=["raw_output", "error", "llm_finished_at", "updated_at"])
 
 
 def telegram_deliver() -> None:
