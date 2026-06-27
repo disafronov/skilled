@@ -18,13 +18,6 @@ class JobQuerySet(models.QuerySet["Job"]):
             error__isnull=True,
         )
 
-    def stale_delivery(self, cutoff: datetime) -> "JobQuerySet":
-        return self.filter(
-            delivery_started_at__lt=cutoff,
-            delivery_finished_at__isnull=True,
-            error__isnull=True,
-        )
-
     def ready_for_delivery(self) -> "JobQuerySet":
         return self.filter(
             llm_finished_at__isnull=False,
