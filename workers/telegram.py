@@ -31,7 +31,15 @@ def _raise_for_status(response: httpx.Response) -> None:
     try:
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
-        raise RuntimeError(exc.response.text) from None
+        try:
+            body = exc.response.json()
+            description = body.get("description", "")
+            if len(description) > 120:
+                description = description[:117] + "..."
+            msg = f"Telegram API error ({exc.response.status_code}): {description}"
+        except Exception:
+            msg = f"Telegram API error ({exc.response.status_code})"
+        raise RuntimeError(msg) from None
 
 
 def detect_document_format(text: str) -> str:
