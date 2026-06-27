@@ -1,3 +1,9 @@
+## [1.0.2-rc.1](https://github.com/disafronov/skilled/compare/v1.0.1...v1.0.2-rc.1) (2026-06-27)
+
+### Performance Improvements
+
+* **jobs:** add worker selection indexes ([4092ed2](https://github.com/disafronov/skilled/commit/4092ed241014e46d5f05ab609d3a5ef489992f2d))
+
 ## [1.0.1](https://github.com/disafronov/skilled/compare/v1.0.0...v1.0.1) (2026-06-26)
 
 ### Bug Fixes
