@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from django.conf import settings
 from openai import OpenAI
@@ -86,4 +86,10 @@ def call_llm(
     )
 
     response = client.chat.completions.create(**body)
-    return cast(str, response.choices[0].message.content)
+    choice = response.choices[0]
+    content = choice.message.content
+    if not isinstance(content, str):
+        raise RuntimeError(
+            f"LLM returned empty response (finish_reason: {choice.finish_reason})"
+        )
+    return content
