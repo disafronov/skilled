@@ -1,3 +1,11 @@
+## [1.0.2-rc.2](https://github.com/disafronov/skilled/compare/v1.0.2-rc.1...v1.0.2-rc.2) (2026-06-27)
+
+### Bug Fixes
+
+* **jobs:** backfill invalid finished jobs before constraints ([48513d6](https://github.com/disafronov/skilled/commit/48513d639227336d5408cadddcab62ccff4b5bb0))
+* **jobs:** make delivery selection safe and ordered ([83eb42b](https://github.com/disafronov/skilled/commit/83eb42be22f0ccffd2da00d77b0b76b57835b4f7))
+* **telegram:** avoid leaking bot token in error tracebacks ([f0e1638](https://github.com/disafronov/skilled/commit/f0e16387a8d338e51c614b6711c1f8b0fcf3b076))
+
 ## [1.0.2-rc.1](https://github.com/disafronov/skilled/compare/v1.0.1...v1.0.2-rc.1) (2026-06-27)
 
 ### Performance Improvements
