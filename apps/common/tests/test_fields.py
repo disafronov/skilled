@@ -16,14 +16,16 @@ def test_to_python_none():
     assert field.to_python(None) is None
 
 
-def test_from_db_value_corrupt():
+def test_from_db_value_corrupt(caplog):
     field = EncryptedCharField()
     assert field.from_db_value("not-encrypted", None, None) == "not-encrypted"
+    assert "Unable to decrypt encrypted field value — keeping raw" in caplog.text
 
 
-def test_to_python_corrupt():
+def test_to_python_corrupt(caplog):
     field = EncryptedCharField()
     assert field.to_python("not-encrypted") == "not-encrypted"
+    assert "Unable to decrypt encrypted field value — keeping raw" in caplog.text
 
 
 def test_roundtrip():
@@ -35,7 +37,8 @@ def test_roundtrip():
     assert encrypted != value
 
 
-def test_plaintext_migration():
+def test_plaintext_migration(caplog):
     field = EncryptedCharField()
     result = field.from_db_value("old-plaintext-token", None, None)
     assert result == "old-plaintext-token"
+    assert "Unable to decrypt encrypted field value — keeping raw" in caplog.text
