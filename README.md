@@ -21,7 +21,7 @@ Works with any OpenAI-compatible provider.
 ## Pipeline
 
 ```
-Telegram ──> telegram_ingest_once (Q2) ──> Job ──> llm_worker_once (Q2) ──> telegram_deliver_once (Q2) ──> Telegram
+Telegram ──> telegram_ingest (Q2) ──> Job ──> llm_worker (Q2) ──> telegram_deliver (Q2) ──> Telegram
 ```
 
 ## Running
@@ -44,9 +44,6 @@ make run
 
 | Command | Description |
 |---------|-------------|
-| `telegram_ingest_once` | Poll Telegram for updates, create Jobs |
-| `llm_worker_once` | Process one pending Job via LLM |
-| `telegram_deliver_once` | Deliver one completed Job to Telegram |
 | `dev` | qcluster + runserver (development) |
 | `start` | qcluster + gunicorn (production) |
 
