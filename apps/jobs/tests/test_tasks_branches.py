@@ -205,19 +205,20 @@ class PipelineTaskBranchTests(TestCase):
         call_llm_mock.assert_called_once()
 
     @patch("apps.jobs.tasks.call_llm", side_effect=RuntimeError("llm down"))
-    def test_llm_worker_stores_error(self, call_llm_mock):
+    def test_llm_worker_stores_error_and_raises(self, call_llm_mock):
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
             raw_input="hello",
         )
 
-        llm_worker()
+        with self.assertRaisesRegex(RuntimeError, "llm down"):
+            llm_worker()
 
         job.refresh_from_db()
         self.assertEqual(job.error, "llm down")
         self.assertIsNone(job.raw_output)
-        self.assertIsNotNone(job.llm_finished_at)
+        self.assertIsNone(job.llm_finished_at)
 
     @patch("apps.jobs.tasks.call_llm", return_value="requeued output")
     def test_llm_worker_requeues_stale_started_job(self, call_llm_mock):
@@ -238,12 +239,10 @@ class PipelineTaskBranchTests(TestCase):
         self.assertGreater(job.llm_started_at, stale_started_at)
         call_llm_mock.assert_called_once()
 
-    @patch("apps.jobs.tasks.logger")
     @patch("apps.jobs.tasks.transaction.atomic", side_effect=RuntimeError("db down"))
-    def test_llm_worker_logs_outer_failure(self, atomic_mock, logger):
-        llm_worker()
-
-        logger.error.assert_called_once()
+    def test_llm_worker_raises_outer_failure(self, atomic_mock):
+        with self.assertRaisesRegex(RuntimeError, "db down"):
+            llm_worker()
 
     @patch("apps.jobs.tasks.send_document", side_effect=RuntimeError("telegram down"))
     def test_deliver_stores_error_and_raises_when_send_fails(self, send_document):
