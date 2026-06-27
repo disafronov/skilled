@@ -68,14 +68,14 @@ class Job(models.Model):
                 ),
             ),
             models.Index(
-                fields=["-created_at", "id"],
+                fields=["llm_finished_at", "id"],
                 name="job_ready_delivery_idx",
                 condition=models.Q(
                     llm_finished_at__isnull=False,
-                    raw_output__isnull=False,
+                    delivery_started_at__isnull=True,
                     delivery_finished_at__isnull=True,
-                    error__isnull=True,
-                ),
+                )
+                & (models.Q(raw_output__isnull=False) | models.Q(error__isnull=False)),
             ),
         ]
         constraints = [
