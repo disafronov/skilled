@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 QUEUE_ACK_TEXT = "Added to the processing queue, please wait..."
 Q2_SUCCESS_RETENTION_SECONDS = 86400
 Q2_LLM_STALE_JOB_SECONDS = 3600
-Q2_DELIVERY_STALE_JOB_SECONDS = 3600
 
 
 def telegram_ingest() -> None:
@@ -163,51 +162,39 @@ def llm_worker() -> None:
 
 def telegram_deliver() -> None:
     """Deliver one completed Job response to Telegram."""
+    with transaction.atomic():
+        job = (
+            Job.objects.select_for_update(skip_locked=True)
+            .ready_for_delivery()
+            .select_related("bot")
+            .order_by("llm_finished_at", "id")
+            .first()
+        )
+        if not job:
+            return
+
+        job.delivery_started_at = timezone.now()
+        job.save(update_fields=["delivery_started_at", "updated_at"])
+
     try:
-        with transaction.atomic():
-            stale_seconds = int(
-                os.environ.get(
-                    "Q2_DELIVERY_STALE_JOB_SECONDS",
-                    str(Q2_DELIVERY_STALE_JOB_SECONDS),
-                )
-            )
-            stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
-            Job.objects.select_for_update(skip_locked=True).stale_delivery(
-                stale_cutoff
-            ).update(delivery_started_at=None, updated_at=timezone.now())
+        raw_output = job.raw_output or ""
+        document_format = detect_document_format(raw_output)
+        send_document(
+            job.bot.telegram_api_token,
+            job.reply_target,
+            raw_output,
+            document_format_filename(job.pk, document_format),
+            document_format_content_type(document_format),
+            caption="LLM response is attached as a text file.",
+            reply_to_message_id=job.reply_to_message_id,
+        )
+        job.delivery_finished_at = timezone.now()
+    except Exception as exc:
+        job.error = str(exc)
+        job.save(update_fields=["error", "updated_at"])
+        raise
 
-            job = (
-                Job.objects.select_for_update(skip_locked=True)
-                .ready_for_delivery()
-                .select_related("bot")
-                .order_by("llm_finished_at", "id")
-                .first()
-            )
-            if not job:
-                return
-
-            job.delivery_started_at = timezone.now()
-            job.save(update_fields=["delivery_started_at", "updated_at"])
-
-        try:
-            raw_output = job.raw_output or ""
-            document_format = detect_document_format(raw_output)
-            send_document(
-                job.bot.telegram_api_token,
-                job.reply_target,
-                raw_output,
-                document_format_filename(job.pk, document_format),
-                document_format_content_type(document_format),
-                caption="LLM response is attached as a text file.",
-                reply_to_message_id=job.reply_to_message_id,
-            )
-            job.delivery_finished_at = timezone.now()
-        except Exception as exc:
-            job.error = str(exc)
-
-        job.save(update_fields=["delivery_finished_at", "error", "updated_at"])
-    except Exception as e:
-        logger.error(f"telegram_deliver failed: {e}", exc_info=True)
+    job.save(update_fields=["delivery_finished_at", "error", "updated_at"])
 
 
 def cleanup_q2_successes() -> None:

@@ -8,7 +8,6 @@ from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
 from apps.jobs.models import Job
 from apps.jobs.tasks import (
-    Q2_DELIVERY_STALE_JOB_SECONDS,
     Q2_LLM_STALE_JOB_SECONDS,
     llm_worker,
     telegram_deliver,
@@ -247,7 +246,7 @@ class PipelineTaskBranchTests(TestCase):
         logger.error.assert_called_once()
 
     @patch("apps.jobs.tasks.send_document", side_effect=RuntimeError("telegram down"))
-    def test_deliver_stores_error_when_send_fails(self, send_document):
+    def test_deliver_stores_error_and_raises_when_send_fails(self, send_document):
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
@@ -256,7 +255,8 @@ class PipelineTaskBranchTests(TestCase):
             llm_finished_at=self.now,
         )
 
-        telegram_deliver()
+        with self.assertRaisesRegex(RuntimeError, "telegram down"):
+            telegram_deliver()
 
         job.refresh_from_db()
         self.assertIsNone(job.delivery_finished_at)
@@ -316,10 +316,8 @@ class PipelineTaskBranchTests(TestCase):
         self.assertEqual(send_document.call_args.args[2], "ready response")
 
     @patch("apps.jobs.tasks.send_document")
-    def test_deliver_requeues_stale_delivery(self, send_document):
-        stale_started_at = self.now - timedelta(
-            seconds=Q2_DELIVERY_STALE_JOB_SECONDS + 1
-        )
+    def test_deliver_does_not_retry_stale_delivery(self, send_document):
+        stale_started_at = self.now - timedelta(hours=2)
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
@@ -332,10 +330,9 @@ class PipelineTaskBranchTests(TestCase):
         telegram_deliver()
 
         job.refresh_from_db()
-        self.assertIsNotNone(job.delivery_finished_at)
-        self.assertGreater(job.delivery_started_at, stale_started_at)
-        send_document.assert_called_once()
-        self.assertEqual(send_document.call_args.args[2], "stale response")
+        self.assertIsNone(job.delivery_finished_at)
+        self.assertEqual(job.delivery_started_at, stale_started_at)
+        send_document.assert_not_called()
 
     def test_deliver_returns_when_no_job_exists(self):
         telegram_deliver()
@@ -344,9 +341,7 @@ class PipelineTaskBranchTests(TestCase):
             Job.objects.filter(delivery_finished_at__isnull=False).exists()
         )
 
-    @patch("apps.jobs.tasks.logger")
     @patch("apps.jobs.tasks.transaction.atomic", side_effect=RuntimeError("db down"))
-    def test_deliver_logs_outer_failure(self, atomic_mock, logger):
-        telegram_deliver()
-
-        logger.error.assert_called_once()
+    def test_deliver_raises_outer_failure(self, atomic_mock):
+        with self.assertRaisesRegex(RuntimeError, "db down"):
+            telegram_deliver()
