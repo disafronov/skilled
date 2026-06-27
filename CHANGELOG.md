@@ -1,3 +1,9 @@
+## [1.1.4-rc.2](https://github.com/disafronov/skilled/compare/v1.1.4-rc.1...v1.1.4-rc.2) (2026-06-27)
+
+### Bug Fixes
+
+* **jobs:** align ready_delivery index with new error-delivery path ([8bb936e](https://github.com/disafronov/skilled/commit/8bb936eaee2c8540d7cf08b9fdf4b608a2b3ed6d))
+
 ## [1.1.4-rc.1](https://github.com/disafronov/skilled/compare/v1.1.3...v1.1.4-rc.1) (2026-06-27)
 
 ### Bug Fixes
