@@ -1,3 +1,10 @@
+## [1.1.4-rc.1](https://github.com/disafronov/skilled/compare/v1.1.3...v1.1.4-rc.1) (2026-06-27)
+
+### Bug Fixes
+
+* deliver LLM errors to Telegram as text messages ([3bdc087](https://github.com/disafronov/skilled/commit/3bdc087ac931ef7361d4a06d6b02682aa669ed6b))
+* sanitizer ([274a73e](https://github.com/disafronov/skilled/commit/274a73e224c99e1c754eeb9d1f8d4f3b2d56875e))
+
 ## [1.1.3](https://github.com/disafronov/skilled/compare/v1.1.2...v1.1.3) (2026-06-27)
 
 ### Bug Fixes
