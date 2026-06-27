@@ -9,7 +9,6 @@ class Job(models.Model):
     raw_output = models.TextField(null=True, blank=True)
     error = models.TextField(null=True, blank=True)
 
-    received_at = models.DateTimeField()
     llm_started_at = models.DateTimeField(null=True, blank=True)
     llm_finished_at = models.DateTimeField(null=True, blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
@@ -18,7 +17,7 @@ class Job(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["-received_at"]
+        ordering = ["-created_at"]
         verbose_name = "Job"
         verbose_name_plural = "Jobs"
 

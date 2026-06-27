@@ -2,7 +2,6 @@ from unittest.mock import MagicMock
 
 from django.contrib.admin.sites import AdminSite
 from django.test import TestCase
-from django.utils import timezone
 
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
@@ -33,7 +32,6 @@ class JobAdminTests(TestCase):
             bot=bot,
             reply_target="123",
             raw_input="hello",
-            received_at=timezone.now(),
         )
 
     def test_job_admin_is_read_only(self):
@@ -57,7 +55,6 @@ class JobAdminTests(TestCase):
                 "raw_input_preview",
                 "raw_output_preview",
                 "error_preview",
-                "received_at",
                 "llm_started_at",
                 "llm_finished_at",
                 "sent_at",
@@ -74,7 +71,6 @@ class JobAdminTests(TestCase):
                 "raw_input",
                 "raw_output",
                 "error",
-                "received_at",
                 "llm_started_at",
                 "llm_finished_at",
                 "sent_at",

@@ -139,7 +139,6 @@ class PipelineTaskBranchTests(TestCase):
             bot=self.bot,
             reply_target="123",
             raw_input="hello",
-            received_at=self.now,
         )
 
         llm_worker()
@@ -150,13 +149,67 @@ class PipelineTaskBranchTests(TestCase):
         self.assertIsNotNone(job.llm_started_at)
         self.assertIsNotNone(job.llm_finished_at)
 
+    @patch("apps.jobs.tasks.call_llm", return_value="oldest output")
+    def test_llm_worker_processes_oldest_pending_job_first(self, call_llm_mock):
+        older = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="older",
+        )
+        newer = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="newer",
+        )
+        Job.objects.filter(pk=older.pk).update(
+            created_at=self.now - timedelta(seconds=10)
+        )
+        Job.objects.filter(pk=newer.pk).update(created_at=self.now)
+
+        llm_worker()
+
+        older.refresh_from_db()
+        newer.refresh_from_db()
+        self.assertEqual(older.raw_output, "oldest output")
+        self.assertIsNone(newer.raw_output)
+        call_llm_mock.assert_called_once()
+
+    @patch("apps.jobs.tasks.call_llm", return_value="pending output")
+    def test_llm_worker_ignores_finished_jobs_without_started_timestamp(
+        self,
+        call_llm_mock,
+    ):
+        finished = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="finished",
+            raw_output="already done",
+            llm_finished_at=self.now,
+        )
+        pending = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="pending",
+        )
+        Job.objects.filter(pk=finished.pk).update(
+            created_at=self.now - timedelta(seconds=10)
+        )
+        Job.objects.filter(pk=pending.pk).update(created_at=self.now)
+
+        llm_worker()
+
+        finished.refresh_from_db()
+        pending.refresh_from_db()
+        self.assertEqual(finished.raw_output, "already done")
+        self.assertEqual(pending.raw_output, "pending output")
+        call_llm_mock.assert_called_once()
+
     @patch("apps.jobs.tasks.call_llm", side_effect=RuntimeError("llm down"))
     def test_llm_worker_stores_error(self, call_llm_mock):
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
             raw_input="hello",
-            received_at=self.now,
         )
 
         llm_worker()
@@ -173,7 +226,6 @@ class PipelineTaskBranchTests(TestCase):
             bot=self.bot,
             reply_target="123",
             raw_input="hello",
-            received_at=self.now,
             llm_started_at=stale_started_at,
         )
 
@@ -200,7 +252,6 @@ class PipelineTaskBranchTests(TestCase):
             reply_target="123",
             raw_input="hi",
             raw_output="short response",
-            received_at=self.now,
             llm_finished_at=self.now,
         )
 

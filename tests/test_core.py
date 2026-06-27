@@ -60,12 +60,11 @@ class JobSelectionPredicatesTests(TestCase):
             wrapper=wrapper,
         )
 
-        # Pending job: received, not started, no error
+        # Pending job: not started, no error
         cls.pending = Job.objects.create(
             bot=bot,
             reply_target="1",
             raw_input="hi",
-            received_at=now,
         )
 
         # In progress: llm_started_at is set
@@ -73,7 +72,6 @@ class JobSelectionPredicatesTests(TestCase):
             bot=bot,
             reply_target="2",
             raw_input="hi2",
-            received_at=now,
             llm_started_at=now,
         )
 
@@ -83,7 +81,6 @@ class JobSelectionPredicatesTests(TestCase):
             reply_target="3",
             raw_input="hi3",
             raw_output="some response",
-            received_at=now,
             llm_started_at=now,
             llm_finished_at=now,
         )
@@ -93,15 +90,14 @@ class JobSelectionPredicatesTests(TestCase):
             bot=bot,
             reply_target="4",
             raw_input="hi4",
-            received_at=now,
             error="something went wrong",
         )
 
     def test_pending_job_selected(self):
-        """Pending job (received, not started, no error) should match."""
+        """Pending job (not started, no error) should match."""
         qs = Job.objects.filter(
-            received_at__isnull=False,
             llm_started_at__isnull=True,
+            llm_finished_at__isnull=True,
             error__isnull=True,
         )
         self.assertIn(self.pending, qs)
@@ -149,20 +145,17 @@ class DerivedJobStatesTests(TestCase):
             bot=bot,
             reply_target="1",
             raw_input="hi",
-            received_at=now,
         )
         cls.processing = Job.objects.create(
             bot=bot,
             reply_target="2",
             raw_input="hi2",
-            received_at=now,
             llm_started_at=now,
         )
         cls.done = Job.objects.create(
             bot=bot,
             reply_target="3",
             raw_input="hi3",
-            received_at=now,
             llm_started_at=now,
             llm_finished_at=now,
             raw_output="resp",
@@ -171,7 +164,6 @@ class DerivedJobStatesTests(TestCase):
             bot=bot,
             reply_target="4",
             raw_input="hi4",
-            received_at=now,
             llm_started_at=now,
             llm_finished_at=now,
             error="fail",
@@ -179,8 +171,8 @@ class DerivedJobStatesTests(TestCase):
 
     def assert_state(self, job, pending, processing, completed, failed):
         self.assertEqual(
-            job.received_at is not None
-            and job.llm_started_at is None
+            job.llm_started_at is None
+            and job.llm_finished_at is None
             and job.error is None,
             pending,
         )
@@ -657,7 +649,6 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output="short response",
-            received_at=self.now,
             llm_finished_at=self.now,
         )
 
@@ -690,7 +681,6 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output="*bold*",
-            received_at=self.now,
             llm_finished_at=self.now,
         )
 
@@ -719,7 +709,6 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output="<b>bold</b>",
-            received_at=self.now,
             llm_finished_at=self.now,
         )
 
@@ -775,7 +764,6 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output=output,
-            received_at=self.now,
             llm_finished_at=self.now,
         )
 
@@ -809,7 +797,6 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output=output,
-            received_at=self.now,
             llm_finished_at=self.now,
         )
 
@@ -840,7 +827,6 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output=output,
-            received_at=self.now,
             llm_finished_at=self.now,
         )
 
