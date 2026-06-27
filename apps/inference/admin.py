@@ -1,11 +1,7 @@
 from django import forms
 from django.contrib import admin
 
-from apps.admin_forms import (
-    AdminModelForm,
-    model_admin_fields,
-    model_admin_list_display,
-)
+from apps.admin_forms import AdminModelForm
 from apps.inference.models import Profile, Provider
 
 
@@ -36,23 +32,37 @@ class ProfileAdminForm(AdminModelForm):
 @admin.register(Provider)
 class ProviderAdmin(admin.ModelAdmin):
     form = ProviderAdminForm
-    fields = model_admin_fields(Provider)
+    fields = ("name", "api_type", "base_url", "auth_token", "updated_at", "created_at")
     readonly_fields = ("updated_at", "created_at")
-    list_display = model_admin_list_display(
-        Provider,
-        exclude=("auth_token",),
-    )
+    list_display = ("name", "api_type", "base_url", "updated_at")
     search_fields = ["name"]
 
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     form = ProfileAdminForm
-    fields = model_admin_fields(Profile)
+    fields = (
+        "name",
+        "provider",
+        "model",
+        "temperature",
+        "top_p",
+        "max_output_tokens",
+        "reasoning_effort",
+        "response_format",
+        "updated_at",
+        "created_at",
+    )
     readonly_fields = ("updated_at", "created_at")
-    list_display = model_admin_list_display(
-        Profile,
-        exclude=("response_format",),
+    list_display = (
+        "name",
+        "provider",
+        "model",
+        "temperature",
+        "top_p",
+        "max_output_tokens",
+        "reasoning_effort",
+        "updated_at",
     )
     list_select_related = ["provider"]
     search_fields = ["name", "provider__name"]
