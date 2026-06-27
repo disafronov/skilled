@@ -181,6 +181,29 @@ class TelegramHttpClientTests(TestCase):
         with self.assertRaisesRegex(RuntimeError, r"Telegram API error \(502\)"):
             _raise_for_status(response)
 
+    def test_non_json_response_on_http_200_logs_warning(self):
+        from workers.telegram import _raise_for_status
+
+        request = httpx.Request("POST", "https://api.telegram.org/botx/sendMessage")
+        response = httpx.Response(
+            200,
+            request=request,
+            text="<html>server error</html>",
+        )
+
+        with self.assertLogs("workers.telegram", level="WARNING") as logs:
+            _raise_for_status(response)
+
+        self.assertEqual(
+            logs.output,
+            [
+                (
+                    "WARNING:workers.telegram:Telegram API returned"
+                    " non-JSON response on HTTP 200"
+                )
+            ],
+        )
+
     def test_http_error_truncates_long_description(self):
         from workers.telegram import _raise_for_status
 

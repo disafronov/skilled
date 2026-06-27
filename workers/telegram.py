@@ -1,10 +1,13 @@
 """Telegram Bot API client wrapper."""
 
 import atexit
+import logging
 import re
 from typing import Any
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 _BOT_API_BASE = "https://api.telegram.org/bot"
 
@@ -60,7 +63,7 @@ def _raise_for_status(response: httpx.Response) -> None:
     except RuntimeError:
         raise
     except Exception:
-        pass  # nosec B110
+        logger.warning("Telegram API returned non-JSON response on HTTP 200")
 
 
 def detect_document_format(text: str) -> str:
