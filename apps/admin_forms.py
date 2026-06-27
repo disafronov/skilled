@@ -1,54 +1,6 @@
 from typing import Any
 
 from django import forms
-from django.db.models import Model
-
-TIMESTAMP_FIELDS = ("updated_at", "created_at")
-
-
-def model_field_names(
-    model: type[Model],
-    *,
-    exclude: tuple[str, ...] = (),
-    include_pk: bool = False,
-) -> tuple[str, ...]:
-    excluded_fields = set(exclude)
-    return tuple(
-        field.name
-        for field in model._meta.fields
-        if field.name not in excluded_fields and (include_pk or not field.primary_key)
-    )
-
-
-def model_admin_fields(
-    model: type[Model],
-    *,
-    exclude: tuple[str, ...] = (),
-    include_pk: bool = False,
-) -> tuple[str, ...]:
-    field_names = model_field_names(model, exclude=exclude, include_pk=include_pk)
-    timestamp_fields = [name for name in TIMESTAMP_FIELDS if name in field_names]
-    regular_fields = [name for name in field_names if name not in timestamp_fields]
-    return (*regular_fields, *timestamp_fields)
-
-
-def model_admin_list_display(
-    model: type[Model],
-    *,
-    exclude: tuple[str, ...] = (),
-    include_pk: bool = False,
-    replacements: dict[str, str] | None = None,
-) -> tuple[str, ...]:
-    replacements = replacements or {}
-    excluded_fields = (*exclude, "created_at")
-    return tuple(
-        replacements.get(field_name, field_name)
-        for field_name in model_field_names(
-            model,
-            exclude=excluded_fields,
-            include_pk=include_pk,
-        )
-    )
 
 
 class AdminModelForm(forms.ModelForm):
