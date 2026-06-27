@@ -1,3 +1,9 @@
+## [1.1.0-rc.4](https://github.com/disafronov/skilled/compare/v1.1.0-rc.3...v1.1.0-rc.4) (2026-06-27)
+
+### Bug Fixes
+
+* handle None content from LLM response instead of cast ([d7ee4a0](https://github.com/disafronov/skilled/commit/d7ee4a0daae66a81dceea10d096a4347482f8199))
+
 ## [1.1.0-rc.3](https://github.com/disafronov/skilled/compare/v1.1.0-rc.2...v1.1.0-rc.3) (2026-06-27)
 
 ## [1.1.0-rc.2](https://github.com/disafronov/skilled/compare/v1.1.0-rc.1...v1.1.0-rc.2) (2026-06-27)
