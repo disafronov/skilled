@@ -27,7 +27,7 @@ class JobAdmin(admin.ModelAdmin):
     )
     list_select_related = ("bot",)
     search_fields = ("raw_input",)
-    list_filter = ("received_at", "llm_started_at", "llm_finished_at", "sent_at")
+    list_filter = ("created_at", "llm_started_at", "llm_finished_at", "sent_at")
     fields = model_admin_fields(Job, include_pk=True)
     readonly_fields = fields
 

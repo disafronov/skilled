@@ -77,7 +77,6 @@ def telegram_ingest() -> None:
                                 reply_target=chat_id,
                                 reply_to_message_id=message_id,
                                 raw_input=" ".join(messages),
-                                received_at=timezone.now(),
                             )
                         )
                         acknowledgements.append((chat_id, message_id))
@@ -121,7 +120,6 @@ def llm_worker() -> None:
             )
             stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
             Job.objects.select_for_update(skip_locked=True).filter(
-                received_at__isnull=False,
                 llm_started_at__lt=stale_cutoff,
                 llm_finished_at__isnull=True,
                 error__isnull=True,
@@ -130,14 +128,15 @@ def llm_worker() -> None:
             job = (
                 Job.objects.select_for_update(skip_locked=True)
                 .filter(
-                    received_at__isnull=False,
                     llm_started_at__isnull=True,
+                    llm_finished_at__isnull=True,
                     error__isnull=True,
                 )
                 .select_related(
                     "bot__wrapper__skill",
                     "bot__profile__provider",
                 )
+                .order_by("created_at", "id")
                 .first()
             )
             if job is None:

@@ -1,5 +1,4 @@
 from django.test import TestCase
-from django.utils import timezone
 
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
@@ -28,7 +27,6 @@ class JobModelTests(TestCase):
             bot=bot,
             reply_target="123",
             raw_input="hello",
-            received_at=timezone.now(),
         )
 
         self.assertEqual(str(job), f"Job #{job.pk} [bot-name]")
