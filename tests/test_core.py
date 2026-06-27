@@ -27,14 +27,10 @@ from workers.telegram import (
     TELEGRAM_DOCUMENT_FORMAT_MARKDOWN,
     TELEGRAM_DOCUMENT_FORMAT_TEXT,
     TELEGRAM_MESSAGE_CHAR_LIMIT,
-    TELEGRAM_PARSE_MODE_HTML,
-    TELEGRAM_PARSE_MODE_MARKDOWN_V2,
     _raise_for_status,
     detect_document_format,
-    detect_parse_mode,
     document_format_content_type,
     document_format_filename,
-    prepare_message_text,
 )
 
 
@@ -283,27 +279,6 @@ class OpenAiRequestAssemblyTests(TestCase):
 class TelegramClientTests(TestCase):
     """Test Telegram API error handling."""
 
-    def test_detects_html_parse_mode(self):
-        self.assertEqual(
-            detect_parse_mode("<b>Hello</b>"),
-            TELEGRAM_PARSE_MODE_HTML,
-        )
-
-    def test_standard_html_has_no_telegram_parse_mode(self):
-        self.assertIsNone(detect_parse_mode("<div>Hello</div>"))
-
-    def test_detects_markdown_parse_mode(self):
-        self.assertEqual(
-            detect_parse_mode("*Hello*"),
-            TELEGRAM_PARSE_MODE_MARKDOWN_V2,
-        )
-
-    def test_standard_markdown_has_no_telegram_parse_mode(self):
-        self.assertIsNone(detect_parse_mode("**Hello**"))
-
-    def test_plain_text_has_no_parse_mode(self):
-        self.assertIsNone(detect_parse_mode("short response"))
-
     def test_detects_document_formats(self):
         self.assertEqual(
             detect_document_format("<b>Hello</b>"),
@@ -346,45 +321,6 @@ class TelegramClientTests(TestCase):
         self.assertEqual(
             document_format_content_type(TELEGRAM_DOCUMENT_FORMAT_TEXT),
             "text/plain",
-        )
-
-    def test_markdown_text_is_escaped_for_markdown_v2(self):
-        self.assertEqual(
-            prepare_message_text("*Hello_world*", TELEGRAM_PARSE_MODE_MARKDOWN_V2),
-            r"*Hello\_world*",
-        )
-
-    def test_plain_message_text_removes_control_chars(self):
-        self.assertEqual(
-            prepare_message_text("hello\x00\x08\nworld", None),
-            "hello\nworld",
-        )
-
-    def test_html_message_text_is_sanitized(self):
-        self.assertEqual(
-            prepare_message_text(
-                '<b onclick="x">hello</b><script>alert(1)</script>',
-                TELEGRAM_PARSE_MODE_HTML,
-            ),
-            "<b>hello</b>alert(1)",
-        )
-
-    def test_html_message_text_allows_safe_links(self):
-        self.assertEqual(
-            prepare_message_text(
-                '<a href="https://example.com" onclick="x">site</a>',
-                TELEGRAM_PARSE_MODE_HTML,
-            ),
-            '<a href="https://example.com">site</a>',
-        )
-
-    def test_html_message_text_drops_unsafe_links(self):
-        self.assertEqual(
-            prepare_message_text(
-                '<a href="javascript:alert(1)">site</a>',
-                TELEGRAM_PARSE_MODE_HTML,
-            ),
-            "<a>site</a>",
         )
 
     def test_http_error_includes_response_body(self):

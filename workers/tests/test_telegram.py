@@ -3,14 +3,6 @@ from unittest.mock import MagicMock, patch
 import httpx
 from django.test import TestCase
 
-from workers.telegram import (
-    TELEGRAM_PARSE_MODE_HTML,
-    TELEGRAM_PARSE_MODE_MARKDOWN_V2,
-    _sanitize_markdown_v2_token,
-    prepare_message_text,
-    sanitize_markdown_v2,
-)
-
 
 class TelegramHttpClientTests(TestCase):
     def _client_cm(self, response: httpx.Response) -> MagicMock:
@@ -34,7 +26,7 @@ class TelegramHttpClientTests(TestCase):
             "chat",
             "*hello*",
             reply_to_message_id=42,
-            parse_mode=TELEGRAM_PARSE_MODE_MARKDOWN_V2,
+            parse_mode="MarkdownV2",
         )
 
         client.post.assert_called_once_with(
@@ -44,7 +36,7 @@ class TelegramHttpClientTests(TestCase):
                 "text": "*hello*",
                 "reply_to_message_id": 42,
                 "allow_sending_without_reply": True,
-                "parse_mode": TELEGRAM_PARSE_MODE_MARKDOWN_V2,
+                "parse_mode": "MarkdownV2",
             },
         )
 
@@ -124,38 +116,75 @@ class TelegramHttpClientTests(TestCase):
             params={"offset": 10, "timeout": 10},
         )
 
-    def test_html_sanitizer_preserves_entities_charrefs_and_code_language(self):
-        self.assertEqual(
-            prepare_message_text(
-                '<code class="language-python" bad>print(&amp; &#35;)</code>',
-                TELEGRAM_PARSE_MODE_HTML,
-            ),
-            '<code class="language-python">print(&amp; &#35;)</code>',
+    @patch("workers.telegram.httpx.Client")
+    def test_http_error_includes_response_body(self, client_cls):
+        from workers.telegram import _raise_for_status
+
+        request = httpx.Request("POST", "https://api.telegram.org/botx/sendMessage")
+        response = httpx.Response(
+            400,
+            request=request,
+            text='{"ok":false,"description":"Bad Request: message is too long"}',
         )
 
-    def test_markdown_v2_sanitizes_all_supported_tokens(self):
-        self.assertEqual(
-            sanitize_markdown_v2(
-                "```a`b\\c``` `a` [a_b](https://x.test/a)b) "
-                "||s!|| __u!__ *b!*. _i!_ ~x!~"
-            ),
-            r"```a\`b\\c``` `a` [a\_b](https://x.test/a)b\) "
-            r"||s\!|| __u\!__ *b\!*\. _i\!_ ~x\!~",
+        with self.assertRaisesRegex(RuntimeError, "message is too long"):
+            _raise_for_status(response)
+
+    def test_detects_document_formats(self):
+        from workers.telegram import (
+            TELEGRAM_DOCUMENT_FORMAT_HTML,
+            TELEGRAM_DOCUMENT_FORMAT_MARKDOWN,
+            TELEGRAM_DOCUMENT_FORMAT_TEXT,
+            detect_document_format,
         )
 
-    def test_markdown_v2_token_fallback_escapes_raw_match(self):
-        match = MagicMock()
-        match.groupdict.return_value = {
-            "fence": None,
-            "code": None,
-            "link_label": None,
-            "link_url": None,
-            "spoiler": None,
-            "underline": None,
-            "bold": None,
-            "italic": None,
-            "strike": None,
-        }
-        match.group.return_value = "raw!"
+        self.assertEqual(
+            detect_document_format("<b>Hello</b>"),
+            TELEGRAM_DOCUMENT_FORMAT_HTML,
+        )
+        self.assertEqual(
+            detect_document_format("<div>Hello</div>"),
+            TELEGRAM_DOCUMENT_FORMAT_HTML,
+        )
+        self.assertEqual(
+            detect_document_format("**Hello**"),
+            TELEGRAM_DOCUMENT_FORMAT_MARKDOWN,
+        )
+        self.assertEqual(
+            detect_document_format("Hello"),
+            TELEGRAM_DOCUMENT_FORMAT_TEXT,
+        )
 
-        self.assertEqual(_sanitize_markdown_v2_token(match), r"raw\!")
+    def test_document_format_metadata(self):
+        from workers.telegram import (
+            TELEGRAM_DOCUMENT_FORMAT_HTML,
+            TELEGRAM_DOCUMENT_FORMAT_MARKDOWN,
+            TELEGRAM_DOCUMENT_FORMAT_TEXT,
+            document_format_content_type,
+            document_format_filename,
+        )
+
+        self.assertEqual(
+            document_format_filename(123, TELEGRAM_DOCUMENT_FORMAT_HTML),
+            "response-123.html",
+        )
+        self.assertEqual(
+            document_format_filename(123, TELEGRAM_DOCUMENT_FORMAT_MARKDOWN),
+            "response-123.md",
+        )
+        self.assertEqual(
+            document_format_filename(123, TELEGRAM_DOCUMENT_FORMAT_TEXT),
+            "response-123.txt",
+        )
+        self.assertEqual(
+            document_format_content_type(TELEGRAM_DOCUMENT_FORMAT_HTML),
+            "text/html",
+        )
+        self.assertEqual(
+            document_format_content_type(TELEGRAM_DOCUMENT_FORMAT_MARKDOWN),
+            "text/markdown",
+        )
+        self.assertEqual(
+            document_format_content_type(TELEGRAM_DOCUMENT_FORMAT_TEXT),
+            "text/plain",
+        )
