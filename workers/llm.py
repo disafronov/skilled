@@ -1,11 +1,17 @@
 """LLM provider client — OpenAI-compatible API."""
 
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from django.conf import settings
 from openai import OpenAI
+
+
+@lru_cache(maxsize=16)
+def _get_openai_client(base_url: str, api_key: str) -> OpenAI:
+    return OpenAI(base_url=base_url, api_key=api_key)
 
 
 def get_global_system_prompt() -> str:
@@ -80,7 +86,7 @@ def call_llm(
         profile, skill, wrapper, raw_input, get_global_system_prompt()
     )
 
-    client = OpenAI(
+    client = _get_openai_client(
         base_url=provider.base_url,
         api_key=provider.auth_token,
     )
