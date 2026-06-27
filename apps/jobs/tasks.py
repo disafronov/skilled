@@ -54,56 +54,56 @@ def telegram_ingest() -> None:
     try:
         for bot in Bot.objects.filter(enabled=True):
             try:
-                acknowledgements = []
-                with transaction.atomic():
-                    offset = bot.telegram_update_offset or None
-                    updates = cast(
-                        list[_TelegramUpdate],
-                        get_updates(bot.telegram_api_token, offset=offset),
-                    )
-                    if not updates:
+                offset = bot.telegram_update_offset or None
+                updates = cast(
+                    list[_TelegramUpdate],
+                    get_updates(bot.telegram_api_token, offset=offset),
+                )
+                if not updates:
+                    continue
+
+                max_id = bot.telegram_update_offset or 0
+                message_batches: dict[str, _MessageBatch] = defaultdict(
+                    lambda: {"messages": [], "reply_to_message_id": None}
+                )
+                for update in updates:
+                    update_id = int(update["update_id"])
+                    max_id = max(max_id, update_id)
+
+                    message = update.get("message")
+                    if not message:
                         continue
 
-                    max_id = bot.telegram_update_offset or 0
-                    message_batches: dict[str, _MessageBatch] = defaultdict(
-                        lambda: {"messages": [], "reply_to_message_id": None}
-                    )
-                    for update in updates:
-                        update_id = int(update["update_id"])
-                        max_id = max(max_id, update_id)
+                    text = message.get("text")
+                    if not isinstance(text, str):
+                        continue
 
-                        message = update.get("message")
-                        if not message:
-                            continue
+                    text = text.strip()
+                    if not text or text.startswith("/"):
+                        continue
 
-                        text = message.get("text")
-                        if not isinstance(text, str):
-                            continue
+                    chat_id = str(message["chat"]["id"])
+                    message_id = message.get("message_id")
+                    batch = message_batches[chat_id]
+                    batch["messages"].append(text)
+                    batch["reply_to_message_id"] = message_id
 
-                        text = text.strip()
-                        if not text or text.startswith("/"):
-                            continue
-
-                        chat_id = str(message["chat"]["id"])
-                        message_id = message.get("message_id")
-                        batch = message_batches[chat_id]
-                        batch["messages"].append(text)
-                        batch["reply_to_message_id"] = message_id
-
-                    jobs_to_create = []
-                    for chat_id, batch in message_batches.items():
-                        messages = batch["messages"]
-                        message_id = batch["reply_to_message_id"]
-                        jobs_to_create.append(
-                            Job(
-                                bot=bot,
-                                reply_target=chat_id,
-                                reply_to_message_id=message_id,
-                                raw_input=" ".join(messages),
-                            )
+                acknowledgements: list[tuple[str, int | None]] = []
+                jobs_to_create = []
+                for chat_id, batch in message_batches.items():
+                    messages = batch["messages"]
+                    message_id = batch["reply_to_message_id"]
+                    jobs_to_create.append(
+                        Job(
+                            bot=bot,
+                            reply_target=chat_id,
+                            reply_to_message_id=message_id,
+                            raw_input=" ".join(messages),
                         )
-                        acknowledgements.append((chat_id, message_id))
+                    )
+                    acknowledgements.append((chat_id, message_id))
 
+                with transaction.atomic():
                     if jobs_to_create:
                         Job.objects.bulk_create(jobs_to_create)
 
