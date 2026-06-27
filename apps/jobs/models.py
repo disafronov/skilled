@@ -20,6 +20,36 @@ class Job(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Job"
         verbose_name_plural = "Jobs"
+        indexes = [
+            models.Index(
+                fields=["created_at", "id"],
+                name="job_ready_llm_idx",
+                condition=models.Q(
+                    llm_started_at__isnull=True,
+                    llm_finished_at__isnull=True,
+                    error__isnull=True,
+                ),
+            ),
+            models.Index(
+                fields=["llm_started_at"],
+                name="job_stale_llm_idx",
+                condition=models.Q(
+                    llm_started_at__isnull=False,
+                    llm_finished_at__isnull=True,
+                    error__isnull=True,
+                ),
+            ),
+            models.Index(
+                fields=["-created_at", "id"],
+                name="job_ready_delivery_idx",
+                condition=models.Q(
+                    llm_finished_at__isnull=False,
+                    raw_output__isnull=False,
+                    sent_at__isnull=True,
+                    error__isnull=True,
+                ),
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Job #{self.pk} [{self.bot.name}]"
