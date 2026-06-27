@@ -1,25 +1,18 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import httpx
 from django.test import TestCase
 
 
 class TelegramHttpClientTests(TestCase):
-    def _client_cm(self, response: httpx.Response) -> MagicMock:
-        client = MagicMock()
-        client.__enter__.return_value = client
-        client.__exit__.return_value = None
-        client.post.return_value = response
-        client.get.return_value = response
-        return client
+    def _request(self, method: str) -> httpx.Request:
+        return httpx.Request(method, "https://example.com")
 
-    @patch("workers.telegram.httpx.Client")
-    def test_send_message_posts_payload(self, client_cls):
+    @patch("workers.telegram._http.post")
+    def test_send_message_posts_payload(self, mock_post):
         from workers.telegram import send_message
 
-        request = httpx.Request("POST", "https://example.com")
-        client = self._client_cm(httpx.Response(200, request=request))
-        client_cls.return_value = client
+        mock_post.return_value = httpx.Response(200, request=self._request("POST"))
 
         send_message(
             "token",
@@ -29,7 +22,7 @@ class TelegramHttpClientTests(TestCase):
             parse_mode="MarkdownV2",
         )
 
-        client.post.assert_called_once_with(
+        mock_post.assert_called_once_with(
             "https://api.telegram.org/bottoken/sendMessage",
             json={
                 "chat_id": "chat",
@@ -40,28 +33,24 @@ class TelegramHttpClientTests(TestCase):
             },
         )
 
-    @patch("workers.telegram.httpx.Client")
-    def test_send_message_posts_minimal_payload(self, client_cls):
+    @patch("workers.telegram._http.post")
+    def test_send_message_posts_minimal_payload(self, mock_post):
         from workers.telegram import send_message
 
-        request = httpx.Request("POST", "https://example.com")
-        client = self._client_cm(httpx.Response(200, request=request))
-        client_cls.return_value = client
+        mock_post.return_value = httpx.Response(200, request=self._request("POST"))
 
         send_message("token", "chat", "hello")
 
-        client.post.assert_called_once_with(
+        mock_post.assert_called_once_with(
             "https://api.telegram.org/bottoken/sendMessage",
             json={"chat_id": "chat", "text": "hello"},
         )
 
-    @patch("workers.telegram.httpx.Client")
-    def test_send_document_posts_file_payload(self, client_cls):
+    @patch("workers.telegram._http.post")
+    def test_send_document_posts_file_payload(self, mock_post):
         from workers.telegram import send_document
 
-        request = httpx.Request("POST", "https://example.com")
-        client = self._client_cm(httpx.Response(200, request=request))
-        client_cls.return_value = client
+        mock_post.return_value = httpx.Response(200, request=self._request("POST"))
 
         send_document(
             "token",
@@ -73,7 +62,7 @@ class TelegramHttpClientTests(TestCase):
             reply_to_message_id=42,
         )
 
-        client.post.assert_called_once_with(
+        mock_post.assert_called_once_with(
             "https://api.telegram.org/bottoken/sendDocument",
             data={
                 "chat_id": "chat",
@@ -84,40 +73,37 @@ class TelegramHttpClientTests(TestCase):
             files={"document": ("response.txt", b"content", "text/plain")},
         )
 
-    @patch("workers.telegram.httpx.Client")
-    def test_send_document_posts_minimal_payload(self, client_cls):
+    @patch("workers.telegram._http.post")
+    def test_send_document_posts_minimal_payload(self, mock_post):
         from workers.telegram import send_document
 
-        request = httpx.Request("POST", "https://example.com")
-        client = self._client_cm(httpx.Response(200, request=request))
-        client_cls.return_value = client
+        mock_post.return_value = httpx.Response(200, request=self._request("POST"))
 
         send_document("token", "chat", "content", "response.txt", "text/plain")
 
-        client.post.assert_called_once_with(
+        mock_post.assert_called_once_with(
             "https://api.telegram.org/bottoken/sendDocument",
             data={"chat_id": "chat"},
             files={"document": ("response.txt", b"content", "text/plain")},
         )
 
-    @patch("workers.telegram.httpx.Client")
-    def test_get_updates_returns_result(self, client_cls):
+    @patch("workers.telegram._http.get")
+    def test_get_updates_returns_result(self, mock_get):
         from workers.telegram import get_updates
 
-        request = httpx.Request("GET", "https://example.com")
-        client = self._client_cm(
-            httpx.Response(200, request=request, json={"result": [{"update_id": 1}]})
+        mock_get.return_value = httpx.Response(
+            200,
+            request=self._request("GET"),
+            json={"result": [{"update_id": 1}]},
         )
-        client_cls.return_value = client
 
         self.assertEqual(get_updates("token", offset=10), [{"update_id": 1}])
-        client.get.assert_called_once_with(
+        mock_get.assert_called_once_with(
             "https://api.telegram.org/bottoken/getUpdates",
             params={"offset": 10, "timeout": 10},
         )
 
-    @patch("workers.telegram.httpx.Client")
-    def test_http_error_includes_response_body(self, client_cls):
+    def test_http_error_includes_response_body(self):
         from workers.telegram import _raise_for_status
 
         request = httpx.Request("POST", "https://api.telegram.org/botx/sendMessage")
