@@ -5,7 +5,7 @@ from django.db import migrations, models
 MISSING_LLM_RESULT_ERROR = "Missing LLM result before job state constraint migration."
 
 
-def backfill_job_state_for_constraints(apps, schema_editor):
+def backfill_job_state_for_constraints(apps, _schema_editor):
     job_model = apps.get_model("jobs", "Job")
 
     job_model.objects.filter(
