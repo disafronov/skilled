@@ -103,7 +103,7 @@ class TelegramHttpClientTests(TestCase):
             params={"offset": 10, "timeout": 10},
         )
 
-    def test_http_error_includes_response_body(self):
+    def test_http_error_sanitizes_response_body(self):
         from workers.telegram import _raise_for_status
 
         request = httpx.Request("POST", "https://api.telegram.org/botx/sendMessage")
@@ -113,7 +113,39 @@ class TelegramHttpClientTests(TestCase):
             text='{"ok":false,"description":"Bad Request: message is too long"}',
         )
 
-        with self.assertRaisesRegex(RuntimeError, "message is too long"):
+        with self.assertRaisesRegex(
+            RuntimeError,
+            r"Telegram API error \(400\): Bad Request: message is too long",
+        ):
+            _raise_for_status(response)
+
+    def test_http_error_handles_non_json_body(self):
+        from workers.telegram import _raise_for_status
+
+        request = httpx.Request("POST", "https://api.telegram.org/botx/sendMessage")
+        response = httpx.Response(
+            502,
+            request=request,
+            text="<html>bad gateway</html>",
+        )
+
+        with self.assertRaisesRegex(RuntimeError, r"Telegram API error \(502\)"):
+            _raise_for_status(response)
+
+    def test_http_error_truncates_long_description(self):
+        from workers.telegram import _raise_for_status
+
+        request = httpx.Request("POST", "https://api.telegram.org/botx/sendMessage")
+        long_desc = "x" * 200
+        response = httpx.Response(
+            400,
+            request=request,
+            text=f'{{"ok":false,"description":"{long_desc}"}}',
+        )
+
+        with self.assertRaisesRegex(
+            RuntimeError, r"Telegram API error \(400\): x{117}\.\.\."
+        ):
             _raise_for_status(response)
 
     def test_detects_document_formats(self):
