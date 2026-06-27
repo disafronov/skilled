@@ -1,3 +1,13 @@
+## [1.1.3-rc.2](https://github.com/disafronov/skilled/compare/v1.1.3-rc.1...v1.1.3-rc.2) (2026-06-27)
+
+### Bug Fixes
+
+* check Telegram API ok field in _raise_for_status to catch silent errors ([60a4082](https://github.com/disafronov/skilled/commit/60a408267e950566abf2e5c31dfbd706fd5304cc))
+* log warning on non-JSON Telegram API response with HTTP 200 ([145d4a4](https://github.com/disafronov/skilled/commit/145d4a4326434156ecb0dbd28a17a1deb96bedda))
+* log warning when encrypted field value cannot be decrypted ([7587ce8](https://github.com/disafronov/skilled/commit/7587ce81c60738ea8fba60be7a163f2c13d986ac))
+* move HTTP calls outside transaction in telegram_ingest ([9abc6dc](https://github.com/disafronov/skilled/commit/9abc6dcd564018cf22b8a7f701a8a4ae2d7f9610))
+* sanitize Telegram API error messages to avoid leaking response bodies ([1d0fd27](https://github.com/disafronov/skilled/commit/1d0fd27e20b4feb3776bb098dad0b91a1bc1a2e9))
+
 ## [1.1.3-rc.1](https://github.com/disafronov/skilled/compare/v1.1.2...v1.1.3-rc.1) (2026-06-27)
 
 ### Performance Improvements
