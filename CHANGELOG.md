@@ -1,3 +1,11 @@
+## [1.1.0-rc.2](https://github.com/disafronov/skilled/compare/v1.1.0-rc.1...v1.1.0-rc.2) (2026-06-27)
+
+### Bug Fixes
+
+* dead code ([1673843](https://github.com/disafronov/skilled/commit/167384313e63fd1beee4dab537eaa03ac8a12718))
+* encrypt tokens at rest using EncryptedCharField ([91242fe](https://github.com/disafronov/skilled/commit/91242fed307f5949a97b4bfa02321983d75269ae))
+* widen Q2 timeout/retry defaults for LLM latency ([17d5e21](https://github.com/disafronov/skilled/commit/17d5e21a1e999a7a917bc0a803d749bbe43e6c8b))
+
 ## [1.1.0-rc.1](https://github.com/disafronov/skilled/compare/v1.0.2-rc.2...v1.1.0-rc.1) (2026-06-27)
 
 ### Features
