@@ -1,9 +1,11 @@
 from django.db import models
 
+from apps.common.fields import EncryptedCharField
+
 
 class Bot(models.Model):
     name = models.CharField(max_length=255, unique=True)
-    telegram_api_token = models.CharField(max_length=255)
+    telegram_api_token = EncryptedCharField(max_length=512)
 
     profile = models.ForeignKey(
         "inference.Profile",
