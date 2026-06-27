@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 QUEUE_ACK_TEXT = "Added to the processing queue, please wait..."
 Q2_SUCCESS_RETENTION_SECONDS = 86400
 Q2_LLM_STALE_JOB_SECONDS = 3600
+Q2_DELIVERY_STALE_JOB_SECONDS = 3600
 
 
 def telegram_ingest() -> None:
@@ -119,19 +120,13 @@ def llm_worker() -> None:
                 )
             )
             stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
-            Job.objects.select_for_update(skip_locked=True).filter(
-                llm_started_at__lt=stale_cutoff,
-                llm_finished_at__isnull=True,
-                error__isnull=True,
+            Job.objects.select_for_update(skip_locked=True).stale_llm(
+                stale_cutoff
             ).update(llm_started_at=None, updated_at=timezone.now())
 
             job = (
                 Job.objects.select_for_update(skip_locked=True)
-                .filter(
-                    llm_started_at__isnull=True,
-                    llm_finished_at__isnull=True,
-                    error__isnull=True,
-                )
+                .ready_for_llm()
                 .select_related(
                     "bot__wrapper__skill",
                     "bot__profile__provider",
@@ -170,19 +165,29 @@ def telegram_deliver() -> None:
     """Deliver one completed Job response to Telegram."""
     try:
         with transaction.atomic():
+            stale_seconds = int(
+                os.environ.get(
+                    "Q2_DELIVERY_STALE_JOB_SECONDS",
+                    str(Q2_DELIVERY_STALE_JOB_SECONDS),
+                )
+            )
+            stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
+            Job.objects.select_for_update(skip_locked=True).stale_delivery(
+                stale_cutoff
+            ).update(delivery_started_at=None, updated_at=timezone.now())
+
             job = (
                 Job.objects.select_for_update(skip_locked=True)
-                .filter(
-                    llm_finished_at__isnull=False,
-                    raw_output__isnull=False,
-                    sent_at__isnull=True,
-                    error__isnull=True,
-                )
+                .ready_for_delivery()
                 .select_related("bot")
+                .order_by("llm_finished_at", "id")
                 .first()
             )
             if not job:
                 return
+
+            job.delivery_started_at = timezone.now()
+            job.save(update_fields=["delivery_started_at", "updated_at"])
 
         try:
             raw_output = job.raw_output or ""
