@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 _BOT_API_BASE = "https://api.telegram.org/bot"
 
+_BOT_TOKEN_RE = re.compile(r"\d+:[A-Za-z0-9_-]{20,}")
+
 TELEGRAM_MESSAGE_CHAR_LIMIT = 4096
 TELEGRAM_DOCUMENT_FORMAT_HTML = "html"
 TELEGRAM_DOCUMENT_FORMAT_MARKDOWN = "markdown"
@@ -37,6 +39,18 @@ _STANDARD_MARKDOWN_PATTERNS = (
 
 _http = httpx.Client(timeout=60.0)
 atexit.register(_http.close)
+
+
+def _request(method: str, url: str, **kwargs: Any) -> httpx.Response:
+    try:
+        response = _http.request(method, url, **kwargs)
+    except httpx.RequestError:
+        raise RuntimeError("Telegram API request failed") from None
+    return response
+
+
+def sanitize_error(text: str) -> str:
+    return _BOT_TOKEN_RE.sub("***", text)
 
 
 def _raise_for_status(response: httpx.Response) -> None:
@@ -107,7 +121,8 @@ def send_message(
     if parse_mode:
         payload["parse_mode"] = parse_mode
 
-    response = _http.post(
+    response = _request(
+        "post",
         _bot_url(token, "sendMessage"),
         json=payload,
     )
@@ -131,7 +146,8 @@ def send_document(
         data["reply_to_message_id"] = str(reply_to_message_id)
         data["allow_sending_without_reply"] = "true"
 
-    response = _http.post(
+    response = _request(
+        "post",
         _bot_url(token, "sendDocument"),
         data=data,
         files={
@@ -147,7 +163,8 @@ def send_document(
 
 def get_updates(token: str, offset: int | None = None) -> list[dict[str, Any]]:
     """Fetch incoming updates via long-poll."""
-    response = _http.get(
+    response = _request(
+        "get",
         _bot_url(token, "getUpdates"),
         params={"offset": offset, "timeout": 10},
     )
