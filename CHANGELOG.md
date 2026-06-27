@@ -1,3 +1,9 @@
+## [1.1.0-rc.1](https://github.com/disafronov/skilled/compare/v1.0.2-rc.2...v1.1.0-rc.1) (2026-06-27)
+
+### Features
+
+* **jobs:** add admin retry actions ([fd83ddb](https://github.com/disafronov/skilled/commit/fd83ddb8e50f9edfb7fd4dedae565bfdebefabe7))
+
 ## [1.0.2-rc.2](https://github.com/disafronov/skilled/compare/v1.0.2-rc.1...v1.0.2-rc.2) (2026-06-27)
 
 ### Bug Fixes
