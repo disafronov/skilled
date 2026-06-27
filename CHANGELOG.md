@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/disafronov/skilled/compare/v1.1.0...v1.1.1) (2026-06-27)
+
+### Bug Fixes
+
+* bump cryptography upper bound to <49.0.0 to resolve 6 CVEs ([86bd971](https://github.com/disafronov/skilled/commit/86bd9712a8fd160cbe882275e48cdb5e5d2f0aa2))
+* replace Signer-based field with actual Fernet encryption ([15dfb76](https://github.com/disafronov/skilled/commit/15dfb76f4f4d3dc08e99bc527dff11803dcffe80))
+
 ## [1.1.1-rc.1](https://github.com/disafronov/skilled/compare/v1.1.0...v1.1.1-rc.1) (2026-06-27)
 
 ### Bug Fixes
