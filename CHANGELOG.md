@@ -1,3 +1,10 @@
+## [1.1.3-rc.1](https://github.com/disafronov/skilled/compare/v1.1.2...v1.1.3-rc.1) (2026-06-27)
+
+### Performance Improvements
+
+* cache OpenAI client instances with lru_cache ([75b4e52](https://github.com/disafronov/skilled/commit/75b4e52eca682732de61d4633dde2612c2666c05))
+* reuse single httpx.Client across Telegram API calls ([2ccbfb7](https://github.com/disafronov/skilled/commit/2ccbfb720313e23138e220bfb936ea78d70129e7))
+
 ## [1.1.2](https://github.com/disafronov/skilled/compare/v1.1.1...v1.1.2) (2026-06-27)
 
 ## [1.1.2-rc.1](https://github.com/disafronov/skilled/compare/v1.1.1...v1.1.2-rc.1) (2026-06-27)
