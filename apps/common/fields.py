@@ -16,7 +16,7 @@ class EncryptedCharField(models.CharField):
     def from_db_value(
         self,
         value: str | None,
-        expression: Any,
+        _expression: Any,
         connection: Any,
     ) -> str | None:
         if value is None:
