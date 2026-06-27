@@ -81,11 +81,12 @@ class JobSelectionPredicatesTests(TestCase):
             llm_finished_at=now,
         )
 
-        # Failed: has error
+        # Failed: LLM finished with error
         cls.failed = Job.objects.create(
             bot=bot,
             reply_target="4",
             raw_input="hi4",
+            llm_finished_at=now,
             error="something went wrong",
         )
 
@@ -98,12 +99,12 @@ class JobSelectionPredicatesTests(TestCase):
         self.assertNotIn(self.failed, qs)
 
     def test_deliverable_job_selected(self):
-        """Deliverable: llm_finished_at set, raw_output set, delivery not finished."""
+        """Deliverable: llm_finished_at + raw_output or error, delivery not finished."""
         qs = Job.objects.ready_for_delivery()
         self.assertIn(self.completed, qs)
+        self.assertIn(self.failed, qs)
         self.assertNotIn(self.pending, qs)
         self.assertNotIn(self.in_progress, qs)
-        self.assertNotIn(self.failed, qs)
 
 
 class DerivedJobStatesTests(TestCase):

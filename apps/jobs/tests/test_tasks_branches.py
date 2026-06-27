@@ -218,7 +218,7 @@ class PipelineTaskBranchTests(TestCase):
         job.refresh_from_db()
         self.assertEqual(job.error, "llm down")
         self.assertIsNone(job.raw_output)
-        self.assertIsNone(job.llm_finished_at)
+        self.assertIsNotNone(job.llm_finished_at)
 
     @patch("apps.jobs.tasks.call_llm", return_value="requeued output")
     def test_llm_worker_requeues_stale_started_job(self, call_llm_mock):
@@ -338,6 +338,27 @@ class PipelineTaskBranchTests(TestCase):
 
         self.assertFalse(
             Job.objects.filter(delivery_finished_at__isnull=False).exists()
+        )
+
+    @patch("apps.jobs.tasks.send_message")
+    def test_deliver_sends_error_as_message_when_job_has_error(self, send_message_mock):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="hi",
+            llm_finished_at=self.now,
+            error="something went wrong",
+        )
+
+        telegram_deliver()
+
+        job.refresh_from_db()
+        self.assertIsNotNone(job.delivery_finished_at)
+        send_message_mock.assert_called_once_with(
+            self.bot.telegram_api_token,
+            "123",
+            "something went wrong",
+            reply_to_message_id=None,
         )
 
     @patch("apps.jobs.tasks.transaction.atomic", side_effect=RuntimeError("db down"))

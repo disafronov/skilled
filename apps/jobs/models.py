@@ -21,11 +21,9 @@ class JobQuerySet(models.QuerySet["Job"]):
     def ready_for_delivery(self) -> "JobQuerySet":
         return self.filter(
             llm_finished_at__isnull=False,
-            raw_output__isnull=False,
             delivery_started_at__isnull=True,
             delivery_finished_at__isnull=True,
-            error__isnull=True,
-        )
+        ).exclude(raw_output__isnull=True, error__isnull=True)
 
 
 class Job(models.Model):
@@ -101,7 +99,10 @@ class Job(models.Model):
                     models.Q(delivery_started_at__isnull=True)
                     | (
                         models.Q(llm_finished_at__isnull=False)
-                        & models.Q(raw_output__isnull=False)
+                        & (
+                            models.Q(raw_output__isnull=False)
+                            | models.Q(error__isnull=False)
+                        )
                     )
                 ),
                 name="job_delivery_started_requires_output",
@@ -109,12 +110,9 @@ class Job(models.Model):
             models.CheckConstraint(
                 condition=(
                     models.Q(delivery_finished_at__isnull=True)
-                    | (
-                        models.Q(delivery_started_at__isnull=False)
-                        & models.Q(error__isnull=True)
-                    )
+                    | models.Q(delivery_started_at__isnull=False)
                 ),
-                name="job_delivery_finished_requires_started_without_error",
+                name="job_delivery_finished_requires_started",
             ),
         ]
 

@@ -172,8 +172,9 @@ def llm_worker() -> None:
         )
         job.raw_output = raw_output
     except Exception as exc:
+        job.llm_finished_at = timezone.now()
         job.error = str(exc)
-        job.save(update_fields=["raw_output", "error", "updated_at"])
+        job.save(update_fields=["raw_output", "llm_finished_at", "error", "updated_at"])
         raise
 
     job.llm_finished_at = timezone.now()
@@ -197,17 +198,25 @@ def telegram_deliver() -> None:
         job.save(update_fields=["delivery_started_at", "updated_at"])
 
     try:
-        raw_output = job.raw_output or ""
-        document_format = detect_document_format(raw_output)
-        send_document(
-            job.bot.telegram_api_token,
-            job.reply_target,
-            raw_output,
-            document_format_filename(job.pk, document_format),
-            document_format_content_type(document_format),
-            caption="LLM response is attached as a text file.",
-            reply_to_message_id=job.reply_to_message_id,
-        )
+        if job.error:
+            send_message(
+                job.bot.telegram_api_token,
+                job.reply_target,
+                job.error,
+                reply_to_message_id=job.reply_to_message_id,
+            )
+        else:
+            raw_output = job.raw_output or ""
+            document_format = detect_document_format(raw_output)
+            send_document(
+                job.bot.telegram_api_token,
+                job.reply_target,
+                raw_output,
+                document_format_filename(job.pk, document_format),
+                document_format_content_type(document_format),
+                caption="LLM response is attached as a text file.",
+                reply_to_message_id=job.reply_to_message_id,
+            )
         job.delivery_finished_at = timezone.now()
     except Exception as exc:
         job.error = str(exc)
