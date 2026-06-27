@@ -1,10 +1,6 @@
 from django.contrib import admin
 
-from apps.admin_forms import (
-    AdminModelForm,
-    model_admin_fields,
-    model_admin_list_display,
-)
+from apps.admin_forms import AdminModelForm
 from apps.library.models import Skill, Wrapper
 
 
@@ -17,9 +13,9 @@ class SkillAdminForm(AdminModelForm):
 @admin.register(Skill)
 class SkillAdmin(admin.ModelAdmin):
     form = SkillAdminForm
-    fields = model_admin_fields(Skill)
+    fields = ("name", "content", "updated_at", "created_at")
     readonly_fields = ("updated_at", "created_at")
-    list_display = model_admin_list_display(Skill, exclude=("content",))
+    list_display = ("name", "updated_at")
     search_fields = ["name"]
 
 
@@ -32,8 +28,8 @@ class WrapperAdminForm(AdminModelForm):
 @admin.register(Wrapper)
 class WrapperAdmin(admin.ModelAdmin):
     form = WrapperAdminForm
-    fields = model_admin_fields(Wrapper)
+    fields = ("name", "skill", "content", "updated_at", "created_at")
     readonly_fields = ("updated_at", "created_at")
-    list_display = model_admin_list_display(Wrapper, exclude=("content",))
+    list_display = ("name", "skill", "updated_at")
     list_select_related = ["skill"]
     search_fields = ["name"]

@@ -4,7 +4,6 @@ from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.text import Truncator
 
-from apps.admin_forms import model_admin_fields, model_admin_list_display
 from apps.jobs.models import Job
 
 JOB_PREVIEW_LENGTH = 80
@@ -19,14 +18,19 @@ def preview_text(value: str | None) -> str:
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
     actions = ("retry_llm_jobs", "retry_delivery_jobs")
-    list_display = model_admin_list_display(
-        Job,
-        include_pk=True,
-        replacements={
-            "raw_input": "raw_input_preview",
-            "raw_output": "raw_output_preview",
-            "error": "error_preview",
-        },
+    list_display = (
+        "id",
+        "bot",
+        "reply_target",
+        "reply_to_message_id",
+        "raw_input_preview",
+        "raw_output_preview",
+        "error_preview",
+        "llm_started_at",
+        "llm_finished_at",
+        "delivery_started_at",
+        "delivery_finished_at",
+        "updated_at",
     )
     list_select_related = ("bot",)
     search_fields = ("raw_input",)
@@ -37,7 +41,21 @@ class JobAdmin(admin.ModelAdmin):
         "delivery_started_at",
         "delivery_finished_at",
     )
-    fields = model_admin_fields(Job, include_pk=True)
+    fields = (
+        "id",
+        "bot",
+        "reply_target",
+        "reply_to_message_id",
+        "raw_input",
+        "raw_output",
+        "error",
+        "llm_started_at",
+        "llm_finished_at",
+        "delivery_started_at",
+        "delivery_finished_at",
+        "updated_at",
+        "created_at",
+    )
     readonly_fields = fields
 
     @admin.display(description="Raw input", ordering="raw_input")
