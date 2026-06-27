@@ -86,8 +86,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 Q_CLUSTER = {
     "name": os.getenv("Q_CLUSTER_NAME", "skilled"),
     "workers": int(os.getenv("Q_WORKERS", 2)),
-    "timeout": int(os.getenv("Q_TIMEOUT", 120)),
-    "retry": int(os.getenv("Q_RETRY", 150)),
+    "timeout": int(os.getenv("Q_TIMEOUT", 600)),
+    "retry": int(os.getenv("Q_RETRY", 660)),
     "queue_limit": int(os.getenv("Q_QUEUE_LIMIT", 50)),
     "bulk": int(os.getenv("Q_BULK", 10)),
     "orm": "default",
