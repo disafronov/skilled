@@ -95,11 +95,7 @@ class JobSelectionPredicatesTests(TestCase):
 
     def test_pending_job_selected(self):
         """Pending job (not started, no error) should match."""
-        qs = Job.objects.filter(
-            llm_started_at__isnull=True,
-            llm_finished_at__isnull=True,
-            error__isnull=True,
-        )
+        qs = Job.objects.ready_for_llm()
         self.assertIn(self.pending, qs)
         self.assertNotIn(self.in_progress, qs)
         self.assertNotIn(self.completed, qs)
@@ -107,12 +103,7 @@ class JobSelectionPredicatesTests(TestCase):
 
     def test_deliverable_job_selected(self):
         """Deliverable: llm_finished_at set, raw_output set, sent_at null, no error."""
-        qs = Job.objects.filter(
-            llm_finished_at__isnull=False,
-            raw_output__isnull=False,
-            sent_at__isnull=True,
-            error__isnull=True,
-        )
+        qs = Job.objects.ready_for_delivery()
         self.assertIn(self.completed, qs)
         self.assertNotIn(self.pending, qs)
         self.assertNotIn(self.in_progress, qs)
