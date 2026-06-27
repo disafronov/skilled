@@ -2,8 +2,9 @@
 
 import logging
 import os
+from collections import defaultdict
 from datetime import timedelta
-from typing import Any, cast
+from typing import NotRequired, TypedDict, cast
 
 from django.db import transaction
 from django.utils import timezone
@@ -28,6 +29,26 @@ Q2_SUCCESS_RETENTION_SECONDS = 86400
 Q2_LLM_STALE_JOB_SECONDS = 3600
 
 
+class _TelegramChat(TypedDict):
+    id: int
+
+
+class _TelegramMessage(TypedDict):
+    chat: _TelegramChat
+    text: NotRequired[str]
+    message_id: NotRequired[int]
+
+
+class _TelegramUpdate(TypedDict):
+    update_id: int
+    message: NotRequired[_TelegramMessage]
+
+
+class _MessageBatch(TypedDict):
+    messages: list[str]
+    reply_to_message_id: int | None
+
+
 def telegram_ingest() -> None:
     """Poll Telegram for updates and create Job records."""
     try:
@@ -36,17 +57,22 @@ def telegram_ingest() -> None:
                 acknowledgements = []
                 with transaction.atomic():
                     offset = bot.telegram_update_offset or None
-                    updates = get_updates(bot.telegram_api_token, offset=offset)
+                    updates = cast(
+                        list[_TelegramUpdate],
+                        get_updates(bot.telegram_api_token, offset=offset),
+                    )
                     if not updates:
                         continue
 
                     max_id = bot.telegram_update_offset or 0
-                    message_batches: dict[str, dict[str, Any]] = {}
+                    message_batches: dict[str, _MessageBatch] = defaultdict(
+                        lambda: {"messages": [], "reply_to_message_id": None}
+                    )
                     for update in updates:
-                        update_id = int(cast(Any, update["update_id"]))
+                        update_id = int(update["update_id"])
                         max_id = max(max_id, update_id)
 
-                        message = cast(dict[str, Any] | None, update.get("message"))
+                        message = update.get("message")
                         if not message:
                             continue
 
@@ -60,17 +86,14 @@ def telegram_ingest() -> None:
 
                         chat_id = str(message["chat"]["id"])
                         message_id = message.get("message_id")
-                        batch = message_batches.setdefault(
-                            chat_id,
-                            {"messages": [], "reply_to_message_id": None},
-                        )
-                        cast(list[str], batch["messages"]).append(text)
+                        batch = message_batches[chat_id]
+                        batch["messages"].append(text)
                         batch["reply_to_message_id"] = message_id
 
                     jobs_to_create = []
                     for chat_id, batch in message_batches.items():
-                        messages = cast(list[str], batch["messages"])
-                        message_id = cast(int | None, batch["reply_to_message_id"])
+                        messages = batch["messages"]
+                        message_id = batch["reply_to_message_id"]
                         jobs_to_create.append(
                             Job(
                                 bot=bot,
