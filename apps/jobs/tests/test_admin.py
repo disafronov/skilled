@@ -42,6 +42,12 @@ class JobAdminTests(TestCase):
         self.assertFalse(admin.has_change_permission(request, self.job))
         self.assertFalse(admin.has_delete_permission(request, self.job))
 
+    def test_job_admin_exposes_retry_actions(self):
+        admin = JobAdmin(Job, AdminSite())
+
+        self.assertIn("retry_llm_jobs", admin.get_actions(MagicMock()))
+        self.assertIn("retry_delivery_jobs", admin.get_actions(MagicMock()))
+
     def test_job_admin_order_comes_from_model(self):
         admin = JobAdmin(Job, AdminSite())
 
@@ -105,3 +111,81 @@ class JobAdminTests(TestCase):
         self.assertEqual(
             admin.raw_input_preview(self.job), preview_text(self.job.raw_input)
         )
+
+    def test_retry_llm_jobs_resets_llm_state(self):
+        admin = JobAdmin(Job, AdminSite())
+        request = MagicMock()
+        admin.message_user = MagicMock()
+        job = Job.objects.create(
+            bot=self.job.bot,
+            reply_target="retry-llm",
+            raw_input="hello",
+            llm_started_at=self.job.created_at,
+            error="llm down",
+        )
+
+        admin.retry_llm_jobs(request, Job.objects.filter(pk=job.pk))
+
+        job.refresh_from_db()
+        self.assertIsNone(job.llm_started_at)
+        self.assertIsNone(job.llm_finished_at)
+        self.assertIsNone(job.raw_output)
+        self.assertIsNone(job.error)
+        self.assertIsNone(job.delivery_started_at)
+        self.assertIsNone(job.delivery_finished_at)
+
+    def test_retry_llm_jobs_warns_when_nothing_is_eligible(self):
+        admin = JobAdmin(Job, AdminSite())
+        request = MagicMock()
+        admin.message_user = MagicMock()
+        job = Job.objects.create(
+            bot=self.job.bot,
+            reply_target="done",
+            raw_input="hello",
+            llm_started_at=self.job.created_at,
+            llm_finished_at=self.job.created_at,
+            raw_output="response",
+            delivery_started_at=self.job.created_at,
+            delivery_finished_at=self.job.created_at,
+        )
+
+        admin.retry_llm_jobs(request, Job.objects.filter(pk=job.pk))
+
+        admin.message_user.assert_called_once()
+        self.assertEqual(admin.message_user.call_args.kwargs["level"], 30)
+        job.refresh_from_db()
+        self.assertIsNotNone(job.delivery_finished_at)
+
+    def test_retry_delivery_jobs_resets_delivery_state(self):
+        admin = JobAdmin(Job, AdminSite())
+        request = MagicMock()
+        admin.message_user = MagicMock()
+        job = Job.objects.create(
+            bot=self.job.bot,
+            reply_target="retry-delivery",
+            raw_input="hello",
+            llm_started_at=self.job.created_at,
+            llm_finished_at=self.job.created_at,
+            raw_output="response",
+            delivery_started_at=self.job.created_at,
+            error="telegram down",
+        )
+
+        admin.retry_delivery_jobs(request, Job.objects.filter(pk=job.pk))
+
+        job.refresh_from_db()
+        self.assertIsNotNone(job.llm_finished_at)
+        self.assertEqual(job.raw_output, "response")
+        self.assertIsNone(job.delivery_started_at)
+        self.assertIsNone(job.delivery_finished_at)
+        self.assertIsNone(job.error)
+
+    def test_retry_delivery_jobs_warns_when_nothing_is_eligible(self):
+        admin = JobAdmin(Job, AdminSite())
+        request = MagicMock()
+        admin.message_user = MagicMock()
+
+        admin.retry_delivery_jobs(request, Job.objects.filter(pk=self.job.pk))
+
+        admin.message_user.assert_called_once()
+        self.assertEqual(admin.message_user.call_args.kwargs["level"], 30)
