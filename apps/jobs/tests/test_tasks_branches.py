@@ -8,6 +8,7 @@ from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
 from apps.jobs.models import Job
 from apps.jobs.tasks import (
+    Q2_DELIVERY_STALE_JOB_SECONDS,
     Q2_LLM_STALE_JOB_SECONDS,
     llm_worker,
     telegram_deliver,
@@ -260,6 +261,81 @@ class PipelineTaskBranchTests(TestCase):
         job.refresh_from_db()
         self.assertIsNone(job.sent_at)
         self.assertEqual(job.error, "telegram down")
+
+    @patch("apps.jobs.tasks.send_document")
+    def test_deliver_sends_oldest_finished_job_first(self, send_document):
+        newer = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="newer",
+            raw_output="newer response",
+            llm_finished_at=self.now,
+        )
+        older = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="older",
+            raw_output="older response",
+            llm_finished_at=self.now - timedelta(seconds=10),
+        )
+
+        telegram_deliver()
+
+        older.refresh_from_db()
+        newer.refresh_from_db()
+        self.assertIsNotNone(older.sent_at)
+        self.assertIsNone(newer.sent_at)
+        send_document.assert_called_once()
+        self.assertEqual(send_document.call_args.args[2], "older response")
+
+    @patch("apps.jobs.tasks.send_document")
+    def test_deliver_skips_job_already_being_delivered(self, send_document):
+        in_progress = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="in progress",
+            raw_output="in progress response",
+            llm_finished_at=self.now - timedelta(seconds=10),
+            delivery_started_at=self.now,
+        )
+        ready = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="ready",
+            raw_output="ready response",
+            llm_finished_at=self.now,
+        )
+
+        telegram_deliver()
+
+        in_progress.refresh_from_db()
+        ready.refresh_from_db()
+        self.assertIsNone(in_progress.sent_at)
+        self.assertIsNotNone(ready.sent_at)
+        send_document.assert_called_once()
+        self.assertEqual(send_document.call_args.args[2], "ready response")
+
+    @patch("apps.jobs.tasks.send_document")
+    def test_deliver_requeues_stale_delivery(self, send_document):
+        stale_started_at = self.now - timedelta(
+            seconds=Q2_DELIVERY_STALE_JOB_SECONDS + 1
+        )
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="stale",
+            raw_output="stale response",
+            llm_finished_at=self.now,
+            delivery_started_at=stale_started_at,
+        )
+
+        telegram_deliver()
+
+        job.refresh_from_db()
+        self.assertIsNotNone(job.sent_at)
+        self.assertGreater(job.delivery_started_at, stale_started_at)
+        send_document.assert_called_once()
+        self.assertEqual(send_document.call_args.args[2], "stale response")
 
     def test_deliver_returns_when_no_job_exists(self):
         telegram_deliver()
