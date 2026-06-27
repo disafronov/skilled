@@ -1,14 +1,22 @@
 """Telegram Bot API client wrapper."""
 
+import atexit
 import re
 from typing import Any
 
 import httpx
 
+_BOT_API_BASE = "https://api.telegram.org/bot"
+
 TELEGRAM_MESSAGE_CHAR_LIMIT = 4096
 TELEGRAM_DOCUMENT_FORMAT_HTML = "html"
 TELEGRAM_DOCUMENT_FORMAT_MARKDOWN = "markdown"
 TELEGRAM_DOCUMENT_FORMAT_TEXT = "text"
+
+
+def _bot_url(token: str, method: str) -> str:
+    return f"{_BOT_API_BASE}{token}/{method}"
+
 
 _STANDARD_HTML_TAG_RE = re.compile(r"</?[a-z][a-z0-9-]*(?:\s+[^>]*)?>", re.IGNORECASE)
 _STANDARD_MARKDOWN_PATTERNS = (
@@ -25,6 +33,7 @@ _STANDARD_MARKDOWN_PATTERNS = (
 )
 
 _http = httpx.Client(timeout=60.0)
+atexit.register(_http.close)
 
 
 def _raise_for_status(response: httpx.Response) -> None:
@@ -96,7 +105,7 @@ def send_message(
         payload["parse_mode"] = parse_mode
 
     response = _http.post(
-        f"https://api.telegram.org/bot{token}/sendMessage",
+        _bot_url(token, "sendMessage"),
         json=payload,
     )
     _raise_for_status(response)
@@ -120,7 +129,7 @@ def send_document(
         data["allow_sending_without_reply"] = "true"
 
     response = _http.post(
-        f"https://api.telegram.org/bot{token}/sendDocument",
+        _bot_url(token, "sendDocument"),
         data=data,
         files={
             "document": (
@@ -136,7 +145,7 @@ def send_document(
 def get_updates(token: str, offset: int | None = None) -> list[dict[str, Any]]:
     """Fetch incoming updates via long-poll."""
     response = _http.get(
-        f"https://api.telegram.org/bot{token}/getUpdates",
+        _bot_url(token, "getUpdates"),
         params={"offset": offset, "timeout": 10},
     )
     _raise_for_status(response)
