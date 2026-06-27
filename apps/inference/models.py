@@ -1,5 +1,7 @@
 from django.db import models
 
+from apps.common.fields import EncryptedCharField
+
 
 class ApiType(models.TextChoices):
     OPENAI = "openai", "OpenAI Compatible"
@@ -13,7 +15,7 @@ class Provider(models.Model):
         default=ApiType.OPENAI,
     )
     base_url = models.URLField()
-    auth_token = models.CharField(max_length=4096)
+    auth_token = EncryptedCharField(max_length=8192)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
