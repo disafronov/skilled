@@ -6,9 +6,6 @@ from cryptography.fernet import Fernet
 
 from apps.common.fields import EncryptedCharField, _cipher
 
-_TEST_KEY = Fernet.generate_key().decode()
-os.environ.setdefault("FIELD_ENCRYPTION_KEY", _TEST_KEY)
-
 
 @pytest.fixture(autouse=True)
 def _clear_cipher_cache():
