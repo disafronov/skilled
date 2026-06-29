@@ -40,6 +40,50 @@ class PipelineTaskBranchTests(TestCase):
             wrapper=wrapper,
         )
 
+    @patch(
+        "apps.jobs.tasks.Bot.objects.select_for_update", return_value=Bot.objects.none()
+    )
+    def test_ingest_skips_bot_locked_by_another_worker(self, mock_sfu):
+        telegram_ingest()
+
+        self.bot.refresh_from_db()
+        self.assertEqual(self.bot.telegram_update_offset, 0)
+        self.assertFalse(Job.objects.exists())
+
+    def test_ingest_skips_bot_deleted_between_transactions(self):
+        def _delete_and_return(*args, **kwargs):
+            self.bot.delete()
+            return [
+                {
+                    "update_id": 10,
+                    "message": {"message_id": 1, "chat": {"id": 123}, "text": "hello"},
+                }
+            ]
+
+        with patch("apps.jobs.tasks.get_updates", side_effect=_delete_and_return):
+            telegram_ingest()
+
+        self.assertFalse(Job.objects.exists())
+
+    def test_ingest_skips_when_offset_already_advanced(self):
+        self.bot.telegram_update_offset = 100
+        self.bot.save(update_fields=["telegram_update_offset"])
+
+        with patch(
+            "apps.jobs.tasks.get_updates",
+            return_value=[
+                {
+                    "update_id": 50,
+                    "message": {"message_id": 1, "chat": {"id": 123}, "text": "hello"},
+                },
+            ],
+        ):
+            telegram_ingest()
+
+        self.bot.refresh_from_db()
+        self.assertEqual(self.bot.telegram_update_offset, 100)
+        self.assertFalse(Job.objects.exists())
+
     @patch("apps.jobs.tasks.get_updates", return_value=[])
     def test_ingest_no_updates_leaves_offset_unchanged(self, get_updates):
         telegram_ingest()
