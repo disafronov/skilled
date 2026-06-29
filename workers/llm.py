@@ -125,6 +125,15 @@ def call_llm(
     raw_input: str,
 ) -> str:
     """Execute an LLM call and return the response text."""
+    logger.info(
+        "LLM call — provider=%s model=%s skill=%s wrapper=%s input_len=%d",
+        provider.base_url,
+        profile.model,
+        skill.content[:40] if skill.content else "",
+        wrapper.content[:40] if wrapper.content else "",
+        len(raw_input),
+    )
+
     body = build_request_body(
         profile, skill, wrapper, raw_input, get_global_system_prompt()
     )
@@ -138,7 +147,11 @@ def call_llm(
     choice = response.choices[0]
     content = choice.message.content
     if not isinstance(content, str):
+        logger.error(
+            "LLM returned empty response (finish_reason=%s)", choice.finish_reason
+        )
         raise RuntimeError(
             f"LLM returned empty response (finish_reason: {choice.finish_reason})"
         )
+    logger.info("LLM response — output_len=%d", len(content))
     return content
