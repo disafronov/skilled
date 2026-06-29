@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import logging
+import os
 from functools import cache
 from typing import Any, cast
 
@@ -15,10 +16,14 @@ logger = logging.getLogger(__name__)
 
 @cache
 def _cipher() -> Fernet:
-    key = base64.urlsafe_b64encode(
+    raw = os.environ.get("FIELD_ENCRYPTION_KEY")
+    if raw:
+        return Fernet(raw)
+    # Backward-compatible fallback: derive from SECRET_KEY
+    derived: bytes = base64.urlsafe_b64encode(
         hashlib.sha256(settings.SECRET_KEY.encode()).digest()
     )
-    return Fernet(key)
+    return Fernet(derived)
 
 
 class EncryptedCharField(models.CharField):
