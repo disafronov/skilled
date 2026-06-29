@@ -1,3 +1,12 @@
+## [1.1.5-rc.2](https://github.com/disafronov/skilled/compare/v1.1.5-rc.1...v1.1.5-rc.2) (2026-06-29)
+
+### Bug Fixes
+
+* **common:** return None on decrypt failure instead of raw encrypted blob ([726a23f](https://github.com/disafronov/skilled/commit/726a23fdd532a0a3503b22727824a7551b860b44))
+* **config:** raise RuntimeError on insecure SECRET_KEY in production ([938f777](https://github.com/disafronov/skilled/commit/938f7776301ba80eeab8278e6c8e565df90a931e))
+* **security:** separate FIELD_ENCRYPTION_KEY from SECRET_KEY ([35fda41](https://github.com/disafronov/skilled/commit/35fda41b6f4be153ac7085880cba87e5df9ed700))
+* **workers:** prevent race condition in telegram_ingest with select_for_update ([f78acab](https://github.com/disafronov/skilled/commit/f78acab2a6a6adbff59a72bbcca5bce2a5ac3cb1))
+
 ## [1.1.5-rc.1](https://github.com/disafronov/skilled/compare/v1.1.4...v1.1.5-rc.1) (2026-06-29)
 
 ## [1.1.4](https://github.com/disafronov/skilled/compare/v1.1.3...v1.1.4) (2026-06-28)
