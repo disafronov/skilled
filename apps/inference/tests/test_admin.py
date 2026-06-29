@@ -50,6 +50,7 @@ class ProviderAdminTests(SimpleTestCase):
             base_url="https://example.com",
             auth_token="secret-token",
         )
+        provider.pk = 1  # simulate existing DB instance
         admin = ProviderAdmin(Provider, AdminSite())
         form_class = admin.get_form(MagicMock(), provider)
         form = form_class(instance=provider)
@@ -75,12 +76,14 @@ class ProviderAdminTests(SimpleTestCase):
             base_url="https://example.com",
             auth_token="secret-token",
         )
+        provider.pk = 1  # simulate existing DB instance
         admin = ProviderAdmin(Provider, AdminSite())
         form_class = admin.get_form(MagicMock(), provider)
         form = form_class(instance=provider)
         form.cleaned_data = {"auth_token": ""}
 
-        self.assertEqual(form.clean()["auth_token"], "secret-token")
+        cleaned = form.clean()
+        self.assertNotIn("auth_token", cleaned)
 
     def test_auth_token_has_no_filled_marker_for_new_provider(self):
         provider = Provider(

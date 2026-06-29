@@ -10,7 +10,9 @@ from django.test import TestCase
 from django.utils import timezone
 from django_q.models import Schedule, Task
 
+from apps.bots.admin import BotAdminForm
 from apps.bots.models import Bot
+from apps.inference.admin import ProviderAdminForm
 from apps.inference.models import Profile, Provider
 from apps.jobs.apps import create_schedules, protect_managed_schedule
 from apps.jobs.models import Job
@@ -773,3 +775,111 @@ class TelegramDeliveryTests(TestCase):
             caption="LLM response is attached as a text file.",
             reply_to_message_id=456,
         )
+
+
+class MaskedFieldAdminFormTests(TestCase):
+    """AdminModelForm must never decrypt masked fields to check or preserve values."""
+
+    def test_bot_admin_form_skips_empty_masked_field_for_existing_instance(self):
+        skill = Skill.objects.create(name="s", content="c")
+        wrapper = Wrapper.objects.create(name="w", skill=skill, content="c")
+        provider = Provider.objects.create(
+            name="p", api_type="openai", base_url="https://x.com", auth_token="t"
+        )
+        profile = Profile.objects.create(name="pr", provider=provider, model="gpt-4")
+        bot = Bot.objects.create(
+            name="bot",
+            telegram_api_token="telegram-token",
+            profile=profile,
+            wrapper=wrapper,
+        )
+
+        form = BotAdminForm(
+            data={
+                "name": "bot",
+                "telegram_api_token": "",
+                "profile": profile.pk,
+                "wrapper": wrapper.pk,
+                "enabled": True,
+                "telegram_update_offset": 0,
+            },
+            instance=bot,
+        )
+
+        self.assertTrue(form.is_valid())
+        self.assertNotIn("telegram_api_token", form.cleaned_data)
+
+    def test_provider_admin_form_skips_empty_masked_field_for_existing_instance(self):
+        provider = Provider.objects.create(
+            name="p", api_type="openai", base_url="https://x.com", auth_token="t"
+        )
+
+        form = ProviderAdminForm(
+            data={
+                "name": "p",
+                "api_type": "openai",
+                "base_url": "https://x.com",
+                "auth_token": "",
+            },
+            instance=provider,
+        )
+
+        self.assertTrue(form.is_valid())
+        self.assertNotIn("auth_token", form.cleaned_data)
+
+    def test_bot_admin_form_masked_field_required_for_new_instance(self):
+        skill = Skill.objects.create(name="s", content="c")
+        wrapper = Wrapper.objects.create(name="w", skill=skill, content="c")
+        profile = Profile.objects.create(
+            name="pr",
+            provider=Provider.objects.create(
+                name="p", api_type="openai", base_url="https://x.com", auth_token="t"
+            ),
+            model="gpt-4",
+        )
+
+        form = BotAdminForm(
+            data={
+                "name": "new-bot",
+                "telegram_api_token": "",
+                "profile": profile.pk,
+                "wrapper": wrapper.pk,
+                "enabled": True,
+                "telegram_update_offset": 0,
+            },
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("telegram_api_token", form.errors)
+
+    def test_bot_admin_form_new_value_in_masked_field_used(self):
+        skill = Skill.objects.create(name="s", content="c")
+        wrapper = Wrapper.objects.create(name="w", skill=skill, content="c")
+        profile = Profile.objects.create(
+            name="pr",
+            provider=Provider.objects.create(
+                name="p", api_type="openai", base_url="https://x.com", auth_token="t"
+            ),
+            model="gpt-4",
+        )
+        bot = Bot.objects.create(
+            name="bot",
+            telegram_api_token="old-token",
+            profile=profile,
+            wrapper=wrapper,
+        )
+
+        form = BotAdminForm(
+            data={
+                "name": "bot",
+                "telegram_api_token": "new-token",
+                "profile": profile.pk,
+                "wrapper": wrapper.pk,
+                "enabled": True,
+                "telegram_update_offset": 0,
+            },
+            instance=bot,
+        )
+
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["telegram_api_token"], "new-token")
