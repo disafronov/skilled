@@ -4,12 +4,42 @@ import logging
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from django.conf import settings
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
+
+
+class _ProviderProto(Protocol):
+    """Minimal provider contract: URL + auth token."""
+
+    base_url: str
+    auth_token: str
+
+
+class _ProfileProto(Protocol):
+    """Minimal profile contract: model name + optional parameters."""
+
+    model: str
+    temperature: float | None
+    top_p: float | None
+    max_output_tokens: int | None
+    reasoning_effort: str | None
+    response_format: Any | None
+
+
+class _SkillProto(Protocol):
+    """Minimal skill contract: system-instruction content."""
+
+    content: str
+
+
+class _WrapperProto(Protocol):
+    """Minimal wrapper contract: wrapper-instruction content."""
+
+    content: str
 
 
 @lru_cache(maxsize=16)
@@ -40,7 +70,7 @@ def _omit_none(d: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in d.items() if v is not None}
 
 
-def _build_kwargs(profile: Any) -> dict[str, Any]:
+def _build_kwargs(profile: _ProfileProto) -> dict[str, Any]:
     """Build optional kwargs from profile, omitting null fields."""
     return _omit_none(
         {
@@ -53,9 +83,9 @@ def _build_kwargs(profile: Any) -> dict[str, Any]:
 
 
 def build_request_body(
-    profile: Any,
-    skill: Any,
-    wrapper: Any,
+    profile: _ProfileProto,
+    skill: _SkillProto,
+    wrapper: _WrapperProto,
     raw_input: str,
     global_system_prompt: str,
 ) -> dict[str, Any]:
@@ -81,10 +111,10 @@ def build_request_body(
 
 
 def call_llm(
-    provider: Any,
-    profile: Any,
-    skill: Any,
-    wrapper: Any,
+    provider: _ProviderProto,
+    profile: _ProfileProto,
+    skill: _SkillProto,
+    wrapper: _WrapperProto,
     raw_input: str,
 ) -> str:
     """Execute an LLM call and return the response text."""
