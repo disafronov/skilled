@@ -1,3 +1,9 @@
+## [1.2.0-rc.1](https://github.com/disafronov/skilled/compare/v1.1.5-rc.3...v1.2.0-rc.1) (2026-06-29)
+
+### Features
+
+* **log:** add structured logging to workers and pipeline tasks ([53cbe0c](https://github.com/disafronov/skilled/commit/53cbe0cd547ff39f8486dac2c0caa29f2ed35468))
+
 ## [1.1.5-rc.3](https://github.com/disafronov/skilled/compare/v1.1.5-rc.2...v1.1.5-rc.3) (2026-06-29)
 
 ### Bug Fixes
