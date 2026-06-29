@@ -1,5 +1,6 @@
 """LLM provider client — OpenAI-compatible API."""
 
+import logging
 import os
 from functools import lru_cache
 from pathlib import Path
@@ -7,6 +8,8 @@ from typing import Any
 
 from django.conf import settings
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=16)
@@ -27,6 +30,9 @@ def get_global_system_prompt() -> str:
     try:
         return path.read_text(encoding="utf-8").strip()
     except FileNotFoundError:
+        logger.warning(
+            "policy file not found at %s — continuing without global policy", path
+        )
         return ""
 
 
