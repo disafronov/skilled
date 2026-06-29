@@ -1,3 +1,19 @@
+## [1.2.0](https://github.com/disafronov/skilled/compare/v1.1.4...v1.2.0) (2026-06-29)
+
+### Features
+
+* **log:** add structured logging to workers and pipeline tasks ([60de711](https://github.com/disafronov/skilled/commit/60de711a918c85807029c6addb95bcd7f719deb7))
+
+### Bug Fixes
+
+* **common:** prevent ciphertext leak in EncryptedCharField ([616dba4](https://github.com/disafronov/skilled/commit/616dba4d09ad451f095d3e21eb13b6fae1e89e41))
+* **common:** return None on decrypt failure instead of raw encrypted blob ([ec8038a](https://github.com/disafronov/skilled/commit/ec8038afeecfd0baf79b21fa9a115e95afc23f35))
+* **config:** raise RuntimeError on insecure SECRET_KEY in production ([537f50c](https://github.com/disafronov/skilled/commit/537f50c20da09da8f5adead61bfc14757c151e03))
+* **security:** separate FIELD_ENCRYPTION_KEY from SECRET_KEY ([c4b8dd3](https://github.com/disafronov/skilled/commit/c4b8dd3fe46e56f4dbdaec22ab8fd121e3049dc6))
+* **tests:** centralize FIELD_ENCRYPTION_KEY setup in root conftest.py ([bd77953](https://github.com/disafronov/skilled/commit/bd779537f24fe2051d2eb7620271e2c636b424d0))
+* **workers:** handle OSError and UnicodeDecodeError when loading policy.md ([229b186](https://github.com/disafronov/skilled/commit/229b186c7af5f1a20ec473a6363e86e7a21bc8ef))
+* **workers:** prevent race condition in telegram_ingest with select_for_update ([ecb26c6](https://github.com/disafronov/skilled/commit/ecb26c6569ef95aec07f7443115431e5299240a5))
+
 ## [1.2.0-rc.1](https://github.com/disafronov/skilled/compare/v1.1.5-rc.3...v1.2.0-rc.1) (2026-06-29)
 
 ### Features
