@@ -55,15 +55,24 @@ def telegram_ingest() -> None:
     try:
         for bot in Bot.objects.filter(enabled=True):
             try:
-                offset = bot.telegram_update_offset or None
+                with transaction.atomic():
+                    locked = (
+                        Bot.objects.select_for_update(skip_locked=True)
+                        .filter(pk=bot.pk)
+                        .first()
+                    )
+                    if locked is None:
+                        continue
+                    offset = locked.telegram_update_offset or None
+
                 updates = cast(
                     list[_TelegramUpdate],
-                    get_updates(bot.telegram_api_token, offset=offset),
+                    get_updates(locked.telegram_api_token, offset=offset),
                 )
                 if not updates:
                     continue
 
-                max_id = bot.telegram_update_offset or 0
+                max_id = locked.telegram_update_offset or 0
                 message_batches: dict[str, _MessageBatch] = defaultdict(
                     lambda: {"messages": [], "reply_to_message_id": None}
                 )
@@ -96,7 +105,7 @@ def telegram_ingest() -> None:
                     message_id = batch["reply_to_message_id"]
                     jobs_to_create.append(
                         Job(
-                            bot=bot,
+                            bot=locked,
                             reply_target=chat_id,
                             reply_to_message_id=message_id,
                             raw_input=" ".join(messages),
@@ -105,17 +114,25 @@ def telegram_ingest() -> None:
                     acknowledgements.append((chat_id, message_id))
 
                 with transaction.atomic():
+                    current = (
+                        Bot.objects.select_for_update().filter(pk=locked.pk).first()
+                    )
+                    if current is None:
+                        continue
+                    if current.telegram_update_offset >= max_id:
+                        continue
+
                     if jobs_to_create:
                         Job.objects.bulk_create(jobs_to_create)
 
                     new_offset = max_id + 1
-                    bot.telegram_update_offset = new_offset
-                    bot.save(update_fields=["telegram_update_offset", "updated_at"])
+                    current.telegram_update_offset = new_offset
+                    current.save(update_fields=["telegram_update_offset", "updated_at"])
 
                 for chat_id, message_id in acknowledgements:
                     try:
                         send_message(
-                            bot.telegram_api_token,
+                            locked.telegram_api_token,
                             chat_id,
                             QUEUE_ACK_TEXT,
                             reply_to_message_id=message_id,
@@ -123,7 +140,7 @@ def telegram_ingest() -> None:
                     except Exception as exc:
                         logger.error(
                             "Bot %s queue acknowledgement failed: %s",
-                            bot.id,
+                            locked.id,
                             exc,
                             exc_info=True,
                         )
