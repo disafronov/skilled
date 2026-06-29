@@ -47,3 +47,13 @@ def test_secure_flags_can_be_disabled_with_false_strings(monkeypatch) -> None:
     assert module.SESSION_COOKIE_SECURE is False
     assert module.CSRF_COOKIE_SECURE is False
     assert not hasattr(module, "SECURE_REDIRECT_EXEMPT")
+
+
+def test_insecure_secret_key_in_production_raises_error(monkeypatch) -> None:
+    monkeypatch.setenv("DJANGO_DEBUG", "False")
+    monkeypatch.delenv("DJANGO_SECRET_KEY", raising=False)
+
+    import pytest
+
+    with pytest.raises(RuntimeError, match="DJANGO_SECRET_KEY must be set"):
+        load_settings_module("config._settings_insecure_secret_test")
