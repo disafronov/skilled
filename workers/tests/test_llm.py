@@ -90,3 +90,18 @@ class LlmCallTests(TestCase):
             with patch.dict("os.environ", {"POLICY_FILE": "policy.md"}):
                 with patch("workers.llm.settings.BASE_DIR", base_dir):
                     self.assertEqual(get_global_system_prompt(), "Relative policy")
+
+    def test_global_system_prompt_returns_empty_on_directory_as_policy_file(self):
+        with TemporaryDirectory() as tmpdir:
+            base_dir = Path(tmpdir)
+            dir_path = base_dir / "policy.md"
+            dir_path.mkdir()
+            with patch("workers.llm.settings.BASE_DIR", base_dir):
+                self.assertEqual(get_global_system_prompt(), "")
+
+    def test_global_system_prompt_returns_empty_on_non_utf8_file(self):
+        with TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "policy.md"
+            path.write_bytes(b"\xff\xfe")
+            with patch("workers.llm.settings.BASE_DIR", Path(tmpdir)):
+                self.assertEqual(get_global_system_prompt(), "")
