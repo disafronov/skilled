@@ -11,8 +11,14 @@ def env_bool(name: str, default: bool) -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "insecure-dev-key-change-in-production")
+_insecure_key = "insecure-dev-key-change-in-production"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", _insecure_key)
 DEBUG = env_bool("DJANGO_DEBUG", True)
+
+if not DEBUG and SECRET_KEY == _insecure_key:
+    raise RuntimeError(
+        "DJANGO_SECRET_KEY must be set to a strong, unique value in production"
+    )
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
 INSTALLED_APPS = [
