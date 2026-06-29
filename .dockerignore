@@ -80,3 +80,6 @@ config/settings_pytest.py
 # Project-local agent/tooling metadata
 .agents/
 .codex/
+
+
+pyrightconfig.json
