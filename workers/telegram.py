@@ -41,11 +41,23 @@ _http = httpx.Client(timeout=60.0)
 atexit.register(_http.close)
 
 
+def _mask_token(url: str) -> str:
+    return _BOT_TOKEN_RE.sub("***", url)
+
+
 def _request(method: str, url: str, **kwargs: Any) -> httpx.Response:
+    logger.debug("Telegram API request: %s %s", method, _mask_token(url))
     try:
         response = _http.request(method, url, **kwargs)
-    except httpx.RequestError:
-        raise RuntimeError("Telegram API request failed") from None
+    except httpx.RequestError as exc:
+        logger.error("Telegram API request failed: %s %s", method, _mask_token(url))
+        raise RuntimeError("Telegram API request failed") from exc
+    logger.debug(
+        "Telegram API response: %s %s %s",
+        method,
+        _mask_token(url),
+        response.status_code,
+    )
     return response
 
 
@@ -114,6 +126,7 @@ def send_message(
     parse_mode: str | None = None,
 ) -> None:
     """Send a text message via Telegram Bot API."""
+    logger.info("Sending message to chat %s (%d chars)", chat_id, len(text))
     payload: dict[str, Any] = {"chat_id": chat_id, "text": text}
     if reply_to_message_id is not None:
         payload["reply_to_message_id"] = reply_to_message_id
@@ -139,6 +152,12 @@ def send_document(
     reply_to_message_id: int | None = None,
 ) -> None:
     """Send text content as a document via Telegram Bot API."""
+    logger.info(
+        "Sending document to chat %s: %s (%d chars)",
+        chat_id,
+        filename,
+        len(content),
+    )
     data = {"chat_id": chat_id}
     if caption:
         data["caption"] = caption
@@ -163,6 +182,7 @@ def send_document(
 
 def get_updates(token: str, offset: int | None = None) -> list[dict[str, Any]]:
     """Fetch incoming updates via long-poll."""
+    logger.debug("Fetching Telegram updates (offset=%s)", offset)
     response = _request(
         "get",
         _bot_url(token, "getUpdates"),
@@ -171,4 +191,5 @@ def get_updates(token: str, offset: int | None = None) -> list[dict[str, Any]]:
     _raise_for_status(response)
     data: dict[str, Any] = response.json()
     results: list[dict[str, Any]] = data.get("result", [])
+    logger.info("Fetched %d Telegram updates (offset=%s)", len(results), offset)
     return results
