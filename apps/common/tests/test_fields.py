@@ -38,7 +38,7 @@ def test_from_db_value_corrupt(caplog):
 
 def test_to_python_corrupt(caplog):
     field = EncryptedCharField()
-    assert field.to_python("not-encrypted") == "not-encrypted"
+    assert field.to_python("not-encrypted") is None
     assert "Unable to decrypt encrypted field value" in caplog.text
 
 
