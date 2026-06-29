@@ -64,6 +64,13 @@ def get_global_system_prompt() -> str:
             "policy file not found at %s — continuing without global policy", path
         )
         return ""
+    except (OSError, UnicodeDecodeError) as exc:
+        logger.error(
+            "Failed to read policy file at %s — %s",
+            path,
+            exc,
+        )
+        return ""
 
 
 def _omit_none(d: dict[str, Any]) -> dict[str, Any]:
