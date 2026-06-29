@@ -24,9 +24,11 @@ def _cipher() -> Fernet:
 
 class EncryptedCharField(models.CharField):
     def get_prep_value(self, value: Any) -> str | None:
-        value = super().get_prep_value(value)
+        # Skip CharField.get_prep_value → it calls to_python which would
+        # try to decrypt plaintext input. We encrypt directly here.
         if value is None:
             return None
+        value = str(value)
         return _cipher().encrypt(value.encode()).decode()
 
     def from_db_value(
@@ -55,7 +57,10 @@ class EncryptedCharField(models.CharField):
         try:
             return _cipher().decrypt(raw.encode()).decode()
         except InvalidToken:
-            # `from_db_value` handles DB-stored values (must be encrypted);
-            # `to_python` also receives plaintext user input — pass it through.
-            logger.warning("Unable to decrypt encrypted field value — keeping raw")
-            return raw
+            # `from_db_value` handles DB-stored values (encrypted blobs);
+            # `to_python` is also called during deserialisation (loaddata/
+            # fixtures), where returning raw could double-encrypt on save
+            # or leak ciphertext. Return None to stay safe and consistent
+            # with `from_db_value`.
+            logger.warning("Unable to decrypt encrypted field value — returning None")
+            return None
