@@ -6,8 +6,17 @@ import subprocess  # nosec B404 — fixed args, no shell, no user input
 import sys
 import time
 
+from django.conf import settings
+
 # Seconds all children share before SIGKILL; override via GRACEFUL_TIMEOUT env var.
 _GRACEFUL_TIMEOUT = int(os.environ.get("GRACEFUL_TIMEOUT", "25"))
+
+
+def _spawn(*args: str) -> subprocess.Popen[bytes]:
+    """Start a child process with fixed args — no shell, no user input."""
+    return subprocess.Popen(  # nosec B603 — fixed args, no user input
+        list(args), cwd=settings.BASE_DIR
+    )
 
 
 def _stop(procs: list[subprocess.Popen[bytes]]) -> None:

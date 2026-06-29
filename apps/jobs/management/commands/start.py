@@ -1,12 +1,10 @@
 """Management command: supervised launcher for qcluster + gunicorn."""
 
-import subprocess  # nosec B404 — fixed args, no shell, no user input
 import sys
 
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from ..supervisor import _supervise
+from ..supervisor import _spawn, _supervise
 
 
 class Command(BaseCommand):
@@ -18,13 +16,7 @@ class Command(BaseCommand):
         """Launch child processes and hand off to the supervisor loop."""
         _supervise(
             [
-                subprocess.Popen(  # nosec B603 — fixed args, no user input
-                    [sys.executable, "manage.py", "qcluster"],
-                    cwd=settings.BASE_DIR,
-                ),
-                subprocess.Popen(  # nosec B603 B607 — fixed args, no user input
-                    ["gunicorn", "config.wsgi"],
-                    cwd=settings.BASE_DIR,
-                ),
+                _spawn(sys.executable, "manage.py", "qcluster"),
+                _spawn("gunicorn", "config.wsgi"),
             ]
         )
