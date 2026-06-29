@@ -69,6 +69,7 @@ class BotAdminTests(SimpleTestCase):
             name="bot",
             telegram_api_token="telegram-token",
         )
+        bot.pk = 1  # simulate existing DB instance
         admin = BotAdmin(Bot, AdminSite())
         form_class = admin.get_form(MagicMock(), bot)
         form = form_class(instance=bot)
@@ -92,9 +93,11 @@ class BotAdminTests(SimpleTestCase):
             name="bot",
             telegram_api_token="telegram-token",
         )
+        bot.pk = 1  # simulate existing DB instance
         admin = BotAdmin(Bot, AdminSite())
         form_class = admin.get_form(MagicMock(), bot)
         form = form_class(instance=bot)
         form.cleaned_data = {"telegram_api_token": ""}
 
-        self.assertEqual(form.clean()["telegram_api_token"], "telegram-token")
+        cleaned = form.clean()
+        self.assertNotIn("telegram_api_token", cleaned)

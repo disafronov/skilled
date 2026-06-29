@@ -32,3 +32,6 @@ policy.md
 # Tests
 htmlcov/
 .coverage
+
+
+pyrightconfig.json
