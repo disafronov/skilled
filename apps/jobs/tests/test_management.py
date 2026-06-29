@@ -1,3 +1,4 @@
+import sys
 from subprocess import TimeoutExpired
 from unittest.mock import MagicMock, patch
 
@@ -6,42 +7,65 @@ from django.test import TestCase
 
 class ManagementCommandTests(TestCase):
     @patch("apps.jobs.management.commands.dev._supervise")
-    @patch("apps.jobs.management.commands.dev.subprocess.Popen")
-    def test_dev_command_supervises_qcluster_and_runserver(self, popen, supervise):
+    @patch("apps.jobs.management.commands.dev._spawn")
+    def test_dev_command_supervises_qcluster_and_runserver(self, spawn, supervise):
         from apps.jobs.management.commands.dev import Command
 
         first = MagicMock()
         second = MagicMock()
-        popen.side_effect = [first, second]
+        spawn.side_effect = [first, second]
 
         Command().handle()
 
-        self.assertEqual(popen.call_count, 2)
-        self.assertEqual(popen.call_args_list[0].args[0][1:], ["manage.py", "qcluster"])
+        self.assertEqual(spawn.call_count, 2)
         self.assertEqual(
-            popen.call_args_list[1].args[0][1:],
-            ["manage.py", "runserver", "0.0.0.0:8000"],
+            spawn.call_args_list[0][0],
+            (sys.executable, "manage.py", "qcluster"),
+        )
+        self.assertEqual(
+            spawn.call_args_list[1][0],
+            (sys.executable, "manage.py", "runserver", "0.0.0.0:8000"),
         )
         supervise.assert_called_once_with([first, second])
 
     @patch("apps.jobs.management.commands.start._supervise")
-    @patch("apps.jobs.management.commands.start.subprocess.Popen")
-    def test_start_command_supervises_qcluster_and_gunicorn(self, popen, supervise):
+    @patch("apps.jobs.management.commands.start._spawn")
+    def test_start_command_supervises_qcluster_and_gunicorn(self, spawn, supervise):
         from apps.jobs.management.commands.start import Command
 
         first = MagicMock()
         second = MagicMock()
-        popen.side_effect = [first, second]
+        spawn.side_effect = [first, second]
 
         Command().handle()
 
-        self.assertEqual(popen.call_count, 2)
-        self.assertEqual(popen.call_args_list[0].args[0][1:], ["manage.py", "qcluster"])
-        self.assertEqual(popen.call_args_list[1].args[0], ["gunicorn", "config.wsgi"])
+        self.assertEqual(spawn.call_count, 2)
+        self.assertEqual(
+            spawn.call_args_list[0][0],
+            (sys.executable, "manage.py", "qcluster"),
+        )
+        self.assertEqual(
+            spawn.call_args_list[1][0],
+            ("gunicorn", "config.wsgi"),
+        )
         supervise.assert_called_once_with([first, second])
 
 
 class SupervisorTests(TestCase):
+    @patch("apps.jobs.management.supervisor.subprocess.Popen")
+    def test_spawn_starts_process_with_fixed_args_and_cwd(self, popen):
+        from django.conf import settings
+
+        from apps.jobs.management import supervisor
+
+        proc = supervisor._spawn(sys.executable, "manage.py", "qcluster")
+
+        popen.assert_called_once_with(
+            [sys.executable, "manage.py", "qcluster"],
+            cwd=settings.BASE_DIR,
+        )
+        self.assertIs(proc, popen.return_value)
+
     def test_stop_terminates_all_and_kills_timeout_survivor(self):
         from apps.jobs.management import supervisor
 
