@@ -274,7 +274,9 @@ class OpenAiRequestAssemblyTests(TestCase):
             path = Path(tmpdir) / "missing.md"
 
             with patch.dict(os.environ, {"POLICY_FILE": str(path)}):
-                self.assertEqual(get_global_system_prompt(), "")
+                with self.assertLogs("workers.llm", level="WARNING") as logs:
+                    self.assertEqual(get_global_system_prompt(), "")
+                    self.assertIn("without global policy", logs.output[0])
 
 
 class TelegramClientTests(TestCase):
