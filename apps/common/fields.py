@@ -43,8 +43,14 @@ class EncryptedCharField(models.CharField):
         try:
             return cast(str, _OLD_SIGNER.unsign_object(value))
         except BadSignature:
-            logger.warning("Unable to decrypt encrypted field value — keeping raw")
-            return value
+            logger.error(
+                "Unable to decrypt encrypted field value — returning None: %s",
+                value[:16],
+            )
+            # Both Fernet and Signer failed — return None rather than leaking
+            # the encrypted blob (which could be sent to external APIs as a
+            # credential).
+            return None
 
     def to_python(self, value: Any) -> str | None:
         if value is None:
@@ -57,5 +63,7 @@ class EncryptedCharField(models.CharField):
         try:
             return cast(str, _OLD_SIGNER.unsign_object(raw))
         except BadSignature:
+            # `from_db_value` handles DB-stored values (must be encrypted);
+            # `to_python` also receives plaintext user input — pass it through.
             logger.warning("Unable to decrypt encrypted field value — keeping raw")
             return raw
