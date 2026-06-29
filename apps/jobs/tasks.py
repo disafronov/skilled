@@ -72,6 +72,8 @@ def telegram_ingest() -> None:
                 if not updates:
                     continue
 
+                logger.debug("Bot %s: processing %d updates", locked.id, len(updates))
+
                 max_id = locked.telegram_update_offset or 0
                 message_batches: dict[str, _MessageBatch] = defaultdict(
                     lambda: {"messages": [], "reply_to_message_id": None}
@@ -124,6 +126,12 @@ def telegram_ingest() -> None:
 
                     if jobs_to_create:
                         Job.objects.bulk_create(jobs_to_create)
+                        logger.info(
+                            "Bot %s: created %d job(s) from %d update(s)",
+                            locked.id,
+                            len(jobs_to_create),
+                            len(updates),
+                        )
 
                     new_offset = max_id + 1
                     current.telegram_update_offset = new_offset
@@ -183,6 +191,7 @@ def llm_worker() -> None:
 
     try:
         bot = job.bot
+        logger.info("LLM worker: processing job %d for bot %d", job.pk, bot.pk)
         raw_output = call_llm(
             provider=bot.profile.provider,
             profile=bot.profile,
@@ -191,7 +200,9 @@ def llm_worker() -> None:
             raw_input=job.raw_input,
         )
         job.raw_output = raw_output
+        logger.info("LLM worker: job %d completed (%d chars)", job.pk, len(raw_output))
     except Exception as exc:
+        logger.error("LLM worker: job %d failed: %s", job.pk, exc, exc_info=True)
         job.llm_finished_at = timezone.now()
         job.error = sanitize_error(str(exc))
         job.save(update_fields=["raw_output", "llm_finished_at", "error", "updated_at"])
@@ -219,6 +230,9 @@ def telegram_deliver() -> None:
 
     try:
         if job.error:
+            logger.info(
+                "Delivery: job %d — sending error to chat %s", job.pk, job.reply_target
+            )
             send_message(
                 job.bot.telegram_api_token,
                 job.reply_target,
@@ -226,6 +240,12 @@ def telegram_deliver() -> None:
                 reply_to_message_id=job.reply_to_message_id,
             )
         else:
+            logger.info(
+                "Delivery: job %d — sending response to chat %s (%d chars)",
+                job.pk,
+                job.reply_target,
+                len(job.raw_output or ""),
+            )
             raw_output = job.raw_output or ""
             document_format = detect_document_format(raw_output)
             send_document(
@@ -238,7 +258,9 @@ def telegram_deliver() -> None:
                 reply_to_message_id=job.reply_to_message_id,
             )
         job.delivery_finished_at = timezone.now()
+        logger.info("Delivery: job %d completed", job.pk)
     except Exception as exc:
+        logger.error("Delivery: job %d failed: %s", job.pk, exc, exc_info=True)
         job.error = sanitize_error(str(exc))
         job.save(update_fields=["error", "updated_at"])
         raise
