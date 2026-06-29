@@ -122,14 +122,16 @@ def telegram_ingest() -> None:
                         )
                     except Exception as exc:
                         logger.error(
-                            f"Bot {bot.id} queue acknowledgement failed: {exc}",
+                            "Bot %s queue acknowledgement failed: %s",
+                            bot.id,
+                            exc,
                             exc_info=True,
                         )
 
             except Exception as e:
-                logger.error(f"Bot {bot.id} ingest failed: {e}", exc_info=True)
+                logger.error("Bot %s ingest failed: %s", bot.id, e, exc_info=True)
     except Exception as e:
-        logger.critical(f"telegram_ingest global failure: {e}", exc_info=True)
+        logger.critical("telegram_ingest global failure: %s", e, exc_info=True)
 
 
 def llm_worker() -> None:
