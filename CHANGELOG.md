@@ -1,3 +1,11 @@
+## [1.1.5-rc.3](https://github.com/disafronov/skilled/compare/v1.1.5-rc.2...v1.1.5-rc.3) (2026-06-29)
+
+### Bug Fixes
+
+* **common:** prevent ciphertext leak in EncryptedCharField ([51993be](https://github.com/disafronov/skilled/commit/51993bef8e552f0477aadfea0bc0bc9be9f942b7))
+* **tests:** centralize FIELD_ENCRYPTION_KEY setup in root conftest.py ([ddb3a7a](https://github.com/disafronov/skilled/commit/ddb3a7aa310a32a1c8b1c5feff91dce3acd09bca))
+* **workers:** handle OSError and UnicodeDecodeError when loading policy.md ([12f5d68](https://github.com/disafronov/skilled/commit/12f5d681d6eaf4832f716b59b98e248a46912c15))
+
 ## [1.1.5-rc.2](https://github.com/disafronov/skilled/compare/v1.1.5-rc.1...v1.1.5-rc.2) (2026-06-29)
 
 ### Bug Fixes
