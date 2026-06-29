@@ -1,29 +1,25 @@
-import base64
-import hashlib
 import logging
 import os
 from functools import cache
-from typing import Any, cast
+from typing import Any
 
 from cryptography.fernet import Fernet, InvalidToken
-from django.conf import settings
-from django.core.signing import BadSignature, Signer
 from django.db import models
 
-_OLD_SIGNER = Signer(salt="skilled.encrypted_field")
 logger = logging.getLogger(__name__)
 
 
 @cache
 def _cipher() -> Fernet:
     raw = os.environ.get("FIELD_ENCRYPTION_KEY")
-    if raw:
-        return Fernet(raw)
-    # Backward-compatible fallback: derive from SECRET_KEY
-    derived: bytes = base64.urlsafe_b64encode(
-        hashlib.sha256(settings.SECRET_KEY.encode()).digest()
-    )
-    return Fernet(derived)
+    if not raw:
+        raise RuntimeError(
+            "FIELD_ENCRYPTION_KEY is not set. "
+            "Generate one with: "
+            'python -c "from cryptography.fernet import Fernet; '
+            'print(Fernet.generate_key().decode())"'
+        )
+    return Fernet(raw)
 
 
 class EncryptedCharField(models.CharField):
@@ -44,17 +40,12 @@ class EncryptedCharField(models.CharField):
         try:
             return _cipher().decrypt(value.encode()).decode()
         except InvalidToken:
-            pass
-        try:
-            return cast(str, _OLD_SIGNER.unsign_object(value))
-        except BadSignature:
             logger.error(
                 "Unable to decrypt encrypted field value — returning None: %s",
                 value[:16],
             )
-            # Both Fernet and Signer failed — return None rather than leaking
-            # the encrypted blob (which could be sent to external APIs as a
-            # credential).
+            # Return None rather than leaking the encrypted blob
+            # (which could be sent to external APIs as a credential).
             return None
 
     def to_python(self, value: Any) -> str | None:
@@ -64,10 +55,6 @@ class EncryptedCharField(models.CharField):
         try:
             return _cipher().decrypt(raw.encode()).decode()
         except InvalidToken:
-            pass
-        try:
-            return cast(str, _OLD_SIGNER.unsign_object(raw))
-        except BadSignature:
             # `from_db_value` handles DB-stored values (must be encrypted);
             # `to_python` also receives plaintext user input — pass it through.
             logger.warning("Unable to decrypt encrypted field value — keeping raw")
