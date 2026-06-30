@@ -1,3 +1,15 @@
+## [1.3.0](https://github.com/disafronov/skilled/compare/v1.2.0...v1.3.0) (2026-06-30)
+
+### Features
+
+* **config:** add BASE_URL setting for site URL ([794729e](https://github.com/disafronov/skilled/commit/794729eec5f68c43f7a9f2787eeb444530284ea3))
+* **jobs:** add signal-based orchestration for pipeline tasks ([2aa74cb](https://github.com/disafronov/skilled/commit/2aa74cbcc5b1b92df69a576c76b515c42a0aa354))
+
+### Bug Fixes
+
+* **jobs:** wrap async_task in transaction.on_commit to prevent race condition ([4aeec56](https://github.com/disafronov/skilled/commit/4aeec5661fa181b38403b4fc9818852d9b2c5276))
+* **security:** remove URL from Telegram API logs ([72044b4](https://github.com/disafronov/skilled/commit/72044b444bb1c2ef0517c78e8e1e9335d195be89))
+
 ## [1.3.0-rc.2](https://github.com/disafronov/skilled/compare/v1.3.0-rc.1...v1.3.0-rc.2) (2026-06-30)
 
 ### Features
