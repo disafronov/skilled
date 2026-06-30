@@ -1,3 +1,9 @@
+## [1.3.0-rc.1](https://github.com/disafronov/skilled/compare/v1.2.1-rc.1...v1.3.0-rc.1) (2026-06-30)
+
+### Features
+
+* **jobs:** add signal-based orchestration for pipeline tasks ([7ac83d5](https://github.com/disafronov/skilled/commit/7ac83d522cfaa817ace7b42589d56692d618c899))
+
 ## [1.2.1-rc.1](https://github.com/disafronov/skilled/compare/v1.2.0...v1.2.1-rc.1) (2026-06-30)
 
 ### Bug Fixes
