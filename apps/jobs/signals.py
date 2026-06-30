@@ -4,6 +4,7 @@ import logging
 from collections.abc import Set as AbstractSet
 from typing import Any
 
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django_q.tasks import async_task
@@ -22,8 +23,9 @@ def job_on_completion(
     **kwargs: Any,
 ) -> None:
     if created:
-        logger.debug("Signal: job %d created — scheduling llm_worker", instance.pk)
-        async_task("apps.jobs.tasks.llm_worker", instance.pk)
+        job_pk = instance.pk
+        logger.debug("Signal: job %d created — scheduling llm_worker", job_pk)
+        transaction.on_commit(lambda: async_task("apps.jobs.tasks.llm_worker", job_pk))
         return
 
     if (
@@ -31,8 +33,11 @@ def job_on_completion(
         and "llm_finished_at" in update_fields
         and instance.llm_finished_at
     ):
+        job_pk = instance.pk
         logger.debug(
             "Signal: job %d llm completed — scheduling telegram_deliver",
-            instance.pk,
+            job_pk,
         )
-        async_task("apps.jobs.tasks.telegram_deliver", instance.pk)
+        transaction.on_commit(
+            lambda: async_task("apps.jobs.tasks.telegram_deliver", job_pk)
+        )
