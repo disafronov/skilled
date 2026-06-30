@@ -103,6 +103,8 @@ class JobsConfig(AppConfig):
         post_migrate.connect(create_schedules, sender=self)
         from django_q.models import Schedule
 
+        import apps.jobs.signals  # noqa: F401
+
         pre_save.connect(
             protect_managed_schedule,
             sender=Schedule,
