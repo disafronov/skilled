@@ -1,3 +1,13 @@
+## [1.3.0-rc.2](https://github.com/disafronov/skilled/compare/v1.3.0-rc.1...v1.3.0-rc.2) (2026-06-30)
+
+### Features
+
+* **config:** add BASE_URL setting for site URL ([4c47ae3](https://github.com/disafronov/skilled/commit/4c47ae3162942e05f341402e4db3b714a7814257))
+
+### Bug Fixes
+
+* **jobs:** wrap async_task in transaction.on_commit to prevent race condition ([ce94e7e](https://github.com/disafronov/skilled/commit/ce94e7e9e8ddaa4edcaa6f9c2b3630f4bea1227a))
+
 ## [1.3.0-rc.1](https://github.com/disafronov/skilled/compare/v1.2.1-rc.1...v1.3.0-rc.1) (2026-06-30)
 
 ### Features
