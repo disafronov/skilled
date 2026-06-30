@@ -409,3 +409,92 @@ class PipelineTaskBranchTests(TestCase):
     def test_deliver_raises_outer_failure(self, atomic_mock):
         with self.assertRaisesRegex(RuntimeError, "db down"):
             telegram_deliver()
+
+    def test_deliver_returns_when_job_pk_not_found(self):
+        telegram_deliver(job_pk=9999)
+
+        self.assertFalse(
+            Job.objects.filter(delivery_finished_at__isnull=False).exists()
+        )
+
+    @patch("apps.jobs.tasks.send_document")
+    def test_deliver_processes_specific_job_by_pk(self, send_document):
+        pending = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="pending",
+            raw_output="pending response",
+            llm_finished_at=self.now,
+        )
+        other = Job.objects.create(
+            bot=self.bot,
+            reply_target="456",
+            raw_input="other",
+            raw_output="other response",
+            llm_finished_at=self.now,
+        )
+
+        telegram_deliver(job_pk=pending.pk)
+
+        pending.refresh_from_db()
+        other.refresh_from_db()
+        self.assertIsNotNone(pending.delivery_finished_at)
+        self.assertIsNone(other.delivery_finished_at)
+        send_document.assert_called_once()
+
+    @patch("apps.jobs.tasks.send_document")
+    def test_deliver_skips_already_delivered_job_by_pk(self, send_document):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="done",
+            raw_output="done response",
+            llm_finished_at=self.now,
+            delivery_started_at=self.now,
+            delivery_finished_at=self.now,
+        )
+        telegram_deliver(job_pk=job.pk)
+
+        telegram_deliver(job_pk=job.pk)
+
+        send_document.assert_not_called()
+
+    @patch("apps.jobs.tasks.logger")
+    def test_llm_worker_returns_when_job_pk_not_found(self, logger):
+        llm_worker(job_pk=9999)
+
+        logger.warning.assert_called_once()
+
+    @patch("apps.jobs.tasks.call_llm", return_value="llm output")
+    def test_llm_worker_processes_specific_job_by_pk(self, call_llm_mock):
+        pending = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="pending",
+        )
+        other = Job.objects.create(
+            bot=self.bot,
+            reply_target="456",
+            raw_input="other",
+        )
+
+        llm_worker(job_pk=pending.pk)
+
+        pending.refresh_from_db()
+        other.refresh_from_db()
+        self.assertEqual(pending.raw_output, "llm output")
+        self.assertIsNone(other.llm_finished_at)
+
+    @patch("apps.jobs.tasks.call_llm", return_value="llm output")
+    def test_llm_worker_skips_already_finished_job_by_pk(self, call_llm_mock):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="done",
+            raw_output="already done",
+            llm_finished_at=self.now,
+        )
+
+        llm_worker(job_pk=job.pk)
+
+        call_llm_mock.assert_not_called()

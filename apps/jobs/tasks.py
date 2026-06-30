@@ -10,6 +10,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django_q.models import Success
+from django_q.tasks import async_task
 
 from apps.bots.models import Bot
 from apps.jobs.models import Job
@@ -132,7 +133,9 @@ def telegram_ingest() -> None:
                             locked.id,
                             len(jobs_to_create),
                             len(updates),
+                            exc_info=settings.DEBUG,
                         )
+                        async_task("apps.jobs.tasks.llm_worker")
 
                     new_offset = max_id + 1
                     current.telegram_update_offset = new_offset
@@ -164,32 +167,50 @@ def telegram_ingest() -> None:
         )
 
 
-def llm_worker() -> None:
-    """Process one pending Job via LLM."""
+def llm_worker(job_pk: int | None = None) -> None:
+    """Process a Job via LLM (signal or poll-driven)."""
     with transaction.atomic():
-        stale_seconds = int(
-            os.environ.get(
-                "Q2_LLM_STALE_JOB_SECONDS",
-                str(Q2_LLM_STALE_JOB_SECONDS),
+        if job_pk is not None:
+            try:
+                job = (
+                    Job.objects.select_for_update(skip_locked=True)
+                    .select_related(
+                        "bot__wrapper__skill",
+                        "bot__profile__provider",
+                    )
+                    .get(pk=job_pk)
+                )
+            except Job.DoesNotExist:
+                logger.warning("llm_worker: job %d does not exist", job_pk)
+                return
+            if job.llm_finished_at is not None:
+                logger.debug("llm_worker: job %d already processed, skipping", job_pk)
+                return
+        else:
+            stale_seconds = int(
+                os.environ.get(
+                    "Q2_LLM_STALE_JOB_SECONDS",
+                    str(Q2_LLM_STALE_JOB_SECONDS),
+                )
             )
-        )
-        stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
-        Job.objects.select_for_update(skip_locked=True).stale_llm(stale_cutoff).update(
-            llm_started_at=None, updated_at=timezone.now()
-        )
+            stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
+            Job.objects.select_for_update(skip_locked=True).stale_llm(
+                stale_cutoff
+            ).update(llm_started_at=None, updated_at=timezone.now())
 
-        job = (
-            Job.objects.select_for_update(skip_locked=True)
-            .ready_for_llm()
-            .select_related(
-                "bot__wrapper__skill",
-                "bot__profile__provider",
+            next_job = (
+                Job.objects.select_for_update(skip_locked=True)
+                .ready_for_llm()
+                .select_related(
+                    "bot__wrapper__skill",
+                    "bot__profile__provider",
+                )
+                .order_by("created_at", "id")
+                .first()
             )
-            .order_by("created_at", "id")
-            .first()
-        )
-        if job is None:
-            return
+            if next_job is None:
+                return
+            job = next_job
 
         job.llm_started_at = timezone.now()
         job.save(update_fields=["llm_started_at", "updated_at"])
@@ -219,18 +240,35 @@ def llm_worker() -> None:
     job.save(update_fields=["raw_output", "error", "llm_finished_at", "updated_at"])
 
 
-def telegram_deliver() -> None:
-    """Deliver one completed Job response to Telegram."""
+def telegram_deliver(job_pk: int | None = None) -> None:
+    """Deliver a completed Job response to Telegram (signal or poll-driven)."""
     with transaction.atomic():
-        job = (
-            Job.objects.select_for_update(skip_locked=True)
-            .ready_for_delivery()
-            .select_related("bot")
-            .order_by("llm_finished_at", "id")
-            .first()
-        )
-        if not job:
-            return
+        if job_pk is not None:
+            try:
+                job = (
+                    Job.objects.select_for_update(skip_locked=True)
+                    .select_related("bot")
+                    .get(pk=job_pk)
+                )
+            except Job.DoesNotExist:
+                logger.warning("telegram_deliver: job %d does not exist", job_pk)
+                return
+            if job.delivery_finished_at is not None:
+                logger.debug(
+                    "telegram_deliver: job %d already delivered, skipping", job_pk
+                )
+                return
+        else:
+            next_job = (
+                Job.objects.select_for_update(skip_locked=True)
+                .ready_for_delivery()
+                .select_related("bot")
+                .order_by("llm_finished_at", "id")
+                .first()
+            )
+            if not next_job:
+                return
+            job = next_job
 
         job.delivery_started_at = timezone.now()
         job.save(update_fields=["delivery_started_at", "updated_at"])
