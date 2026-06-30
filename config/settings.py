@@ -20,6 +20,7 @@ if not DEBUG and SECRET_KEY == _insecure_key:
         "DJANGO_SECRET_KEY must be set to a strong, unique value in production"
     )
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+BASE_URL = os.getenv("DJANGO_BASE_URL", "").rstrip("/")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

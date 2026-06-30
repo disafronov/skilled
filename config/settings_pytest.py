@@ -31,6 +31,7 @@ MIDDLEWARE = [  # noqa: F405
 ]
 
 ALLOWED_HOSTS = [host for host in ALLOWED_HOSTS if host]  # noqa: F405
+BASE_URL = ""  # noqa: F405
 CSRF_TRUSTED_ORIGINS = [  # noqa: F405
     origin for origin in CSRF_TRUSTED_ORIGINS if origin  # noqa: F405
 ]
