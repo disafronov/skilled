@@ -6,6 +6,7 @@ from collections import defaultdict
 from datetime import timedelta
 from typing import NotRequired, TypedDict, cast
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django_q.models import Success
@@ -150,13 +151,17 @@ def telegram_ingest() -> None:
                             "Bot %s queue acknowledgement failed: %s",
                             locked.id,
                             exc,
-                            exc_info=True,
+                            exc_info=settings.DEBUG,
                         )
 
             except Exception as e:
-                logger.error("Bot %s ingest failed: %s", bot.id, e, exc_info=True)
+                logger.error(
+                    "Bot %s ingest failed: %s", bot.id, e, exc_info=settings.DEBUG
+                )
     except Exception as e:
-        logger.critical("telegram_ingest global failure: %s", e, exc_info=True)
+        logger.critical(
+            "telegram_ingest global failure: %s", e, exc_info=settings.DEBUG
+        )
 
 
 def llm_worker() -> None:
@@ -202,7 +207,9 @@ def llm_worker() -> None:
         job.raw_output = raw_output
         logger.info("LLM worker: job %d completed (%d chars)", job.pk, len(raw_output))
     except Exception as exc:
-        logger.error("LLM worker: job %d failed: %s", job.pk, exc, exc_info=True)
+        logger.error(
+            "LLM worker: job %d failed: %s", job.pk, exc, exc_info=settings.DEBUG
+        )
         job.llm_finished_at = timezone.now()
         job.error = sanitize_error(str(exc))
         job.save(update_fields=["raw_output", "llm_finished_at", "error", "updated_at"])
@@ -260,7 +267,9 @@ def telegram_deliver() -> None:
         job.delivery_finished_at = timezone.now()
         logger.info("Delivery: job %d completed", job.pk)
     except Exception as exc:
-        logger.error("Delivery: job %d failed: %s", job.pk, exc, exc_info=True)
+        logger.error(
+            "Delivery: job %d failed: %s", job.pk, exc, exc_info=settings.DEBUG
+        )
         job.error = sanitize_error(str(exc))
         job.save(update_fields=["error", "updated_at"])
         raise
