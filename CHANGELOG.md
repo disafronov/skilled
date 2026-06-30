@@ -1,3 +1,9 @@
+## [1.2.1-rc.1](https://github.com/disafronov/skilled/compare/v1.2.0...v1.2.1-rc.1) (2026-06-30)
+
+### Bug Fixes
+
+* **security:** remove URL from Telegram API logs ([cc1b25f](https://github.com/disafronov/skilled/commit/cc1b25f62ffad4dae3eb16ca3a117008c24f4913))
+
 ## [1.2.0](https://github.com/disafronov/skilled/compare/v1.1.4...v1.2.0) (2026-06-29)
 
 ### Features
