@@ -41,23 +41,13 @@ _http = httpx.Client(timeout=60.0)
 atexit.register(_http.close)
 
 
-def _mask_token(url: str) -> str:
-    return _BOT_TOKEN_RE.sub("***", url)
-
-
 def _request(method: str, url: str, **kwargs: Any) -> httpx.Response:
-    logger.debug("Telegram API request: %s %s", method, _mask_token(url))
+    logger.debug("Telegram API request: %s", method)
     try:
         response = _http.request(method, url, **kwargs)
     except httpx.RequestError as exc:
-        logger.error("Telegram API request failed: %s %s", method, _mask_token(url))
+        logger.error("Telegram API request failed: %s", method)
         raise RuntimeError("Telegram API request failed") from exc
-    logger.debug(
-        "Telegram API response: %s %s %s",
-        method,
-        _mask_token(url),
-        response.status_code,
-    )
     return response
 
 
