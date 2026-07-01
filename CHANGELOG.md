@@ -1,3 +1,14 @@
+## [1.5.0](https://github.com/disafronov/skilled/compare/v1.4.1...v1.5.0) (2026-07-01)
+
+### Features
+
+* **jobs:** async ack via signal ([d710d43](https://github.com/disafronov/skilled/commit/d710d4389966d0a4600b9f2d5e08a9abdf0b6f95))
+
+### Bug Fixes
+
+* **ingest:** cleanup webhook when bot is disabled ([a69cf5f](https://github.com/disafronov/skilled/commit/a69cf5f9a148009fa98101ff50e136ac96e8804c))
+* **logging:** mask bot tokens in logs ([9a18e8f](https://github.com/disafronov/skilled/commit/9a18e8f1dda8eef023a3d8eb08631107efcc9e9d))
+
 ## [1.5.0-rc.1](https://github.com/disafronov/skilled/compare/v1.4.1...v1.5.0-rc.1) (2026-07-01)
 
 ### Features
