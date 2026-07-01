@@ -1,61 +1,105 @@
 # skilled
 
-Skill-driven AI bot runtime.
-
-## Core concepts
-
-- Skill — semantic behavior
-- Wrapper — execution contract
-- Bot — transport endpoint
-- Job — execution artifact
+Skill-driven AI bot runtime — connects Telegram to any OpenAI-compatible LLM via an asynchronous job queue.
 
 ## Architecture
 
-Telegram -> Job Queue -> LLM Worker -> Response
+```text
+Telegram ──┬── webhook ──> Job ──> llm_worker ──> telegram_deliver ──> Telegram
+           │             ^
+           └── poll ─────┘
+           (Q2 schedule)
+```
 
-## API Compatibility
+**Two ingestion paths:**
 
-Uses OpenAI-compatible Chat Completions API (`/chat/completions`).
-Works with any OpenAI-compatible provider.
+- **Webhook** (primary) — Telegram pushes updates to `/webhook/<token>/`. The token is looked up via deterministic encryption (AES-SIV) for O(1) DB access. Zero polling latency.
+- **Polling** (fallback) — scheduled Q2 task `telegram_ingest` periodically fetches updates via `getUpdates`. Webhook auto-registers, self-heals on errors, and falls back to polling with a configurable cooldown.
+
+Both paths create `Job` records. A Django `post_save` signal schedules downstream tasks via `transaction.on_commit`:
+
+| Signal trigger | Enqueued task |
+| -------------- | -------------- |
+| Job created | `telegram_ack` — confirm receipt to user |
+| Job created | `llm_worker` — call the LLM |
+| `llm_finished_at` set | `telegram_deliver` — send response to user |
+
+Scheduled Q2 tasks run the same workers as backup (1-minute interval), giving the system a hybrid push+pull resilience model.
+
+## Core concepts
+
+```text
+Skill    — system-level instruction content
+Wrapper  — per-bot wrapper instruction
+Profile  — model + temperature + other LLM parameters
+Provider — API endpoint + auth (OpenAI-compatible)
+Bot      — Telegram endpoint (ties skill + wrapper + profile + token)
+Job      — single message execution artifact
+```
+
+All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider & Profile), `apps/bots` (Bot), and `apps/jobs` (Job + pipeline).
 
 ## Pipeline
 
-```text
-Telegram ──> telegram_ingest (Q2) ──> Job ──> llm_worker (Q2) ──> telegram_deliver (Q2) ──> Telegram
-```
+1. **Ingest** — `telegram_ingest` or webhook view creates a `Job`
+2. **Ack** — `telegram_ack` replies "Added to the processing queue"
+3. **LLM** — `llm_worker` calls the configured OpenAI-compatible API
+4. **Deliver** — `telegram_deliver` sends the response (text or file) to the user
+
+## Security
+
+- **Field encryption** — `telegram_api_token` and `auth_token` encrypted at rest with AES-SIV (deterministic, enables DB lookup).
+- **Webhook token** — the bot token acts as a bearer secret in the URL path (`/webhook/<token>/`). Do not log full URIs for `/webhook/` in reverse-proxy / CDN access logs.
+- **Log masking** — `BotTokenFilter` strips bot tokens from all log output via regex.
+- **Production** — `DJANGO_SECRET_KEY` must be strong; `DEBUG` must be `False`.
+
+## Configuration
+
+Key environment variables (see `env.example` for full list):
+
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `FIELD_ENCRYPTION_KEY` | — | AES-SIV 32-byte hex key (generate via `secrets.token_bytes(32).hex()`) |
+| `DJANGO_BASE_URL` | `""` | Public URL for webhook registration; empty = polling only |
+| `WEBHOOK_COOLDOWN_SECONDS` | `300` | Seconds to wait before retrying webhook after fallback |
+| `WEBHOOK_FALLBACK_PENDING_THRESHOLD` | `5` | Max pending updates before falling back to polling |
+| `POLICY_FILE` | `policy.md` | Global system prompt appended to every LLM call |
+| `Q2_TELEGRAM_INGEST_MINUTES` | `1` | Polling interval |
+| `Q2_LLM_WORKER_MINUTES` | `1` | LLM worker schedule interval |
+| `Q2_TELEGRAM_DELIVER_MINUTES` | `1` | Delivery worker schedule interval |
+| `Q2_LLM_STALE_JOB_SECONDS` | `3600` | Timeout for re-queueing stalled LLM jobs |
 
 ## Running
 
 ```bash
-# Start database
+# Start PostgreSQL
 docker compose up -d postgres
+
+# Install dependencies
+uv sync
 
 # Apply migrations
 uv run python manage.py migrate
 
-# Run all checks
+# Run all checks (lint, test, dead-code)
 make all
 
 # Start dev server + task queue
 make run
 ```
 
-## Management Commands
+## Health checks
+
+| Endpoint | Purpose |
+| -------- | ------- |
+| `/health/liveness/` | Process is running |
+| `/health/readiness/` | Process can reach critical dependencies |
+
+Used by Docker `HEALTHCHECK`.
+
+## Management commands
 
 | Command | Description |
 | ------- | ----------- |
 | `dev` | qcluster + runserver (development) |
 | `start` | qcluster + gunicorn (production) |
-
-## Health Checks
-
-| Endpoint | Purpose |
-| ---------- | ----------- |
-| `/health/liveness/` | Process is running |
-| `/health/readiness/` | Process can reach critical dependencies |
-
-The Docker image uses `/health/readiness/` for its `HEALTHCHECK`.
-
-## Security
-
-- Webhook URL (`/webhook/<token>/`) contains a bearer secret (Telegram bot token). Do not log full request paths or URIs for `/webhook/` in reverse proxy / CDN access logs.

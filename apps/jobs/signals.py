@@ -27,6 +27,9 @@ def job_on_completion(
         logger.debug(
             "Signal: job %d created — scheduling send_ack + llm_worker", job_pk
         )
+        # on_commit: the post_save signal fires inside the caller's atomic block.
+        # Enqueuing Q2 tasks before the transaction commits would create orphan
+        # tasks if the outer transaction rolls back.
         transaction.on_commit(
             lambda: async_task("apps.jobs.tasks.telegram_ack", job_pk)
         )
