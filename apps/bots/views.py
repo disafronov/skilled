@@ -8,15 +8,18 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.bots.models import Bot
-from apps.common.fields import encrypt_deterministic
 from apps.jobs.models import Job
 
 logger = logging.getLogger(__name__)
 
+_SECRET_TOKEN_HEADER = (
+    "HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN"  # nosec — header name, not a secret value
+)
+
 
 @csrf_exempt
 @require_POST
-def webhook(request: HttpRequest, token: str) -> HttpResponse:
+def webhook(request: HttpRequest) -> HttpResponse:
     """Receive Telegram update via webhook and enqueue it as a Job."""
     try:
         body = json.loads(request.body)
@@ -36,26 +39,15 @@ def webhook(request: HttpRequest, token: str) -> HttpResponse:
     if not text or text.startswith("/"):
         return HttpResponse("ok")
 
-    try:
-        encrypted = encrypt_deterministic(token)
-    except RuntimeError:
-        logger.error("Webhook: FIELD_ENCRYPTION_KEY not configured")
-        return HttpResponse("encryption error", status=500)
+    secret = request.META.get(_SECRET_TOKEN_HEADER)
+    if not secret:
+        logger.info("Webhook: missing secret token header")
+        return HttpResponse("not found", status=404)
 
-    # AES-SIV ciphertext is raw bytes; Django's ORM would run it through
-    # get_prep_value → EncryptedCharField.get_prep_value, which encrypts again.
-    # Use .extra() with raw SQL to compare the already-encrypted value directly.
-    bot = (
-        Bot.objects.filter(enabled=True)
-        .extra(
-            where=["telegram_api_token = %s"],
-            params=[encrypted],
-        )
-        .first()
-    )
+    bot = Bot.objects.filter(enabled=True, webhook_secret=secret).first()
 
     if bot is None:
-        logger.info("Webhook: bot not found")
+        logger.info("Webhook: unverified request")
         return HttpResponse("not found", status=404)
 
     chat_id = str(message["chat"]["id"])
