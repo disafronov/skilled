@@ -1,6 +1,7 @@
 from typing import Any
 
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.utils.translation import ngettext
 
 from apps.admin_forms import AdminModelForm
 from apps.admin_mixins import CHANGES_FIELDSET
@@ -12,7 +13,7 @@ class BotAdminForm(AdminModelForm):
 
     class Meta:
         model = Bot
-        fields = "__all__"
+        exclude = ("webhook_secret",)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -65,3 +66,26 @@ class BotAdmin(admin.ModelAdmin):
     )
     list_select_related = ["wrapper", "profile"]
     search_fields = ["name"]
+    actions = ["rotate_webhook_secret"]
+
+    @admin.action(description="Rotate webhook secret for selected bots")
+    def rotate_webhook_secret(
+        self,
+        request: Any,
+        queryset: Any,
+    ) -> None:
+        """Regenerate webhook_secret and invalidate webhook registration."""
+        count = 0
+        for bot in queryset:
+            bot.rotate_webhook_secret()
+            count += 1
+        self.message_user(
+            request,
+            ngettext(
+                "Rotated webhook secret for %d bot",
+                "Rotated webhook secret for %d bots",
+                count,
+            )
+            % count,
+            messages.SUCCESS,
+        )

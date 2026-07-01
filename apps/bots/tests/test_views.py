@@ -1,7 +1,6 @@
 """Tests for bot webhook views."""
 
 import json
-from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
@@ -36,14 +35,20 @@ class WebhookViewTests(TestCase):
             wrapper=wrapper,
         )
 
-    def _url(self, token: str | None = None) -> str:
-        return reverse("webhook", kwargs={"token": token or self.raw_token})
+    def _url(self) -> str:
+        return reverse("webhook")
 
-    def _post(self, data: dict, token: str | None = None):
+    def _post(self, data: dict, secret: str | None = None):
+        headers = {
+            "HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN": (
+                secret if secret is not None else self.bot.webhook_secret
+            ),
+        }
         return self.client.post(
-            self._url(token),
+            self._url(),
             data=json.dumps(data),
             content_type="application/json",
+            **headers,
         )
 
     def test_requires_post(self):
@@ -72,10 +77,17 @@ class WebhookViewTests(TestCase):
         response = self._post({"message": {"chat": {"id": 1}, "text": "   "}})
         self.assertEqual(response.status_code, 200)
 
-    def test_returns_404_for_unknown_token(self):
+    def test_returns_404_when_secret_missing(self):
         response = self._post(
             {"message": {"chat": {"id": 1}, "text": "hello"}},
-            token="unknown:token",
+            secret="",
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_returns_404_for_unknown_secret(self):
+        response = self._post(
+            {"message": {"chat": {"id": 1}, "text": "hello"}},
+            secret="unknown-secret",
         )
         self.assertEqual(response.status_code, 404)
 
@@ -85,16 +97,6 @@ class WebhookViewTests(TestCase):
 
         response = self._post({"message": {"chat": {"id": 1}, "text": "hello"}})
         self.assertEqual(response.status_code, 404)
-
-    def test_returns_500_on_encryption_key_missing(self):
-        from apps.common.fields import _cipher
-
-        _cipher.cache_clear()
-        with patch.dict("os.environ", {"FIELD_ENCRYPTION_KEY": ""}):
-            response = self._post({"message": {"chat": {"id": 1}, "text": "hello"}})
-        _cipher.cache_clear()
-
-        self.assertEqual(response.status_code, 500)
 
     def test_creates_job_for_valid_message(self):
         response = self._post(

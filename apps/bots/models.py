@@ -1,6 +1,13 @@
+import secrets
+
 from django.db import models
 
 from apps.common.fields import EncryptedCharField
+
+
+def generate_webhook_secret() -> str:
+    """Generate a 32-char hex string for X-Telegram-Bot-Api-Secret-Token."""
+    return secrets.token_hex(16)
 
 
 class Bot(models.Model):
@@ -8,6 +15,12 @@ class Bot(models.Model):
 
     name = models.CharField(max_length=255, unique=True)
     telegram_api_token = EncryptedCharField(max_length=512)
+
+    webhook_secret = EncryptedCharField(
+        max_length=64,
+        default=generate_webhook_secret,
+        help_text="Secret token sent as X-Telegram-Bot-Api-Secret-Token header",
+    )
 
     profile = models.ForeignKey(
         "inference.Profile",
@@ -46,3 +59,10 @@ class Bot(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def rotate_webhook_secret(self) -> None:
+        """Generate a new webhook_secret and invalidate current webhook registration."""
+        type(self).objects.filter(pk=self.pk).update(
+            webhook_secret=generate_webhook_secret(),
+            webhook_enabled_at=None,
+        )

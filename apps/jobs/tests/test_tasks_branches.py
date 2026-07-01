@@ -596,11 +596,12 @@ class WebhookManagementTests(TestCase):
     ):
         telegram_ingest()
 
+        self.bot.refresh_from_db()
         mock_set.assert_called_once_with(
             "telegram-token",
-            "https://example.com/webhook/telegram-token/",
+            "https://example.com/webhook/",
+            secret_token=self.bot.webhook_secret,
         )
-        self.bot.refresh_from_db()
         self.assertIsNotNone(self.bot.webhook_enabled_at)
         self.assertIsNone(self.bot.webhook_disabled_at)
 
@@ -608,8 +609,9 @@ class WebhookManagementTests(TestCase):
     @patch("apps.jobs.tasks.get_updates", return_value=[])
     @patch(
         "apps.jobs.tasks.get_webhook_info",
-        return_value={
-            "url": "https://example.com/webhook/telegram-token/",
+        return_value=lambda self: {
+            "url": "https://example.com/webhook/",
+            "secret_token": self.bot.webhook_secret,
             "pending_update_count": 0,
         },
     )
@@ -620,6 +622,12 @@ class WebhookManagementTests(TestCase):
         mock_info,
         mock_updates,
     ):
+        # Use the correct return value from the lambda above
+        mock_info.return_value = {
+            "url": "https://example.com/webhook/",
+            "secret_token": self.bot.webhook_secret,
+            "pending_update_count": 0,
+        }
         telegram_ingest()
 
         mock_set.assert_not_called()
@@ -633,7 +641,8 @@ class WebhookManagementTests(TestCase):
     @patch(
         "apps.jobs.tasks.get_webhook_info",
         return_value={
-            "url": "https://example.com/webhook/telegram-token/",
+            "url": "https://example.com/webhook/",
+            "secret_token": "will-be-overridden",
             "pending_update_count": 10,
         },
     )
@@ -644,6 +653,11 @@ class WebhookManagementTests(TestCase):
         mock_info,
         mock_updates,
     ):
+        mock_info.return_value = {
+            "url": "https://example.com/webhook/",
+            "secret_token": self.bot.webhook_secret,
+            "pending_update_count": 10,
+        }
         telegram_ingest()
 
         mock_delete.assert_called_once_with("telegram-token")
@@ -656,7 +670,8 @@ class WebhookManagementTests(TestCase):
     @patch(
         "apps.jobs.tasks.get_webhook_info",
         return_value={
-            "url": "https://example.com/webhook/telegram-token/",
+            "url": "https://example.com/webhook/",
+            "secret_token": "stale-secret",
             "pending_update_count": 0,
             "last_error_message": "Wrong URL",
         },
@@ -746,7 +761,8 @@ class WebhookManagementTests(TestCase):
     @patch(
         "apps.jobs.tasks.get_webhook_info",
         return_value={
-            "url": "https://example.com/webhook/telegram-token/",
+            "url": "https://example.com/webhook/",
+            "secret_token": "stale-secret",
             "pending_update_count": 0,
         },
     )
@@ -760,6 +776,11 @@ class WebhookManagementTests(TestCase):
         self.bot.webhook_enabled_at = self.now
         self.bot.save(update_fields=["webhook_enabled_at"])
 
+        mock_info.return_value = {
+            "url": "https://example.com/webhook/",
+            "secret_token": self.bot.webhook_secret,
+            "pending_update_count": 0,
+        }
         telegram_ingest()
 
         mock_set.assert_not_called()
