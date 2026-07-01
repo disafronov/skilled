@@ -1,3 +1,9 @@
+## [1.6.0-rc.2](https://github.com/disafronov/skilled/compare/v1.6.0-rc.1...v1.6.0-rc.2) (2026-07-01)
+
+### Bug Fixes
+
+* **admin:** job retry actions now reset any selected job and queue async_task ([6ad596d](https://github.com/disafronov/skilled/commit/6ad596d9568536544ec21c4019fe880d8d888554))
+
 ## [1.6.0-rc.1](https://github.com/disafronov/skilled/compare/v1.5.0...v1.6.0-rc.1) (2026-07-01)
 
 ### Features
