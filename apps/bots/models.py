@@ -11,7 +11,7 @@ def generate_webhook_secret() -> str:
 
 
 class Bot(models.Model):
-    """Telegram bot endpoint — ties an LLM profile + wrapper to a Telegram API token."""
+    """Telegram endpoint / transport identity."""
 
     name = models.CharField(max_length=255, unique=True)
     telegram_api_token = EncryptedCharField(max_length=512)
@@ -20,15 +20,6 @@ class Bot(models.Model):
         max_length=64,
         default=generate_webhook_secret,
         help_text="Secret token sent as X-Telegram-Bot-Api-Secret-Token header",
-    )
-
-    profile = models.ForeignKey(
-        "inference.Profile",
-        on_delete=models.PROTECT,
-    )
-    wrapper = models.ForeignKey(
-        "library.Wrapper",
-        on_delete=models.PROTECT,
     )
 
     enabled = models.BooleanField(

@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
-from apps.jobs.models import IntakeBuffer, Job
+from apps.jobs.models import IntakeBuffer, Job, Worker
 from apps.jobs.tasks import (
     Q2_LLM_STALE_JOB_SECONDS,
     llm_worker,
@@ -38,6 +38,9 @@ class PipelineTaskBranchTests(TestCase):
         cls.bot = Bot.objects.create(
             name="task-bot",
             telegram_api_token="telegram-token",
+        )
+        Worker.objects.create(
+            bot=cls.bot,
             profile=profile,
             wrapper=wrapper,
         )
@@ -550,6 +553,47 @@ class PipelineTaskBranchTests(TestCase):
         self.assertEqual(pending.raw_output, "llm output")
         self.assertIsNone(other.llm_finished_at)
 
+    def test_llm_worker_fails_when_worker_disabled_by_pk(self):
+        bot2 = Bot.objects.create(
+            name="disabled-worker-bot",
+            telegram_api_token="tok2",
+        )
+        Worker.objects.create(
+            bot=bot2,
+            profile=self.bot.worker.profile,
+            wrapper=self.bot.worker.wrapper,
+            enabled=False,
+        )
+        job = Job.objects.create(
+            bot=bot2,
+            reply_target="123",
+            raw_input="disabled",
+        )
+
+        with self.assertRaises(RuntimeError):
+            llm_worker(job_pk=job.pk)
+
+        job.refresh_from_db()
+        self.assertIsNotNone(job.llm_finished_at)
+        self.assertIn("Worker disabled", job.error)
+
+    def test_llm_worker_fails_when_worker_missing_by_pk(self):
+        bot2 = Bot.objects.create(
+            name="no-worker-bot",
+            telegram_api_token="tok3",
+        )
+        job = Job.objects.create(
+            bot=bot2,
+            reply_target="123",
+            raw_input="missing",
+        )
+
+        llm_worker(job_pk=job.pk)
+
+        job.refresh_from_db()
+        self.assertIsNotNone(job.llm_finished_at)
+        self.assertIn("No worker configured", job.error)
+
     @patch("apps.jobs.tasks.call_llm", return_value="llm output")
     def test_llm_worker_skips_already_finished_job_by_pk(self, call_llm_mock):
         job = Job.objects.create(
@@ -571,26 +615,9 @@ class WebhookManagementTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.now = datetime.now(dt_timezone.utc)
-        skill = Skill.objects.create(name="webhook-skill", content="s")
-        wrapper = Wrapper.objects.create(
-            name="webhook-wrapper", skill=skill, content="w"
-        )
-        provider = Provider.objects.create(
-            name="webhook-provider",
-            api_type="openai",
-            base_url="https://example.com",
-            auth_token="tok",
-        )
-        profile = Profile.objects.create(
-            provider=provider,
-            name="webhook-profile",
-            model="gpt-4o",
-        )
         cls.bot = Bot.objects.create(
             name="webhook-bot",
             telegram_api_token="telegram-token",
-            profile=profile,
-            wrapper=wrapper,
         )
 
     @override_settings(BASE_URL="https://example.com")
@@ -816,22 +843,9 @@ class WebhookManagementTests(TestCase):
 class TelegramAckTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        skill = Skill.objects.create(name="ack-skill", content="s")
-        wrapper = Wrapper.objects.create(name="ack-wrapper", skill=skill, content="w")
-        provider = Provider.objects.create(
-            name="ack-provider",
-            api_type="openai",
-            base_url="https://example.com",
-            auth_token="tok",
-        )
-        profile = Profile.objects.create(
-            provider=provider, name="ack-pr", model="gpt-4o"
-        )
         cls.bot = Bot.objects.create(
             name="ack-bot",
             telegram_api_token="telegram-token",
-            profile=profile,
-            wrapper=wrapper,
         )
 
     @patch("apps.jobs.tasks.set_message_reaction")
@@ -896,22 +910,9 @@ class TelegramAckTests(TestCase):
 class IntakeFlushTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        skill = Skill.objects.create(name="flush-skill", content="s")
-        wrapper = Wrapper.objects.create(name="flush-wrapper", skill=skill, content="w")
-        provider = Provider.objects.create(
-            name="flush-provider",
-            api_type="openai",
-            base_url="https://example.com",
-            auth_token="tok",
-        )
-        profile = Profile.objects.create(
-            provider=provider, name="flush-profile", model="gpt-4o"
-        )
         cls.bot = Bot.objects.create(
             name="flush-bot",
             telegram_api_token="tok",
-            profile=profile,
-            wrapper=wrapper,
         )
 
     def test_flush_creates_job_from_due_buffer(self):

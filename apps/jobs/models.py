@@ -155,3 +155,33 @@ class IntakeBuffer(models.Model):
 
     def __str__(self) -> str:
         return f"IntakeBuffer #{self.pk} [{self.bot.name}] #{self.chat_id}"
+
+
+class Worker(models.Model):
+    """Execution configuration for a bot — currently holds LLM profile and wrapper."""
+
+    bot = models.OneToOneField(
+        "bots.Bot",
+        on_delete=models.CASCADE,
+        related_name="worker",
+    )
+    profile = models.ForeignKey(
+        "inference.Profile",
+        on_delete=models.PROTECT,
+    )
+    wrapper = models.ForeignKey(
+        "library.Wrapper",
+        on_delete=models.PROTECT,
+    )
+    enabled = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["bot__name"]
+        verbose_name = "Worker"
+        verbose_name_plural = "Workers"
+
+    def __str__(self) -> str:
+        return f"Worker for {self.bot.name}"

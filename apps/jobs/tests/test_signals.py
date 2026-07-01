@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
-from apps.jobs.models import Job
+from apps.jobs.models import Job, Worker
 from apps.library.models import Skill, Wrapper
 
 
@@ -25,6 +25,9 @@ class SignalOrchestrationTests(TestCase):
         cls.bot = Bot.objects.create(
             name="sig-bot",
             telegram_api_token="telegram-token",
+        )
+        Worker.objects.create(
+            bot=cls.bot,
             profile=profile,
             wrapper=wrapper,
         )

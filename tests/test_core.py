@@ -41,20 +41,9 @@ class JobSelectionPredicatesTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         now = datetime.now(dt_timezone.utc)
-        skill = Skill.objects.create(name="s", content="s")
-        wrapper = Wrapper.objects.create(name="w", skill=skill, content="w")
-        provider = Provider.objects.create(
-            name="p",
-            api_type="openai",
-            base_url="https://example.com",
-            auth_token="tok",
-        )
-        profile = Profile.objects.create(provider=provider, name="pr", model="gpt-4o")
         bot = Bot.objects.create(
             name="b",
             telegram_api_token="tok",
-            profile=profile,
-            wrapper=wrapper,
         )
 
         # Pending job: not started, no error
@@ -114,20 +103,9 @@ class DerivedJobStatesTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         now = datetime.now(dt_timezone.utc)
-        skill = Skill.objects.create(name="s", content="s")
-        wrapper = Wrapper.objects.create(name="w", skill=skill, content="w")
-        provider = Provider.objects.create(
-            name="p",
-            api_type="openai",
-            base_url="https://x.com",
-            auth_token="tok",
-        )
-        profile = Profile.objects.create(provider=provider, name="pr", model="gpt-4o")
         bot = Bot.objects.create(
             name="b",
             telegram_api_token="tok",
-            profile=profile,
-            wrapper=wrapper,
         )
 
         cls.pending = Job.objects.create(
@@ -548,28 +526,9 @@ class TelegramDeliveryTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.now = datetime.now(dt_timezone.utc)
-        skill = Skill.objects.create(name="delivery-skill", content="s")
-        wrapper = Wrapper.objects.create(
-            name="delivery-wrapper",
-            skill=skill,
-            content="w",
-        )
-        provider = Provider.objects.create(
-            name="delivery-provider",
-            api_type="openai",
-            base_url="https://example.com",
-            auth_token="tok",
-        )
-        profile = Profile.objects.create(
-            provider=provider,
-            name="delivery-profile",
-            model="gpt-4o",
-        )
         cls.bot = Bot.objects.create(
             name="delivery-bot",
             telegram_api_token="telegram-token",
-            profile=profile,
-            wrapper=wrapper,
         )
 
     @patch("apps.jobs.tasks.send_document")
@@ -788,25 +747,15 @@ class MaskedFieldAdminFormTests(TestCase):
     """AdminModelForm must never decrypt masked fields to check or preserve values."""
 
     def test_bot_admin_form_skips_empty_masked_field_for_existing_instance(self):
-        skill = Skill.objects.create(name="s", content="c")
-        wrapper = Wrapper.objects.create(name="w", skill=skill, content="c")
-        provider = Provider.objects.create(
-            name="p", api_type="openai", base_url="https://x.com", auth_token="t"
-        )
-        profile = Profile.objects.create(name="pr", provider=provider, model="gpt-4")
         bot = Bot.objects.create(
             name="bot",
             telegram_api_token="telegram-token",
-            profile=profile,
-            wrapper=wrapper,
         )
 
         form = BotAdminForm(
             data={
                 "name": "bot",
                 "telegram_api_token": "",
-                "profile": profile.pk,
-                "wrapper": wrapper.pk,
                 "enabled": True,
                 "telegram_update_offset": 0,
             },
@@ -835,22 +784,10 @@ class MaskedFieldAdminFormTests(TestCase):
         self.assertNotIn("auth_token", form.cleaned_data)
 
     def test_bot_admin_form_masked_field_required_for_new_instance(self):
-        skill = Skill.objects.create(name="s", content="c")
-        wrapper = Wrapper.objects.create(name="w", skill=skill, content="c")
-        profile = Profile.objects.create(
-            name="pr",
-            provider=Provider.objects.create(
-                name="p", api_type="openai", base_url="https://x.com", auth_token="t"
-            ),
-            model="gpt-4",
-        )
-
         form = BotAdminForm(
             data={
                 "name": "new-bot",
                 "telegram_api_token": "",
-                "profile": profile.pk,
-                "wrapper": wrapper.pk,
                 "enabled": True,
                 "telegram_update_offset": 0,
             },
@@ -860,28 +797,15 @@ class MaskedFieldAdminFormTests(TestCase):
         self.assertIn("telegram_api_token", form.errors)
 
     def test_bot_admin_form_new_value_in_masked_field_used(self):
-        skill = Skill.objects.create(name="s", content="c")
-        wrapper = Wrapper.objects.create(name="w", skill=skill, content="c")
-        profile = Profile.objects.create(
-            name="pr",
-            provider=Provider.objects.create(
-                name="p", api_type="openai", base_url="https://x.com", auth_token="t"
-            ),
-            model="gpt-4",
-        )
         bot = Bot.objects.create(
             name="bot",
             telegram_api_token="old-token",
-            profile=profile,
-            wrapper=wrapper,
         )
 
         form = BotAdminForm(
             data={
                 "name": "bot",
                 "telegram_api_token": "new-token",
-                "profile": profile.pk,
-                "wrapper": wrapper.pk,
                 "enabled": True,
                 "telegram_update_offset": 0,
             },

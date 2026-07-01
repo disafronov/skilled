@@ -12,7 +12,7 @@ from django_q.models import Success
 
 from apps.bots.models import Bot
 from apps.jobs.intake import accept_telegram_message
-from apps.jobs.models import IntakeBuffer, Job
+from apps.jobs.models import IntakeBuffer, Job, Worker
 from workers.llm import call_llm
 from workers.telegram import (
     delete_webhook,
@@ -256,10 +256,7 @@ def llm_worker(job_pk: int | None = None) -> None:
             try:
                 job = (
                     Job.objects.select_for_update(skip_locked=True)
-                    .select_related(
-                        "bot__wrapper__skill",
-                        "bot__profile__provider",
-                    )
+                    .select_related("bot")
                     .get(pk=job_pk)
                 )
             except Job.DoesNotExist:
@@ -283,9 +280,13 @@ def llm_worker(job_pk: int | None = None) -> None:
             next_job = (
                 Job.objects.select_for_update(skip_locked=True)
                 .ready_for_llm()
+                .filter(
+                    bot__worker__isnull=False,
+                    bot__worker__enabled=True,
+                )
                 .select_related(
-                    "bot__wrapper__skill",
-                    "bot__profile__provider",
+                    "bot__worker__wrapper__skill",
+                    "bot__worker__profile__provider",
                 )
                 .order_by("created_at", "id")
                 .first()
@@ -297,18 +298,33 @@ def llm_worker(job_pk: int | None = None) -> None:
         job.llm_started_at = timezone.now()
         job.save(update_fields=["llm_started_at", "updated_at"])
 
+    bot = job.bot
     try:
-        bot = job.bot
+        if job_pk is not None:
+            worker = Worker.objects.select_related(
+                "profile__provider", "wrapper__skill"
+            ).get(bot=bot)
+        else:
+            worker = bot.worker
+
+        if not worker.enabled:
+            raise RuntimeError(f"Worker disabled for bot {bot.pk}")
+
         logger.info("LLM worker: processing job %d for bot %d", job.pk, bot.pk)
         raw_output = call_llm(
-            provider=bot.profile.provider,
-            profile=bot.profile,
-            skill=bot.wrapper.skill,
-            wrapper=bot.wrapper,
+            provider=worker.profile.provider,
+            profile=worker.profile,
+            skill=worker.wrapper.skill,
+            wrapper=worker.wrapper,
             raw_input=job.raw_input,
         )
         job.raw_output = raw_output
         logger.info("LLM worker: job %d completed (%d chars)", job.pk, len(raw_output))
+    except Worker.DoesNotExist:
+        logger.error("LLM worker: no worker for bot %d", bot.pk)
+        job.llm_finished_at = timezone.now()
+        job.error = sanitize_error("No worker configured for bot")
+        job.save(update_fields=["llm_finished_at", "error", "updated_at"])
     except Exception as exc:
         logger.error(
             "LLM worker: job %d failed: %s", job.pk, exc, exc_info=settings.DEBUG

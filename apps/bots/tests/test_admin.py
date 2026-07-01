@@ -6,8 +6,6 @@ from django.test import SimpleTestCase, TestCase
 
 from apps.bots.admin import BotAdmin
 from apps.bots.models import Bot
-from apps.inference.models import Profile, Provider
-from apps.library.models import Skill, Wrapper
 
 
 class BotAdminTests(SimpleTestCase):
@@ -23,8 +21,6 @@ class BotAdminTests(SimpleTestCase):
                         "fields": (
                             "name",
                             "telegram_api_token",
-                            "profile",
-                            "wrapper",
                             "enabled",
                             "telegram_update_offset",
                         )
@@ -50,8 +46,6 @@ class BotAdminTests(SimpleTestCase):
             admin.list_display,
             (
                 "name",
-                "profile",
-                "wrapper",
                 "enabled",
                 "telegram_update_offset",
                 "webhook_enabled_at",
@@ -70,8 +64,6 @@ class BotAdminTests(SimpleTestCase):
             [
                 "name",
                 "telegram_api_token",
-                "profile",
-                "wrapper",
                 "enabled",
                 "telegram_update_offset",
             ],
@@ -126,26 +118,10 @@ class BotAdminTests(SimpleTestCase):
 
 
 class BotAdminActionTests(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        cls.skill = Skill.objects.create(name="s", content="s")
-        cls.wrapper = Wrapper.objects.create(name="w", skill=cls.skill, content="w")
-        cls.provider = Provider.objects.create(
-            name="p",
-            api_type="openai",
-            base_url="https://example.com",
-            auth_token="tok",
-        )
-        cls.profile = Profile.objects.create(
-            provider=cls.provider, name="pr", model="gpt-4o"
-        )
-
     def test_rotate_webhook_secret_action_executes(self):
         bot = Bot.objects.create(
             name="action-bot",
             telegram_api_token="telegram-token",
-            profile=self.profile,
-            wrapper=self.wrapper,
         )
         original_secret = bot.webhook_secret
         admin = BotAdmin(Bot, AdminSite())

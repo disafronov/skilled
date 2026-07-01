@@ -6,33 +6,16 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.bots.models import Bot
-from apps.inference.models import Profile, Provider
 from apps.jobs.models import IntakeBuffer, Job
-from apps.library.models import Skill, Wrapper
 
 
 class WebhookViewTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.raw_token = "123456:ABC-DEF1234abcdef"
-        skill = Skill.objects.create(name="webhook-skill", content="s")
-        wrapper = Wrapper.objects.create(
-            name="webhook-wrapper", skill=skill, content="w"
-        )
-        provider = Provider.objects.create(
-            name="webhook-provider",
-            api_type="openai",
-            base_url="https://example.com",
-            auth_token="tok",
-        )
-        profile = Profile.objects.create(
-            provider=provider, name="webhook-profile", model="gpt-4o"
-        )
         cls.bot = Bot.objects.create(
             name="webhook-bot",
             telegram_api_token=cls.raw_token,
-            profile=profile,
-            wrapper=wrapper,
         )
 
     def _url(self) -> str:

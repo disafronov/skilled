@@ -30,8 +30,6 @@ class BotAdmin(admin.ModelAdmin):
                 "fields": (
                     "name",
                     "telegram_api_token",
-                    "profile",
-                    "wrapper",
                     "enabled",
                     "telegram_update_offset",
                 ),
@@ -56,15 +54,13 @@ class BotAdmin(admin.ModelAdmin):
     )
     list_display = (
         "name",
-        "profile",
-        "wrapper",
         "enabled",
         "telegram_update_offset",
         "webhook_enabled_at",
         "webhook_disabled_at",
         "updated_at",
     )
-    list_select_related = ["wrapper", "profile"]
+    list_select_related = ()
     search_fields = ["name"]
     actions = ["rotate_webhook_secret"]
 

@@ -6,7 +6,7 @@ from django.utils.text import Truncator
 from django_q.tasks import async_task
 
 from apps.admin_mixins import CHANGES_FIELDSET
-from apps.jobs.models import Job
+from apps.jobs.models import Job, Worker
 
 JOB_PREVIEW_LENGTH = 80
 
@@ -161,3 +161,19 @@ class JobAdmin(admin.ModelAdmin):
         obj: Job | None = None,
     ) -> bool:
         return False
+
+
+@admin.register(Worker)
+class WorkerAdmin(admin.ModelAdmin):
+    """Admin for execution configuration."""
+
+    list_display = (
+        "bot",
+        "profile",
+        "wrapper",
+        "enabled",
+        "updated_at",
+    )
+    list_select_related = ("bot", "profile", "wrapper")
+    search_fields = ("bot__name",)
+    readonly_fields = ("created_at", "updated_at")
