@@ -183,3 +183,66 @@ def get_updates(token: str, offset: int | None = None) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = data.get("result", [])
     logger.info("Fetched %d Telegram updates (offset=%s)", len(results), offset)
     return results
+
+
+def set_webhook(token: str, url: str) -> dict[str, Any]:
+    """Register a webhook URL for the bot.
+
+    Args:
+        token: Bot API token.
+        url: Full HTTPS URL (including ``/webhook/<token>/``).
+
+    Returns:
+        The response ``result`` dict from Telegram API.
+    """
+    logger.info("Registering webhook for bot token ending in %s", token[-4:])
+    response = _request(
+        "post",
+        _bot_url(token, "setWebhook"),
+        json={
+            "url": url,
+            "drop_pending_updates": False,
+            "allowed_updates": ["message"],
+        },
+    )
+    _raise_for_status(response)
+    data: dict[str, Any] = response.json()
+    result: dict[str, Any] = data.get("result", {})
+    return result
+
+
+def delete_webhook(token: str) -> dict[str, Any]:
+    """Remove the registered webhook and fall back to polling.
+
+    Args:
+        token: Bot API token.
+
+    Returns:
+        The response ``result`` dict from Telegram API.
+    """
+    logger.info("Removing webhook for bot token ending in %s", token[-4:])
+    response = _request(
+        "post",
+        _bot_url(token, "deleteWebhook"),
+        json={"drop_pending_updates": True},
+    )
+    _raise_for_status(response)
+    data: dict[str, Any] = response.json()
+    result: dict[str, Any] = data.get("result", {})
+    return result
+
+
+def get_webhook_info(token: str) -> dict[str, Any]:
+    """Retrieve current webhook registration status.
+
+    Returns:
+        The response ``result`` dict (keys: url, has_custom_certificate,
+        pending_update_count, last_error_date, last_error_message,
+        max_connections, allowed_updates).
+    """
+    logger.debug("Fetching webhook info for bot token ending in %s", token[-4:])
+    response = _request("get", _bot_url(token, "getWebhookInfo"))
+    _raise_for_status(response)
+    data: dict[str, Any] = response.json()
+    result: dict[str, Any] = data.get("result", {})
+    return result
