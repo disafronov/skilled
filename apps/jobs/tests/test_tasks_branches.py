@@ -148,7 +148,12 @@ class PipelineTaskBranchTests(TestCase):
             },
             {
                 "update_id": 13,
-                "message": {"message_id": 10, "chat": {"id": 123}, "text": "hello"},
+                "message": {
+                    "message_id": 10,
+                    "chat": {"id": 123},
+                    "date": 1700000000,
+                    "text": "hello",
+                },
             },
         ],
     )
@@ -169,7 +174,12 @@ class PipelineTaskBranchTests(TestCase):
             {"update_id": 10},
             {
                 "update_id": 11,
-                "message": {"message_id": 7, "chat": {"id": 123}, "text": "hello"},
+                "message": {
+                    "message_id": 7,
+                    "chat": {"id": 123},
+                    "date": 1700000000,
+                    "text": "hello",
+                },
             },
         ],
     )
@@ -911,7 +921,8 @@ class IntakeFlushTests(TestCase):
             chat_id="123",
             reply_to_message_id=99,
             text="hello world",
-            last_message_at=old,
+            last_message_ts=1700000000,
+            last_received_at=old,
         )
 
         from apps.jobs.tasks import flush_intake_buffers
@@ -932,7 +943,8 @@ class IntakeFlushTests(TestCase):
             bot=self.bot,
             chat_id="123",
             text="fresh",
-            last_message_at=now,
+            last_message_ts=1700000000,
+            last_received_at=now,
         )
 
         from apps.jobs.tasks import flush_intake_buffers
@@ -950,7 +962,8 @@ class IntakeFlushTests(TestCase):
             bot=self.bot,
             chat_id="123",
             text="done",
-            last_message_at=old,
+            last_message_ts=1700000000,
+            last_received_at=old,
             flushed_at=timezone.now(),
         )
 
@@ -968,7 +981,8 @@ class IntakeFlushTests(TestCase):
             bot=self.bot,
             chat_id="123",
             text="claimed",
-            last_message_at=old,
+            last_message_ts=1700000000,
+            last_received_at=old,
         )
 
         from apps.jobs.tasks import flush_intake_buffers

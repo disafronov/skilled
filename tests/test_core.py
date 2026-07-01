@@ -669,6 +669,7 @@ class TelegramDeliveryTests(TestCase):
                 "message": {
                     "message_id": 456,
                     "chat": {"id": 123},
+                    "date": 1700000000,
                     "text": "hello",
                 },
             }
@@ -681,12 +682,15 @@ class TelegramDeliveryTests(TestCase):
         buffer = IntakeBuffer.objects.get(text="hello")
         self.assertEqual(buffer.chat_id, "123")
         self.assertEqual(buffer.reply_to_message_id, 456)
+        self.assertEqual(buffer.last_message_ts, 1700000000)
         self.assertFalse(Job.objects.exists())
 
     def test_accept_message_without_message_id(self):
         from apps.jobs.intake import accept_telegram_message
 
-        buffer = accept_telegram_message(self.bot, "999", None, "no-message-id")
+        buffer = accept_telegram_message(
+            self.bot, "999", None, 1700000000, "no-message-id"
+        )
         self.assertIsNone(buffer.reply_to_message_id)
         self.assertEqual(buffer.text, "no-message-id")
 

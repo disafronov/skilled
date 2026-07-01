@@ -54,6 +54,7 @@ class IntakeBufferModelTests(TestCase):
             bot=bot,
             chat_id="42",
             text="hello",
-            last_message_at=timezone.now(),
+            last_message_ts=1700000000,
+            last_received_at=timezone.now(),
         )
         self.assertEqual(str(buffer), f"IntakeBuffer #{buffer.pk} [buffer-bot] #42")

@@ -5,9 +5,9 @@ Skill-driven AI bot runtime — connects Telegram to any OpenAI-compatible LLM v
 ## Architecture
 
 ```text
-Telegram ──┬── webhook ──> Job ──> llm_worker ──> telegram_deliver ──> Telegram
-           │             ^
-           └── poll ─────┘
+Telegram ──┬── webhook ──> IntakeBuffer ──> Job ──> llm_worker ──> telegram_deliver ──> Telegram
+           │                (flush)
+           └── poll ────────┘
            (Q2 schedule)
 ```
 
@@ -16,7 +16,7 @@ Telegram ──┬── webhook ──> Job ──> llm_worker ──> telegram
 - **Webhook** (primary) — Telegram pushes updates to `/webhook/`. Inbound auth uses `X-Telegram-Bot-Api-Secret-Token` header matched against the bot's `webhook_secret`. Zero polling latency.
 - **Polling** (fallback) — scheduled Q2 task `telegram_ingest` periodically fetches updates via `getUpdates`. Webhook auto-registers, self-heals on errors, and falls back to polling with a configurable cooldown.
 
-Both paths create `Job` records. A Django `post_save` signal schedules downstream tasks via `transaction.on_commit`:
+Both paths accumulate messages into an **IntakeBuffer**, one per bot/chat. Messages are grouped by Telegram `message.date` timestamp — consecutive messages within the debounce window merge into one buffer. A message beyond the window triggers an immediate flush into a `Job`. A scheduled safety flush (`intake_flush`) catches any leftover open buffer. A Django `post_save` signal schedules downstream tasks via `transaction.on_commit`:
 
 | Signal trigger | Enqueued task |
 | -------------- | -------------- |
@@ -33,18 +33,20 @@ Skill    — system-level instruction content
 Wrapper  — per-bot wrapper instruction
 Profile  — model + temperature + other LLM parameters
 Provider — API endpoint + auth (OpenAI-compatible)
-Bot      — Telegram endpoint (ties skill + wrapper + profile + token + webhook_secret)
-Job      — single message execution artifact
+Bot           — Telegram endpoint (ties skill + wrapper + profile + token + webhook_secret)
+IntakeBuffer  — mutable pre-job accumulator (one open buffer per bot/chat)
+Job           — finalized execution artifact (immutable after creation)
 ```
 
 All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider & Profile), `apps/bots` (Bot), and `apps/jobs` (Job + pipeline).
 
 ## Pipeline
 
-1. **Ingest** — `telegram_ingest` or webhook view creates a `Job`
-2. **Ack** — `telegram_ack` replies "Added to the processing queue"
-3. **LLM** — `llm_worker` calls the configured OpenAI-compatible API
-4. **Deliver** — `telegram_deliver` sends the response (text or file) to the user
+1. **Intake** — `telegram_ingest` or webhook view accumulates message into `IntakeBuffer`, groups by Telegram `message.date`
+2. **Flush** — immediate flush on group boundary, or `intake_flush` (scheduled Q2) as safety backstop
+3. **Ack** — `telegram_ack` replies "Added to the processing queue"
+4. **LLM** — `llm_worker` calls the configured OpenAI-compatible API
+5. **Deliver** — `telegram_deliver` sends the response (text or file) to the user
 
 ## Security
 
