@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
 from datetime import timezone as dt_timezone
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
-from apps.jobs.models import Job
+from apps.jobs.models import IntakeBuffer, Job
 from apps.jobs.tasks import (
     Q2_LLM_STALE_JOB_SECONDS,
     llm_worker,
@@ -157,8 +158,9 @@ class PipelineTaskBranchTests(TestCase):
         self.bot.refresh_from_db()
         self.assertEqual(self.bot.telegram_update_offset, 14)
         self.assertEqual(
-            list(Job.objects.values_list("raw_input", flat=True)), ["hello"]
+            list(IntakeBuffer.objects.values_list("text", flat=True)), ["hello"]
         )
+        self.assertFalse(Job.objects.exists())
 
     @patch("apps.jobs.tasks.logger")
     @patch(
@@ -178,7 +180,8 @@ class PipelineTaskBranchTests(TestCase):
     ):
         telegram_ingest()
 
-        self.assertTrue(Job.objects.filter(raw_input="hello").exists())
+        self.assertTrue(IntakeBuffer.objects.filter(text="hello").exists())
+        self.assertFalse(Job.objects.exists())
         self.bot.refresh_from_db()
         self.assertEqual(self.bot.telegram_update_offset, 12)
 
@@ -878,3 +881,102 @@ class TelegramAckTests(TestCase):
         )
         telegram_ack(job.pk)
         mock_reaction.assert_not_called()
+
+
+class IntakeFlushTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        skill = Skill.objects.create(name="flush-skill", content="s")
+        wrapper = Wrapper.objects.create(name="flush-wrapper", skill=skill, content="w")
+        provider = Provider.objects.create(
+            name="flush-provider",
+            api_type="openai",
+            base_url="https://example.com",
+            auth_token="tok",
+        )
+        profile = Profile.objects.create(
+            provider=provider, name="flush-profile", model="gpt-4o"
+        )
+        cls.bot = Bot.objects.create(
+            name="flush-bot",
+            telegram_api_token="tok",
+            profile=profile,
+            wrapper=wrapper,
+        )
+
+    def test_flush_creates_job_from_due_buffer(self):
+        old = timezone.now() - timedelta(seconds=60)
+        buffer = IntakeBuffer.objects.create(
+            bot=self.bot,
+            chat_id="123",
+            reply_to_message_id=99,
+            text="hello world",
+            last_message_at=old,
+        )
+
+        from apps.jobs.tasks import flush_intake_buffers
+
+        flush_intake_buffers()
+
+        buffer.refresh_from_db()
+        self.assertIsNotNone(buffer.flushed_at)
+        job = Job.objects.get()
+        self.assertEqual(job.bot, self.bot)
+        self.assertEqual(job.reply_target, "123")
+        self.assertEqual(job.reply_to_message_id, 99)
+        self.assertEqual(job.raw_input, "hello world")
+
+    def test_flush_skips_fresh_buffer(self):
+        now = timezone.now()
+        IntakeBuffer.objects.create(
+            bot=self.bot,
+            chat_id="123",
+            text="fresh",
+            last_message_at=now,
+        )
+
+        from apps.jobs.tasks import flush_intake_buffers
+
+        flush_intake_buffers()
+
+        self.assertFalse(Job.objects.exists())
+        self.assertEqual(
+            IntakeBuffer.objects.filter(flushed_at__isnull=True).count(), 1
+        )
+
+    def test_flush_is_idempotent_when_already_flushed(self):
+        old = timezone.now() - timedelta(seconds=60)
+        buffer = IntakeBuffer.objects.create(
+            bot=self.bot,
+            chat_id="123",
+            text="done",
+            last_message_at=old,
+            flushed_at=timezone.now(),
+        )
+
+        from apps.jobs.tasks import flush_intake_buffers
+
+        flush_intake_buffers()
+
+        self.assertFalse(Job.objects.exists())
+        buffer.refresh_from_db()
+        self.assertIsNotNone(buffer.flushed_at)
+
+    def test_flush_skips_when_buffer_claimed_under_lock(self):
+        old = timezone.now() - timedelta(seconds=60)
+        IntakeBuffer.objects.create(
+            bot=self.bot,
+            chat_id="123",
+            text="claimed",
+            last_message_at=old,
+        )
+
+        from apps.jobs.tasks import flush_intake_buffers
+
+        with patch.object(type(IntakeBuffer.objects), "select_for_update") as mock_sfu:
+            mock_qs = MagicMock()
+            mock_sfu.return_value = mock_qs
+            mock_qs.filter.return_value.first.return_value = None
+            flush_intake_buffers()
+
+        self.assertFalse(Job.objects.exists())

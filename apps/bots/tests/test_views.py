@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
-from apps.jobs.models import Job
+from apps.jobs.models import IntakeBuffer
 from apps.library.models import Skill, Wrapper
 
 
@@ -98,7 +98,7 @@ class WebhookViewTests(TestCase):
         response = self._post({"message": {"chat": {"id": 1}, "text": "hello"}})
         self.assertEqual(response.status_code, 404)
 
-    def test_creates_job_for_valid_message(self):
+    def test_creates_intake_buffer_for_valid_message(self):
         response = self._post(
             {
                 "message": {
@@ -111,8 +111,36 @@ class WebhookViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b"ok")
 
-        job = Job.objects.get()
-        self.assertEqual(job.bot, self.bot)
-        self.assertEqual(job.reply_target, "42")
-        self.assertEqual(job.reply_to_message_id, 99)
-        self.assertEqual(job.raw_input, "hello world")
+        buffer = IntakeBuffer.objects.get()
+        self.assertEqual(buffer.bot, self.bot)
+        self.assertEqual(buffer.chat_id, "42")
+        self.assertEqual(buffer.reply_to_message_id, 99)
+        self.assertEqual(buffer.text, "hello world")
+        self.assertIsNone(buffer.flushed_at)
+
+    def test_merges_consecutive_messages_into_one_buffer(self):
+        self._post(
+            {
+                "message": {
+                    "chat": {"id": 7},
+                    "message_id": 10,
+                    "text": "first",
+                }
+            }
+        )
+        self._post(
+            {
+                "message": {
+                    "chat": {"id": 7},
+                    "message_id": 11,
+                    "text": "second",
+                }
+            }
+        )
+
+        self.assertEqual(IntakeBuffer.objects.count(), 1)
+        buffer = IntakeBuffer.objects.get()
+        self.assertEqual(buffer.text, "first\nsecond")
+        self.assertEqual(buffer.message_count, 2)
+        self.assertEqual(buffer.reply_to_message_id, 11)
+        self.assertIsNone(buffer.flushed_at)

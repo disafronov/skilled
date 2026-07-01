@@ -662,7 +662,7 @@ class TelegramDeliveryTests(TestCase):
 
     @patch("apps.jobs.tasks.send_message")
     @patch("apps.jobs.tasks.get_updates")
-    def test_ingest_stores_reply_message_id(self, get_updates, send_message):
+    def test_ingest_appends_to_intake_buffer(self, get_updates, send_message):
         get_updates.return_value = [
             {
                 "update_id": 100,
@@ -676,9 +676,19 @@ class TelegramDeliveryTests(TestCase):
 
         telegram_ingest()
 
-        job = Job.objects.get(raw_input="hello")
-        self.assertEqual(job.reply_target, "123")
-        self.assertEqual(job.reply_to_message_id, 456)
+        from apps.jobs.models import IntakeBuffer
+
+        buffer = IntakeBuffer.objects.get(text="hello")
+        self.assertEqual(buffer.chat_id, "123")
+        self.assertEqual(buffer.reply_to_message_id, 456)
+        self.assertFalse(Job.objects.exists())
+
+    def test_accept_message_without_message_id(self):
+        from apps.jobs.intake import accept_telegram_message
+
+        buffer = accept_telegram_message(self.bot, "999", None, "no-message-id")
+        self.assertIsNone(buffer.reply_to_message_id)
+        self.assertEqual(buffer.text, "no-message-id")
 
     @patch("apps.jobs.tasks.send_document")
     @patch("apps.jobs.tasks.send_message")
