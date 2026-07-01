@@ -373,6 +373,39 @@ class TelegramHttpClientTests(TestCase):
         )
 
     @patch("workers.telegram._http.request")
+    def test_set_message_reaction_posts_expected_payload(self, mock_request):
+        from workers.telegram import set_message_reaction
+
+        mock_request.return_value = httpx.Response(
+            200, request=self._request("POST"), json={"ok": True, "result": True}
+        )
+
+        set_message_reaction("token", "123", 456, "🤔")
+
+        mock_request.assert_called_once_with(
+            "post",
+            "https://api.telegram.org/bottoken/setMessageReaction",
+            json={
+                "chat_id": "123",
+                "message_id": 456,
+                "reaction": [{"type": "emoji", "emoji": "🤔"}],
+            },
+        )
+
+    @patch("workers.telegram._http.request")
+    def test_set_message_reaction_raises_on_api_error(self, mock_request):
+        from workers.telegram import set_message_reaction
+
+        mock_request.return_value = httpx.Response(
+            400,
+            request=self._request("POST"),
+            json={"ok": False, "description": "Bad request"},
+        )
+
+        with self.assertRaises(RuntimeError):
+            set_message_reaction("token", "123", 456, "👍")
+
+    @patch("workers.telegram._http.request")
     def test_delete_webhook_posts_expected_payload(self, mock_request):
         from workers.telegram import delete_webhook
 

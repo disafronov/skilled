@@ -9,7 +9,6 @@ from apps.inference.models import Profile, Provider
 from apps.jobs.models import Job
 from apps.jobs.tasks import (
     Q2_LLM_STALE_JOB_SECONDS,
-    QUEUE_ACK_TEXT,
     llm_worker,
     telegram_ack,
     telegram_deliver,
@@ -822,8 +821,8 @@ class TelegramAckTests(TestCase):
             wrapper=wrapper,
         )
 
-    @patch("apps.jobs.tasks.send_message")
-    def test_ack_sends_message(self, mock_send):
+    @patch("apps.jobs.tasks.set_message_reaction")
+    def test_ack_sends_reaction(self, mock_reaction):
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
@@ -833,11 +832,11 @@ class TelegramAckTests(TestCase):
 
         telegram_ack(job.pk)
 
-        mock_send.assert_called_once_with(
+        mock_reaction.assert_called_once_with(
             "telegram-token",
             "123",
-            QUEUE_ACK_TEXT,
-            reply_to_message_id=456,
+            456,
+            "🤔",
         )
 
     @patch("apps.jobs.tasks.logger")
@@ -846,15 +845,36 @@ class TelegramAckTests(TestCase):
 
         mock_logger.warning.assert_called_once()
 
-    @patch("apps.jobs.tasks.send_message", side_effect=RuntimeError("ack down"))
+    @patch("apps.jobs.tasks.set_message_reaction", side_effect=RuntimeError("ack down"))
     @patch("apps.jobs.tasks.logger")
-    def test_ack_logs_error_on_failure(self, mock_logger, mock_send):
+    def test_ack_logs_error_on_failure(self, mock_logger, mock_reaction):
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
+            reply_to_message_id=789,
             raw_input="hello",
         )
 
         telegram_ack(job.pk)
 
         mock_logger.error.assert_called_once()
+
+    @override_settings(TELEGRAM_ACK_REACTION="")
+    def test_ack_skipped_when_reaction_empty(self):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            reply_to_message_id=456,
+            raw_input="hello",
+        )
+        telegram_ack(job.pk)
+
+    @patch("apps.jobs.tasks.set_message_reaction")
+    def test_ack_skipped_when_no_reply_to_message_id(self, mock_reaction):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="hello",
+        )
+        telegram_ack(job.pk)
+        mock_reaction.assert_not_called()
