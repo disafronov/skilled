@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from django.contrib.admin.sites import AdminSite
 from django.test import TestCase
@@ -142,7 +142,8 @@ class JobAdminTests(TestCase):
             admin.raw_input_preview(self.job), preview_text(self.job.raw_input)
         )
 
-    def test_retry_llm_jobs_resets_llm_state(self):
+    @patch("apps.jobs.admin.async_task")
+    def test_retry_llm_jobs_resets_and_requeues(self, mock_async):
         admin = JobAdmin(Job, AdminSite())
         request = MagicMock()
         admin.message_user = MagicMock()
@@ -163,8 +164,11 @@ class JobAdminTests(TestCase):
         self.assertIsNone(job.error)
         self.assertIsNone(job.delivery_started_at)
         self.assertIsNone(job.delivery_finished_at)
+        mock_async.assert_called_once_with("apps.jobs.tasks.llm_worker", job.pk)
+        admin.message_user.assert_called_once()
 
-    def test_retry_llm_jobs_warns_when_nothing_is_eligible(self):
+    @patch("apps.jobs.admin.async_task")
+    def test_retry_llm_jobs_resets_completed_job(self, mock_async):
         admin = JobAdmin(Job, AdminSite())
         request = MagicMock()
         admin.message_user = MagicMock()
@@ -181,12 +185,17 @@ class JobAdminTests(TestCase):
 
         admin.retry_llm_jobs(request, Job.objects.filter(pk=job.pk))
 
-        admin.message_user.assert_called_once()
-        self.assertEqual(admin.message_user.call_args.kwargs["level"], 30)
         job.refresh_from_db()
-        self.assertIsNotNone(job.delivery_finished_at)
+        self.assertIsNone(job.llm_started_at)
+        self.assertIsNone(job.llm_finished_at)
+        self.assertIsNone(job.raw_output)
+        self.assertIsNone(job.error)
+        self.assertIsNone(job.delivery_started_at)
+        self.assertIsNone(job.delivery_finished_at)
+        mock_async.assert_called_once_with("apps.jobs.tasks.llm_worker", job.pk)
 
-    def test_retry_delivery_jobs_resets_delivery_state(self):
+    @patch("apps.jobs.admin.async_task")
+    def test_retry_delivery_jobs_resets_and_requeues(self, mock_async):
         admin = JobAdmin(Job, AdminSite())
         request = MagicMock()
         admin.message_user = MagicMock()
@@ -209,13 +218,31 @@ class JobAdminTests(TestCase):
         self.assertIsNone(job.delivery_started_at)
         self.assertIsNone(job.delivery_finished_at)
         self.assertIsNone(job.error)
+        mock_async.assert_called_once_with("apps.jobs.tasks.telegram_deliver", job.pk)
+        admin.message_user.assert_called_once()
 
-    def test_retry_delivery_jobs_warns_when_nothing_is_eligible(self):
+    @patch("apps.jobs.admin.async_task")
+    def test_retry_delivery_jobs_resets_completed_delivery(self, mock_async):
         admin = JobAdmin(Job, AdminSite())
         request = MagicMock()
         admin.message_user = MagicMock()
+        job = Job.objects.create(
+            bot=self.job.bot,
+            reply_target="done-delivery",
+            raw_input="hello",
+            llm_started_at=self.job.created_at,
+            llm_finished_at=self.job.created_at,
+            raw_output="response",
+            delivery_started_at=self.job.created_at,
+            delivery_finished_at=self.job.created_at,
+        )
 
-        admin.retry_delivery_jobs(request, Job.objects.filter(pk=self.job.pk))
+        admin.retry_delivery_jobs(request, Job.objects.filter(pk=job.pk))
 
-        admin.message_user.assert_called_once()
-        self.assertEqual(admin.message_user.call_args.kwargs["level"], 30)
+        job.refresh_from_db()
+        self.assertIsNotNone(job.llm_finished_at)
+        self.assertEqual(job.raw_output, "response")
+        self.assertIsNone(job.delivery_started_at)
+        self.assertIsNone(job.delivery_finished_at)
+        self.assertIsNone(job.error)
+        mock_async.assert_called_once_with("apps.jobs.tasks.telegram_deliver", job.pk)

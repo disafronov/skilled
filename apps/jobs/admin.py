@@ -3,6 +3,7 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.text import Truncator
+from django_q.tasks import async_task
 
 from apps.admin_mixins import CHANGES_FIELDSET
 from apps.jobs.models import Job
@@ -104,11 +105,8 @@ class JobAdmin(admin.ModelAdmin):
         request: HttpRequest,
         queryset: QuerySet[Job],
     ) -> None:
-        updated = queryset.filter(
-            llm_finished_at__isnull=True,
-            delivery_started_at__isnull=True,
-            delivery_finished_at__isnull=True,
-        ).update(
+        pks = list(queryset.values_list("pk", flat=True))
+        count = Job.objects.filter(pk__in=pks).update(
             llm_started_at=None,
             llm_finished_at=None,
             raw_output=None,
@@ -117,18 +115,13 @@ class JobAdmin(admin.ModelAdmin):
             delivery_finished_at=None,
             updated_at=timezone.now(),
         )
-        if updated:
-            self.message_user(
-                request,
-                f"Queued {updated} job(s) for LLM retry.",
-                level=messages.SUCCESS,
-            )
-        else:
-            self.message_user(
-                request,
-                "No selected jobs were eligible for LLM retry.",
-                level=messages.WARNING,
-            )
+        for pk in pks:
+            async_task("apps.jobs.tasks.llm_worker", pk)
+        self.message_user(
+            request,
+            f"Retrying {count} job(s) for LLM processing.",
+            level=messages.SUCCESS,
+        )
 
     @admin.action(description="Retry selected delivery jobs")
     def retry_delivery_jobs(
@@ -136,27 +129,20 @@ class JobAdmin(admin.ModelAdmin):
         request: HttpRequest,
         queryset: QuerySet[Job],
     ) -> None:
-        updated = queryset.filter(
-            llm_finished_at__isnull=False,
-            delivery_finished_at__isnull=True,
-        ).update(
+        pks = list(queryset.values_list("pk", flat=True))
+        count = Job.objects.filter(pk__in=pks).update(
             delivery_started_at=None,
             delivery_finished_at=None,
             error=None,
             updated_at=timezone.now(),
         )
-        if updated:
-            self.message_user(
-                request,
-                f"Queued {updated} job(s) for delivery retry.",
-                level=messages.SUCCESS,
-            )
-        else:
-            self.message_user(
-                request,
-                "No selected jobs were eligible for delivery retry.",
-                level=messages.WARNING,
-            )
+        for pk in pks:
+            async_task("apps.jobs.tasks.telegram_deliver", pk)
+        self.message_user(
+            request,
+            f"Retrying {count} job(s) for delivery.",
+            level=messages.SUCCESS,
+        )
 
     # Prevent create, edit, delete
     def has_add_permission(self, _request: HttpRequest) -> bool:
