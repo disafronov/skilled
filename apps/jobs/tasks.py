@@ -15,13 +15,16 @@ from apps.bots.models import Bot
 from apps.jobs.models import Job
 from workers.llm import call_llm
 from workers.telegram import (
+    delete_webhook,
     detect_document_format,
     document_format_content_type,
     document_format_filename,
     get_updates,
+    get_webhook_info,
     sanitize_error,
     send_document,
     send_message,
+    set_webhook,
 )
 
 logger = logging.getLogger(__name__)
@@ -51,11 +54,73 @@ class _MessageBatch(TypedDict):
     reply_to_message_id: int | None
 
 
+def _manage_webhook_for_bot(bot: Bot) -> bool:
+    """Check webhook health and register / heal / fallback. Returns True if healthy."""
+    # Respect cooldown — skip API calls entirely if recently fell back
+    if bot.webhook_disabled_at:
+        elapsed = (timezone.now() - bot.webhook_disabled_at).total_seconds()
+        if elapsed < settings.WEBHOOK_COOLDOWN_SECONDS:
+            return False
+
+    try:
+        info = get_webhook_info(bot.telegram_api_token)
+    except RuntimeError:
+        return False
+
+    expected_url = f"{settings.BASE_URL}/webhook/{bot.telegram_api_token}/"
+    current_url = info.get("url", "")
+    pending = info.get("pending_update_count", 0)
+    last_error = info.get("last_error_message")
+
+    is_healthy = (
+        current_url == expected_url
+        and pending < settings.WEBHOOK_FALLBACK_PENDING_THRESHOLD
+        and not last_error
+    )
+
+    if is_healthy:
+        if not bot.webhook_enabled_at or bot.webhook_disabled_at:
+            Bot.objects.filter(pk=bot.pk).update(
+                webhook_enabled_at=timezone.now(),
+                webhook_disabled_at=None,
+            )
+        return True
+
+    # Register or fix webhook
+    if current_url != expected_url or last_error:
+        try:
+            set_webhook(bot.telegram_api_token, expected_url)
+            Bot.objects.filter(pk=bot.pk).update(
+                webhook_enabled_at=timezone.now(),
+                webhook_disabled_at=None,
+            )
+            return True
+        except RuntimeError:
+            logger.warning(
+                "Bot %s: failed to register webhook, falling back to polling",
+                bot.id,
+            )
+
+    # Fall back to polling
+    try:
+        delete_webhook(bot.telegram_api_token)
+    except RuntimeError:
+        pass
+    Bot.objects.filter(pk=bot.pk).update(
+        webhook_disabled_at=timezone.now(),
+    )
+    return False
+
+
 def telegram_ingest() -> None:
-    """Poll Telegram for updates and create Job records."""
+    """Poll Telegram for updates and manage webhook lifecycle."""
     try:
         for bot in Bot.objects.filter(enabled=True):
             try:
+                # Webhook management (if BASE_URL configured)
+                if settings.BASE_URL:
+                    _manage_webhook_for_bot(bot)
+
                 with transaction.atomic():
                     locked = (
                         Bot.objects.select_for_update(skip_locked=True)

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from datetime import timezone as dt_timezone
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from apps.bots.models import Bot
 from apps.inference.models import Profile, Provider
@@ -528,3 +528,256 @@ class PipelineTaskBranchTests(TestCase):
         llm_worker(job_pk=job.pk)
 
         call_llm_mock.assert_not_called()
+
+
+class WebhookManagementTests(TestCase):
+    """Tests for _manage_webhook_for_bot called inside telegram_ingest."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.now = datetime.now(dt_timezone.utc)
+        skill = Skill.objects.create(name="webhook-skill", content="s")
+        wrapper = Wrapper.objects.create(
+            name="webhook-wrapper", skill=skill, content="w"
+        )
+        provider = Provider.objects.create(
+            name="webhook-provider",
+            api_type="openai",
+            base_url="https://example.com",
+            auth_token="tok",
+        )
+        profile = Profile.objects.create(
+            provider=provider,
+            name="webhook-profile",
+            model="gpt-4o",
+        )
+        cls.bot = Bot.objects.create(
+            name="webhook-bot",
+            telegram_api_token="telegram-token",
+            profile=profile,
+            wrapper=wrapper,
+        )
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch("apps.jobs.tasks.get_updates", return_value=[])
+    @patch(
+        "apps.jobs.tasks.get_webhook_info",
+        return_value={"url": "", "pending_update_count": 0},
+    )
+    @patch("apps.jobs.tasks.set_webhook", return_value={})
+    def test_webhook_auto_registers_when_not_set(
+        self,
+        mock_set,
+        mock_info,
+        mock_updates,
+    ):
+        telegram_ingest()
+
+        mock_set.assert_called_once_with(
+            "telegram-token",
+            "https://example.com/webhook/telegram-token/",
+        )
+        self.bot.refresh_from_db()
+        self.assertIsNotNone(self.bot.webhook_enabled_at)
+        self.assertIsNone(self.bot.webhook_disabled_at)
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch("apps.jobs.tasks.get_updates", return_value=[])
+    @patch(
+        "apps.jobs.tasks.get_webhook_info",
+        return_value={
+            "url": "https://example.com/webhook/telegram-token/",
+            "pending_update_count": 0,
+        },
+    )
+    @patch("apps.jobs.tasks.set_webhook")
+    def test_webhook_skips_re_registration_when_healthy(
+        self,
+        mock_set,
+        mock_info,
+        mock_updates,
+    ):
+        telegram_ingest()
+
+        mock_set.assert_not_called()
+        self.bot.refresh_from_db()
+        # webhook_enabled_at is set because it was None and webhook is healthy
+        self.assertIsNotNone(self.bot.webhook_enabled_at)
+        self.assertIsNone(self.bot.webhook_disabled_at)
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch("apps.jobs.tasks.get_updates", return_value=[])
+    @patch(
+        "apps.jobs.tasks.get_webhook_info",
+        return_value={
+            "url": "https://example.com/webhook/telegram-token/",
+            "pending_update_count": 10,
+        },
+    )
+    @patch("apps.jobs.tasks.delete_webhook", return_value={})
+    def test_webhook_falls_back_when_pending_threshold_exceeded(
+        self,
+        mock_delete,
+        mock_info,
+        mock_updates,
+    ):
+        telegram_ingest()
+
+        mock_delete.assert_called_once_with("telegram-token")
+        self.bot.refresh_from_db()
+        self.assertIsNone(self.bot.webhook_enabled_at)
+        self.assertIsNotNone(self.bot.webhook_disabled_at)
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch("apps.jobs.tasks.get_updates", return_value=[])
+    @patch(
+        "apps.jobs.tasks.get_webhook_info",
+        return_value={
+            "url": "https://example.com/webhook/telegram-token/",
+            "pending_update_count": 0,
+            "last_error_message": "Wrong URL",
+        },
+    )
+    @patch("apps.jobs.tasks.set_webhook", return_value={})
+    def test_webhook_re_registers_on_last_error(
+        self,
+        mock_set,
+        mock_info,
+        mock_updates,
+    ):
+        telegram_ingest()
+
+        mock_set.assert_called_once()
+        self.bot.refresh_from_db()
+        self.assertIsNotNone(self.bot.webhook_enabled_at)
+        self.assertIsNone(self.bot.webhook_disabled_at)
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch("apps.jobs.tasks.get_updates", return_value=[])
+    @patch("apps.jobs.tasks.get_webhook_info")
+    @patch("apps.jobs.tasks.set_webhook", side_effect=RuntimeError("API down"))
+    @patch("apps.jobs.tasks.delete_webhook", return_value={})
+    def test_webhook_falls_back_when_registration_fails(
+        self,
+        mock_delete,
+        mock_set,
+        mock_info,
+        mock_updates,
+    ):
+        mock_info.return_value = {
+            "url": "",
+            "pending_update_count": 0,
+        }
+        telegram_ingest()
+
+        mock_delete.assert_called_once_with("telegram-token")
+        self.bot.refresh_from_db()
+        self.assertIsNotNone(self.bot.webhook_disabled_at)
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch("apps.jobs.tasks.get_updates", return_value=[])
+    @patch("apps.jobs.tasks.get_webhook_info")
+    def test_webhook_respects_cooldown_after_fallback(
+        self,
+        mock_info,
+        mock_updates,
+    ):
+        self.bot.webhook_disabled_at = self.now
+        self.bot.save(update_fields=["webhook_disabled_at"])
+
+        telegram_ingest()
+
+        # Cooldown (300s) is active — no webhook API calls
+        mock_info.assert_not_called()
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch("apps.jobs.tasks.get_updates", return_value=[])
+    @patch("apps.jobs.tasks.get_webhook_info")
+    @patch("apps.jobs.tasks.set_webhook")
+    def test_webhook_retries_after_cooldown_expires(
+        self,
+        mock_set,
+        mock_info,
+        mock_updates,
+    ):
+        past = self.now - timedelta(seconds=400)
+        self.bot.webhook_disabled_at = past
+        self.bot.save(update_fields=["webhook_disabled_at"])
+
+        mock_info.return_value = {
+            "url": "",
+            "pending_update_count": 0,
+        }
+        mock_set.return_value = {}
+
+        telegram_ingest()
+
+        mock_info.assert_called_once()
+        mock_set.assert_called_once()
+        self.bot.refresh_from_db()
+        self.assertIsNotNone(self.bot.webhook_enabled_at)
+        self.assertIsNone(self.bot.webhook_disabled_at)
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch("apps.jobs.tasks.get_updates", return_value=[])
+    @patch(
+        "apps.jobs.tasks.get_webhook_info",
+        return_value={
+            "url": "https://example.com/webhook/telegram-token/",
+            "pending_update_count": 0,
+        },
+    )
+    @patch("apps.jobs.tasks.set_webhook")
+    def test_webhook_does_not_update_when_already_registered(
+        self,
+        mock_set,
+        mock_info,
+        mock_updates,
+    ):
+        self.bot.webhook_enabled_at = self.now
+        self.bot.save(update_fields=["webhook_enabled_at"])
+
+        telegram_ingest()
+
+        mock_set.assert_not_called()
+        self.bot.refresh_from_db()
+        self.assertEqual(self.bot.webhook_enabled_at, self.now)
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch("apps.jobs.tasks.get_updates", return_value=[])
+    @patch(
+        "apps.jobs.tasks.get_webhook_info", side_effect=RuntimeError("API unreachable")
+    )
+    def test_webhook_handles_info_api_error(
+        self,
+        mock_info,
+        mock_updates,
+    ):
+        telegram_ingest()
+
+        self.bot.refresh_from_db()
+        self.assertIsNone(self.bot.webhook_enabled_at)
+        self.assertIsNone(self.bot.webhook_disabled_at)
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch("apps.jobs.tasks.get_updates", return_value=[])
+    @patch(
+        "apps.jobs.tasks.get_webhook_info",
+        return_value={
+            "url": "",
+            "pending_update_count": 0,
+        },
+    )
+    @patch("apps.jobs.tasks.set_webhook", side_effect=RuntimeError("register failed"))
+    @patch("apps.jobs.tasks.delete_webhook", side_effect=RuntimeError("delete failed"))
+    def test_webhook_handles_delete_error_during_fallback(
+        self,
+        mock_delete,
+        mock_set,
+        mock_info,
+        mock_updates,
+    ):
+        telegram_ingest()
+
+        self.bot.refresh_from_db()
+        self.assertIsNotNone(self.bot.webhook_disabled_at)
