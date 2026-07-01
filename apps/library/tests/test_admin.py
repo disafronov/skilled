@@ -11,7 +11,13 @@ class SkillAdminTests(SimpleTestCase):
     def test_skill_admin_order_comes_from_model(self):
         admin = SkillAdmin(Skill, AdminSite())
 
-        self.assertEqual(admin.fields, ("name", "content", "updated_at", "created_at"))
+        self.assertEqual(
+            admin.fieldsets,
+            (
+                (None, {"fields": ("name", "content")}),
+                ("Changes", {"fields": ("updated_at", "created_at")}),
+            ),
+        )
         self.assertEqual(admin.readonly_fields, ("updated_at", "created_at"))
         self.assertEqual(admin.list_display, ("name", "updated_at"))
 
@@ -33,8 +39,11 @@ class WrapperAdminTests(SimpleTestCase):
         admin = WrapperAdmin(Wrapper, AdminSite())
 
         self.assertEqual(
-            admin.fields,
-            ("name", "skill", "content", "updated_at", "created_at"),
+            admin.fieldsets,
+            (
+                (None, {"fields": ("name", "skill", "content")}),
+                ("Changes", {"fields": ("updated_at", "created_at")}),
+            ),
         )
         self.assertEqual(admin.readonly_fields, ("updated_at", "created_at"))
         self.assertEqual(admin.list_display, ("name", "skill", "updated_at"))

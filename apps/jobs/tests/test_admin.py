@@ -69,7 +69,38 @@ class JobAdminTests(TestCase):
             ),
         )
         self.assertEqual(
-            admin.fields,
+            admin.fieldsets,
+            (
+                (
+                    None,
+                    {
+                        "fields": (
+                            "id",
+                            "bot",
+                            "reply_target",
+                            "reply_to_message_id",
+                            "raw_input",
+                            "raw_output",
+                            "error",
+                        )
+                    },
+                ),
+                (
+                    "Pipeline",
+                    {
+                        "fields": (
+                            "llm_started_at",
+                            "llm_finished_at",
+                            "delivery_started_at",
+                            "delivery_finished_at",
+                        )
+                    },
+                ),
+                ("Changes", {"fields": ("updated_at", "created_at")}),
+            ),
+        )
+        self.assertEqual(
+            admin.readonly_fields,
             (
                 "id",
                 "bot",
@@ -86,7 +117,6 @@ class JobAdminTests(TestCase):
                 "created_at",
             ),
         )
-        self.assertEqual(admin.readonly_fields, admin.fields)
         self.assertNotIn("raw_input", admin.list_display)
         self.assertNotIn("raw_output", admin.list_display)
         self.assertNotIn("error", admin.list_display)

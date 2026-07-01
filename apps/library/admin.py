@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from apps.admin_forms import AdminModelForm
+from apps.admin_mixins import CHANGES_FIELDSET
 from apps.library.models import Skill, Wrapper
 
 
@@ -13,7 +14,15 @@ class SkillAdminForm(AdminModelForm):
 @admin.register(Skill)
 class SkillAdmin(admin.ModelAdmin):
     form = SkillAdminForm
-    fields = ("name", "content", "updated_at", "created_at")
+    fieldsets = (  # type: ignore[assignment]
+        (
+            None,
+            {
+                "fields": ("name", "content"),
+            },
+        ),
+        CHANGES_FIELDSET,
+    )
     readonly_fields = ("updated_at", "created_at")
     list_display = ("name", "updated_at")
     search_fields = ["name"]
@@ -28,7 +37,15 @@ class WrapperAdminForm(AdminModelForm):
 @admin.register(Wrapper)
 class WrapperAdmin(admin.ModelAdmin):
     form = WrapperAdminForm
-    fields = ("name", "skill", "content", "updated_at", "created_at")
+    fieldsets = (  # type: ignore[assignment]
+        (
+            None,
+            {
+                "fields": ("name", "skill", "content"),
+            },
+        ),
+        CHANGES_FIELDSET,
+    )
     readonly_fields = ("updated_at", "created_at")
     list_display = ("name", "skill", "updated_at")
     list_select_related = ["skill"]

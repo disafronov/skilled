@@ -13,8 +13,11 @@ class ProviderAdminTests(SimpleTestCase):
         admin = ProviderAdmin(Provider, AdminSite())
 
         self.assertEqual(
-            admin.fields,
-            ("name", "api_type", "base_url", "auth_token", "updated_at", "created_at"),
+            admin.fieldsets,
+            (
+                (None, {"fields": ("name", "api_type", "base_url", "auth_token")}),
+                ("Changes", {"fields": ("updated_at", "created_at")}),
+            ),
         )
         self.assertEqual(admin.readonly_fields, ("updated_at", "created_at"))
         self.assertEqual(
@@ -120,18 +123,24 @@ class ProfileAdminTests(SimpleTestCase):
         admin = ProfileAdmin(Profile, AdminSite())
 
         self.assertEqual(
-            admin.fields,
+            admin.fieldsets,
             (
-                "name",
-                "provider",
-                "model",
-                "temperature",
-                "top_p",
-                "max_output_tokens",
-                "reasoning_effort",
-                "response_format",
-                "updated_at",
-                "created_at",
+                (
+                    None,
+                    {
+                        "fields": (
+                            "name",
+                            "provider",
+                            "model",
+                            "temperature",
+                            "top_p",
+                            "max_output_tokens",
+                            "reasoning_effort",
+                            "response_format",
+                        )
+                    },
+                ),
+                ("Changes", {"fields": ("updated_at", "created_at")}),
             ),
         )
         self.assertEqual(admin.readonly_fields, ("updated_at", "created_at"))

@@ -13,19 +13,37 @@ class BotAdminTests(SimpleTestCase):
         admin = BotAdmin(Bot, AdminSite())
 
         self.assertEqual(
-            admin.fields,
+            admin.fieldsets,
             (
-                "name",
-                "telegram_api_token",
-                "profile",
-                "wrapper",
-                "enabled",
-                "telegram_update_offset",
-                "updated_at",
-                "created_at",
+                (
+                    None,
+                    {
+                        "fields": (
+                            "name",
+                            "telegram_api_token",
+                            "profile",
+                            "wrapper",
+                            "enabled",
+                            "telegram_update_offset",
+                        )
+                    },
+                ),
+                (
+                    "Webhook",
+                    {
+                        "fields": (
+                            "webhook_enabled_at",
+                            "webhook_disabled_at",
+                        )
+                    },
+                ),
+                ("Changes", {"fields": ("updated_at", "created_at")}),
             ),
         )
-        self.assertEqual(admin.readonly_fields, ("updated_at", "created_at"))
+        self.assertEqual(
+            admin.readonly_fields,
+            ("webhook_enabled_at", "webhook_disabled_at", "updated_at", "created_at"),
+        )
         self.assertEqual(
             admin.list_display,
             (
@@ -34,6 +52,8 @@ class BotAdminTests(SimpleTestCase):
                 "wrapper",
                 "enabled",
                 "telegram_update_offset",
+                "webhook_enabled_at",
+                "webhook_disabled_at",
                 "updated_at",
             ),
         )
