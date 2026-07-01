@@ -52,5 +52,6 @@ def webhook(request: HttpRequest) -> HttpResponse:
 
     chat_id = str(message["chat"]["id"])
     message_id = message.get("message_id")
-    accept_telegram_message(bot, chat_id, message_id, text)
+    message_date = int(message["date"])
+    accept_telegram_message(bot, chat_id, message_id, message_date, text)
     return HttpResponse("ok")

@@ -2,7 +2,6 @@
 
 import logging
 import os
-from collections import defaultdict
 from datetime import timedelta
 from typing import NotRequired, TypedDict, cast
 
@@ -39,6 +38,7 @@ class _TelegramChat(TypedDict):
 
 
 class _TelegramMessage(TypedDict):
+    date: int
     chat: _TelegramChat
     text: NotRequired[str]
     message_id: NotRequired[int]
@@ -47,11 +47,6 @@ class _TelegramMessage(TypedDict):
 class _TelegramUpdate(TypedDict):
     update_id: int
     message: NotRequired[_TelegramMessage]
-
-
-class _MessageBatch(TypedDict):
-    messages: list[str]
-    reply_to_message_id: int | None
 
 
 def _manage_webhook_for_bot(bot: Bot) -> bool:
@@ -193,29 +188,7 @@ def telegram_ingest() -> None:
                 ):
                     continue
 
-                message_batches: dict[str, _MessageBatch] = defaultdict(
-                    lambda: {"messages": [], "reply_to_message_id": None}
-                )
-                for update in updates:
-                    message = update.get("message")
-                    if not message:
-                        continue
-
-                    text = message.get("text")
-                    if not isinstance(text, str):
-                        continue
-
-                    text = text.strip()
-                    if not text or text.startswith("/"):
-                        continue
-
-                    chat_id = str(message["chat"]["id"])
-                    message_id = message.get("message_id")
-                    batch = message_batches[chat_id]
-                    batch["messages"].append(text)
-                    batch["reply_to_message_id"] = message_id
-
-                # Offset gate + job creation + offset advance in one atomic block.
+                # Offset gate + ingestion + offset advance in one atomic block.
                 # The second select_for_update re-reads the Bot row (now locked with
                 # no skip_locked) to verify the offset hasn't been claimed by another
                 # worker between the first lock and get_updates.
@@ -231,16 +204,33 @@ def telegram_ingest() -> None:
                     ):
                         continue
 
-                    for chat_id, batch in message_batches.items():
-                        message_id = batch["reply_to_message_id"]
-                        for text in batch["messages"]:
-                            accept_telegram_message(current, chat_id, message_id, text)
+                    ingested = 0
+                    for update in updates:
+                        message = update.get("message")
+                        if not message:
+                            continue
 
-                    if message_batches:
+                        text = message.get("text")
+                        if not isinstance(text, str):
+                            continue
+
+                        text = text.strip()
+                        if not text or text.startswith("/"):
+                            continue
+
+                        chat_id = str(message["chat"]["id"])
+                        message_id = message.get("message_id")
+                        message_date = int(message["date"])
+                        accept_telegram_message(
+                            current, chat_id, message_id, message_date, text
+                        )
+                        ingested += 1
+
+                    if ingested:
                         logger.info(
-                            "Bot %s: created %d job(s) from %d update(s)",
+                            "Bot %s: ingested %d message(s) from %d update(s)",
                             current.id,
-                            len(message_batches),
+                            ingested,
                             len(updates),
                             exc_info=settings.DEBUG,
                         )
@@ -408,11 +398,17 @@ def telegram_deliver(job_pk: int | None = None) -> None:
 
 
 def flush_intake_buffers() -> None:
-    """Flush due intake buffers into Job records."""
+    """Flush due intake buffers into Job records.
+
+    Safety backstop for the last open group. The primary flush happens
+    immediately inside accept_telegram_message when a new message crosses
+    the debounce boundary. This task catches any leftover open buffer
+    that never saw a follow-up message.
+    """
     debounce = getattr(settings, "TELEGRAM_INTAKE_DEBOUNCE_SECONDS", 10)
     cutoff = timezone.now() - timedelta(seconds=debounce)
     buffers = IntakeBuffer.objects.filter(
-        flushed_at__isnull=True, last_message_at__lt=cutoff
+        flushed_at__isnull=True, last_received_at__lt=cutoff
     )
     for buffer in buffers:
         with transaction.atomic():
