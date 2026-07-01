@@ -1,3 +1,14 @@
+## [1.4.0-rc.2](https://github.com/disafronov/skilled/compare/v1.4.0-rc.1...v1.4.0-rc.2) (2026-07-01)
+
+### Features
+
+* **jobs:** skip polling when webhook is healthy ([91a34a7](https://github.com/disafronov/skilled/commit/91a34a75943e9e563b347610423abf8c397290f8))
+
+### Bug Fixes
+
+* **jobs:** merge Job creation into same atomic block as offset gate ([b8f3408](https://github.com/disafronov/skilled/commit/b8f3408f8a1bc7769a0223404c9fc2e1e0bff213))
+* **views:** remove token prefix from webhook 404 log ([b2014c3](https://github.com/disafronov/skilled/commit/b2014c36037c654f63d4ac2277e2dbbd3190cf88))
+
 ## [1.4.0-rc.1](https://github.com/disafronov/skilled/compare/v1.3.0...v1.4.0-rc.1) (2026-07-01)
 
 ### Features
