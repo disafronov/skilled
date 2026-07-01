@@ -13,7 +13,7 @@ Telegram ──┬── webhook ──> Job ──> llm_worker ──> telegram
 
 **Two ingestion paths:**
 
-- **Webhook** (primary) — Telegram pushes updates to `/webhook/<token>/`. The token is looked up via deterministic encryption (AES-SIV) for O(1) DB access. Zero polling latency.
+- **Webhook** (primary) — Telegram pushes updates to `/webhook/`. Inbound auth uses `X-Telegram-Bot-Api-Secret-Token` header matched against the bot's `webhook_secret`. Zero polling latency.
 - **Polling** (fallback) — scheduled Q2 task `telegram_ingest` periodically fetches updates via `getUpdates`. Webhook auto-registers, self-heals on errors, and falls back to polling with a configurable cooldown.
 
 Both paths create `Job` records. A Django `post_save` signal schedules downstream tasks via `transaction.on_commit`:
@@ -33,7 +33,7 @@ Skill    — system-level instruction content
 Wrapper  — per-bot wrapper instruction
 Profile  — model + temperature + other LLM parameters
 Provider — API endpoint + auth (OpenAI-compatible)
-Bot      — Telegram endpoint (ties skill + wrapper + profile + token)
+Bot      — Telegram endpoint (ties skill + wrapper + profile + token + webhook_secret)
 Job      — single message execution artifact
 ```
 
@@ -48,8 +48,8 @@ All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provi
 
 ## Security
 
-- **Field encryption** — `telegram_api_token` and `auth_token` encrypted at rest with AES-SIV (deterministic, enables DB lookup).
-- **Webhook token** — the bot token acts as a bearer secret in the URL path (`/webhook/<token>/`). Do not log full URIs for `/webhook/` in reverse-proxy / CDN access logs.
+- **Field encryption** — `telegram_api_token`, `auth_token`, and `webhook_secret` encrypted at rest with AES-SIV (deterministic, enables DB lookup).
+- **Webhook auth** — inbound requests carry `X-Telegram-Bot-Api-Secret-Token` header matched against the bot's `webhook_secret`. Telegram API token is never exposed in URLs or logs.
 - **Log masking** — `BotTokenFilter` strips bot tokens from all log output via regex.
 - **Production** — `DJANGO_SECRET_KEY` must be strong; `DEBUG` must be `False`.
 
