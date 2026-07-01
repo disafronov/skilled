@@ -150,9 +150,6 @@ def telegram_ingest() -> None:
                 ):
                     continue
 
-                if not Bot.objects.filter(pk=locked.pk).exists():
-                    continue
-
                 message_batches: dict[str, _MessageBatch] = defaultdict(
                     lambda: {"messages": [], "reply_to_message_id": None}
                 )
@@ -176,36 +173,43 @@ def telegram_ingest() -> None:
                     batch["reply_to_message_id"] = message_id
 
                 acknowledgements: list[tuple[str, int | None]] = []
-                for chat_id, batch in message_batches.items():
-                    messages = batch["messages"]
-                    message_id = batch["reply_to_message_id"]
-                    Job.objects.create(
-                        bot=locked,
-                        reply_target=chat_id,
-                        reply_to_message_id=message_id,
-                        raw_input=" ".join(messages),
-                    )
-                    acknowledgements.append((chat_id, message_id))
 
+                # Offset gate + job creation + offset advance in one atomic block
                 with transaction.atomic():
                     current = (
                         Bot.objects.select_for_update().filter(pk=locked.pk).first()
                     )
-                    if current is not None and current.telegram_update_offset < max_id:
-                        if message_batches:
-                            logger.info(
-                                "Bot %s: created %d job(s) from %d update(s)",
-                                locked.id,
-                                len(message_batches),
-                                len(updates),
-                                exc_info=settings.DEBUG,
-                            )
+                    if current is None:
+                        continue
+                    if (
+                        current.telegram_update_offset is not None
+                        and max_id <= current.telegram_update_offset
+                    ):
+                        continue
 
-                        new_offset = max_id + 1
-                        current.telegram_update_offset = new_offset
-                        current.save(
-                            update_fields=["telegram_update_offset", "updated_at"]
+                    for chat_id, batch in message_batches.items():
+                        messages = batch["messages"]
+                        message_id = batch["reply_to_message_id"]
+                        Job.objects.create(
+                            bot=current,
+                            reply_target=chat_id,
+                            reply_to_message_id=message_id,
+                            raw_input=" ".join(messages),
                         )
+                        acknowledgements.append((chat_id, message_id))
+
+                    if message_batches:
+                        logger.info(
+                            "Bot %s: created %d job(s) from %d update(s)",
+                            current.id,
+                            len(message_batches),
+                            len(updates),
+                            exc_info=settings.DEBUG,
+                        )
+
+                    new_offset = max_id + 1
+                    current.telegram_update_offset = new_offset
+                    current.save(update_fields=["telegram_update_offset", "updated_at"])
 
                 for chat_id, message_id in acknowledgements:
                     try:
