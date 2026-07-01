@@ -7,11 +7,11 @@ from typing import Any
 
 import httpx
 
+from apps.log_filters import _BOT_TOKEN_RE
+
 logger = logging.getLogger(__name__)
 
 _BOT_API_BASE = "https://api.telegram.org/bot"
-
-_BOT_TOKEN_RE = re.compile(r"\d+:[A-Za-z0-9_-]{20,}")
 
 TELEGRAM_MESSAGE_CHAR_LIMIT = 4096
 TELEGRAM_DOCUMENT_FORMAT_HTML = "html"
