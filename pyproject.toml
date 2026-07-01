@@ -76,6 +76,7 @@ omit = [
   ".venv/*",
   "tests/*",
   "*/tests/*",
+  "*/migrations/*",
   "manage.py",
   "config/settings_pytest.py",
   "config/wsgi.py"
