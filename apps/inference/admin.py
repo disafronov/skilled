@@ -2,6 +2,7 @@ from django import forms
 from django.contrib import admin
 
 from apps.admin_forms import AdminModelForm
+from apps.admin_mixins import CHANGES_FIELDSET
 from apps.inference.models import Profile, Provider
 
 
@@ -32,7 +33,15 @@ class ProfileAdminForm(AdminModelForm):
 @admin.register(Provider)
 class ProviderAdmin(admin.ModelAdmin):
     form = ProviderAdminForm
-    fields = ("name", "api_type", "base_url", "auth_token", "updated_at", "created_at")
+    fieldsets = (  # type: ignore[assignment]
+        (
+            None,
+            {
+                "fields": ("name", "api_type", "base_url", "auth_token"),
+            },
+        ),
+        CHANGES_FIELDSET,
+    )
     readonly_fields = ("updated_at", "created_at")
     list_display = ("name", "api_type", "base_url", "updated_at")
     search_fields = ["name"]
@@ -41,17 +50,23 @@ class ProviderAdmin(admin.ModelAdmin):
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     form = ProfileAdminForm
-    fields = (
-        "name",
-        "provider",
-        "model",
-        "temperature",
-        "top_p",
-        "max_output_tokens",
-        "reasoning_effort",
-        "response_format",
-        "updated_at",
-        "created_at",
+    fieldsets = (  # type: ignore[assignment]
+        (
+            None,
+            {
+                "fields": (
+                    "name",
+                    "provider",
+                    "model",
+                    "temperature",
+                    "top_p",
+                    "max_output_tokens",
+                    "reasoning_effort",
+                    "response_format",
+                ),
+            },
+        ),
+        CHANGES_FIELDSET,
     )
     readonly_fields = ("updated_at", "created_at")
     list_display = (

@@ -3,6 +3,7 @@ from typing import Any
 from django.contrib import admin
 
 from apps.admin_forms import AdminModelForm
+from apps.admin_mixins import CHANGES_FIELDSET
 from apps.bots.models import Bot
 
 
@@ -21,23 +22,45 @@ class BotAdminForm(AdminModelForm):
 @admin.register(Bot)
 class BotAdmin(admin.ModelAdmin):
     form = BotAdminForm
-    fields = (
-        "name",
-        "telegram_api_token",
-        "profile",
-        "wrapper",
-        "enabled",
-        "telegram_update_offset",
+    fieldsets = (  # type: ignore[assignment]
+        (
+            None,
+            {
+                "fields": (
+                    "name",
+                    "telegram_api_token",
+                    "profile",
+                    "wrapper",
+                    "enabled",
+                    "telegram_update_offset",
+                ),
+            },
+        ),
+        (
+            "Webhook",
+            {
+                "fields": (
+                    "webhook_enabled_at",
+                    "webhook_disabled_at",
+                ),
+            },
+        ),
+        CHANGES_FIELDSET,
+    )
+    readonly_fields = (
+        "webhook_enabled_at",
+        "webhook_disabled_at",
         "updated_at",
         "created_at",
     )
-    readonly_fields = ("updated_at", "created_at")
     list_display = (
         "name",
         "profile",
         "wrapper",
         "enabled",
         "telegram_update_offset",
+        "webhook_enabled_at",
+        "webhook_disabled_at",
         "updated_at",
     )
     list_select_related = ["wrapper", "profile"]
