@@ -8,14 +8,14 @@ execution path.
 
 import os
 
-from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.ciphers.aead import AESSIV
 
 # Force a test encryption key early — before any EncryptedCharField access.
 # os.environ.setdefault is insufficient because `make test` sources env.example
 # which may contain FIELD_ENCRYPTION_KEY= (empty string), preventing the
 # default from being set.  Under pytest-xdist, workers that inherit an empty
 # FIELD_ENCRYPTION_KEY would then raise RuntimeError in _cipher().
-os.environ["FIELD_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
+os.environ["FIELD_ENCRYPTION_KEY"] = AESSIV.generate_key(256).hex()
 
 from .settings import *  # noqa: F401,F403,E402
 
