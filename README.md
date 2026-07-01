@@ -67,6 +67,7 @@ Key environment variables (see `env.example` for full list):
 | `Q2_TELEGRAM_INGEST_MINUTES` | `1` | Polling interval |
 | `Q2_LLM_WORKER_MINUTES` | `1` | LLM worker schedule interval |
 | `Q2_TELEGRAM_DELIVER_MINUTES` | `1` | Delivery worker schedule interval |
+| `TELEGRAM_ACK_REACTION` | `🤔` | Emoji reaction for queue acknowledgement (empty = disabled) |
 | `Q2_LLM_STALE_JOB_SECONDS` | `3600` | Timeout for re-queueing stalled LLM jobs |
 
 ## Running
