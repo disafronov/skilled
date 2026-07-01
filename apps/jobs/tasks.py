@@ -10,7 +10,6 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django_q.models import Success
-from django_q.tasks import async_task
 
 from apps.bots.models import Bot
 from apps.jobs.models import Job
@@ -77,13 +76,22 @@ def telegram_ingest() -> None:
                 logger.debug("Bot %s: processing %d updates", locked.id, len(updates))
 
                 max_id = locked.telegram_update_offset or 0
+                for u in updates:
+                    max_id = max(max_id, int(u["update_id"]))
+
+                if (
+                    locked.telegram_update_offset
+                    and max_id <= locked.telegram_update_offset
+                ):
+                    continue
+
+                if not Bot.objects.filter(pk=locked.pk).exists():
+                    continue
+
                 message_batches: dict[str, _MessageBatch] = defaultdict(
                     lambda: {"messages": [], "reply_to_message_id": None}
                 )
                 for update in updates:
-                    update_id = int(update["update_id"])
-                    max_id = max(max_id, update_id)
-
                     message = update.get("message")
                     if not message:
                         continue
@@ -103,17 +111,14 @@ def telegram_ingest() -> None:
                     batch["reply_to_message_id"] = message_id
 
                 acknowledgements: list[tuple[str, int | None]] = []
-                jobs_to_create = []
                 for chat_id, batch in message_batches.items():
                     messages = batch["messages"]
                     message_id = batch["reply_to_message_id"]
-                    jobs_to_create.append(
-                        Job(
-                            bot=locked,
-                            reply_target=chat_id,
-                            reply_to_message_id=message_id,
-                            raw_input=" ".join(messages),
-                        )
+                    Job.objects.create(
+                        bot=locked,
+                        reply_target=chat_id,
+                        reply_to_message_id=message_id,
+                        raw_input=" ".join(messages),
                     )
                     acknowledgements.append((chat_id, message_id))
 
@@ -121,25 +126,21 @@ def telegram_ingest() -> None:
                     current = (
                         Bot.objects.select_for_update().filter(pk=locked.pk).first()
                     )
-                    if current is None:
-                        continue
-                    if current.telegram_update_offset >= max_id:
-                        continue
+                    if current is not None and current.telegram_update_offset < max_id:
+                        if message_batches:
+                            logger.info(
+                                "Bot %s: created %d job(s) from %d update(s)",
+                                locked.id,
+                                len(message_batches),
+                                len(updates),
+                                exc_info=settings.DEBUG,
+                            )
 
-                    if jobs_to_create:
-                        Job.objects.bulk_create(jobs_to_create)
-                        logger.info(
-                            "Bot %s: created %d job(s) from %d update(s)",
-                            locked.id,
-                            len(jobs_to_create),
-                            len(updates),
-                            exc_info=settings.DEBUG,
+                        new_offset = max_id + 1
+                        current.telegram_update_offset = new_offset
+                        current.save(
+                            update_fields=["telegram_update_offset", "updated_at"]
                         )
-                        async_task("apps.jobs.tasks.llm_worker")
-
-                    new_offset = max_id + 1
-                    current.telegram_update_offset = new_offset
-                    current.save(update_fields=["telegram_update_offset", "updated_at"])
 
                 for chat_id, message_id in acknowledgements:
                     try:
