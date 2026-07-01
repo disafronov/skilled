@@ -1,3 +1,13 @@
+## [1.7.0](https://github.com/disafronov/skilled/compare/v1.6.0...v1.7.0) (2026-07-01)
+
+### Features
+
+* **telegram:** replace text ack with setMessageReaction reaction ([01d05e6](https://github.com/disafronov/skilled/commit/01d05e6f2289487e014bb7390ddc23f9b9c19175))
+
+### Bug Fixes
+
+* **admin:** restore masked-field handling in AdminModelForm ([8b9d629](https://github.com/disafronov/skilled/commit/8b9d629751e4aa0eb9691d2e1c8d937863cbee13))
+
 ## [1.7.0-rc.1](https://github.com/disafronov/skilled/compare/v1.6.0...v1.7.0-rc.1) (2026-07-01)
 
 ### Features
