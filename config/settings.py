@@ -124,6 +124,11 @@ STORAGES = {
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "mask_bot_token": {
+            "()": "apps.log_filters.BotTokenFilter",
+        },
+    },
     "formatters": {
         "verbose": {
             "format": "{asctime} [{levelname}] {name}: {message}",
@@ -135,6 +140,7 @@ LOGGING = {
             "level": "DEBUG" if DEBUG else "INFO",
             "class": "logging.StreamHandler",
             "formatter": "verbose",
+            "filters": ["mask_bot_token"],
         },
     },
     "loggers": {
