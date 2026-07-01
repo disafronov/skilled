@@ -21,6 +21,10 @@ if not DEBUG and SECRET_KEY == _insecure_key:
     )
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 BASE_URL = os.getenv("DJANGO_BASE_URL", "").rstrip("/")
+WEBHOOK_COOLDOWN_SECONDS = int(os.getenv("WEBHOOK_COOLDOWN_SECONDS", "300"))
+WEBHOOK_FALLBACK_PENDING_THRESHOLD = int(
+    os.getenv("WEBHOOK_FALLBACK_PENDING_THRESHOLD", "5")
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
