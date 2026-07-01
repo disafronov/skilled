@@ -134,6 +134,15 @@ def telegram_ack(job_id: int) -> None:
 def telegram_ingest() -> None:
     """Poll Telegram for updates and manage webhook lifecycle."""
     try:
+        # Clean up webhooks for disabled bots
+        for bot in Bot.objects.filter(enabled=False, webhook_enabled_at__isnull=False):
+            try:
+                delete_webhook(bot.telegram_api_token)
+            except RuntimeError:
+                logger.warning("Bot %s: failed to delete webhook", bot.id)
+                continue
+            Bot.objects.filter(pk=bot.pk).update(webhook_enabled_at=None)
+
         for bot in Bot.objects.filter(enabled=True):
             try:
                 # Webhook management (if BASE_URL configured)
