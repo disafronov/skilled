@@ -1,3 +1,22 @@
+## [1.4.0](https://github.com/disafronov/skilled/compare/v1.3.0...v1.4.0) (2026-07-01)
+
+### Features
+
+* **bots:** deterministic AES-SIV encryption helper for DB lookups ([78f943c](https://github.com/disafronov/skilled/commit/78f943c64db4c5f0913d25cf90cf790292e350d7))
+* **bots:** webhook view for Telegram update ingestion ([62710eb](https://github.com/disafronov/skilled/commit/62710ebf15c3345a9ebee1d0ad24a182985a26d7))
+* **bots:** webhook_enabled_at and webhook_disabled_at fields ([2d9f6a1](https://github.com/disafronov/skilled/commit/2d9f6a16aabfdae8fa8c84e2a0c93ccb761996b6))
+* **core:** webhook settings and URL route ([af490a3](https://github.com/disafronov/skilled/commit/af490a3ab6faba2abca06848b05013440212a83c))
+* **jobs:** auto-register and self-heal webhooks in telegram_ingest ([5ab4526](https://github.com/disafronov/skilled/commit/5ab45267be8339abd67350ca295b4d061110295d))
+* **jobs:** skip polling when webhook is healthy ([35aa185](https://github.com/disafronov/skilled/commit/35aa1850bd3d3892828367adc0d6c9c876213c1e))
+* **workers:** telegram webhook API helpers ([c589843](https://github.com/disafronov/skilled/commit/c5898431743715db0f4554aceeb1053ff18c0b15))
+
+### Bug Fixes
+
+* **jobs:** guard ingest job creation against stale offset and deleted bot ([aa64bc9](https://github.com/disafronov/skilled/commit/aa64bc9a1cbd9d95ea6778dc00aeb90a347d76ee))
+* **jobs:** merge Job creation into same atomic block as offset gate ([945f3fd](https://github.com/disafronov/skilled/commit/945f3fd060885a65fdc24d61f724c35a8f45106f))
+* **views:** remove token prefix from webhook 404 log ([fe1c190](https://github.com/disafronov/skilled/commit/fe1c190d052cf3fc8da23391e7274ea7c21fe3ff))
+* **workers:** remove token suffix from webhook logs (CodeQL) ([a123b7e](https://github.com/disafronov/skilled/commit/a123b7ea875cde34af5898c88fa8712a730457ca))
+
 ## [1.4.0-rc.2](https://github.com/disafronov/skilled/compare/v1.4.0-rc.1...v1.4.0-rc.2) (2026-07-01)
 
 ### Features
