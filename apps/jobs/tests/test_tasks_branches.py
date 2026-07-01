@@ -609,11 +609,6 @@ class WebhookManagementTests(TestCase):
     @patch("apps.jobs.tasks.get_updates", return_value=[])
     @patch(
         "apps.jobs.tasks.get_webhook_info",
-        return_value=lambda self: {
-            "url": "https://example.com/webhook/",
-            "secret_token": self.bot.webhook_secret,
-            "pending_update_count": 0,
-        },
     )
     @patch("apps.jobs.tasks.set_webhook")
     def test_webhook_skips_re_registration_when_healthy(
@@ -622,10 +617,8 @@ class WebhookManagementTests(TestCase):
         mock_info,
         mock_updates,
     ):
-        # Use the correct return value from the lambda above
         mock_info.return_value = {
             "url": "https://example.com/webhook/",
-            "secret_token": self.bot.webhook_secret,
             "pending_update_count": 0,
         }
         telegram_ingest()
@@ -638,14 +631,7 @@ class WebhookManagementTests(TestCase):
 
     @override_settings(BASE_URL="https://example.com")
     @patch("apps.jobs.tasks.get_updates", return_value=[])
-    @patch(
-        "apps.jobs.tasks.get_webhook_info",
-        return_value={
-            "url": "https://example.com/webhook/",
-            "secret_token": "will-be-overridden",
-            "pending_update_count": 10,
-        },
-    )
+    @patch("apps.jobs.tasks.get_webhook_info")
     @patch("apps.jobs.tasks.delete_webhook", return_value={})
     def test_webhook_falls_back_when_pending_threshold_exceeded(
         self,
@@ -655,7 +641,6 @@ class WebhookManagementTests(TestCase):
     ):
         mock_info.return_value = {
             "url": "https://example.com/webhook/",
-            "secret_token": self.bot.webhook_secret,
             "pending_update_count": 10,
         }
         telegram_ingest()
@@ -667,15 +652,7 @@ class WebhookManagementTests(TestCase):
 
     @override_settings(BASE_URL="https://example.com")
     @patch("apps.jobs.tasks.get_updates", return_value=[])
-    @patch(
-        "apps.jobs.tasks.get_webhook_info",
-        return_value={
-            "url": "https://example.com/webhook/",
-            "secret_token": "stale-secret",
-            "pending_update_count": 0,
-            "last_error_message": "Wrong URL",
-        },
-    )
+    @patch("apps.jobs.tasks.get_webhook_info")
     @patch("apps.jobs.tasks.set_webhook", return_value={})
     def test_webhook_re_registers_on_last_error(
         self,
@@ -683,6 +660,11 @@ class WebhookManagementTests(TestCase):
         mock_info,
         mock_updates,
     ):
+        mock_info.return_value = {
+            "url": "https://example.com/webhook/",
+            "pending_update_count": 0,
+            "last_error_message": "Wrong URL",
+        }
         telegram_ingest()
 
         mock_set.assert_called_once()
@@ -758,14 +740,7 @@ class WebhookManagementTests(TestCase):
 
     @override_settings(BASE_URL="https://example.com")
     @patch("apps.jobs.tasks.get_updates", return_value=[])
-    @patch(
-        "apps.jobs.tasks.get_webhook_info",
-        return_value={
-            "url": "https://example.com/webhook/",
-            "secret_token": "stale-secret",
-            "pending_update_count": 0,
-        },
-    )
+    @patch("apps.jobs.tasks.get_webhook_info")
     @patch("apps.jobs.tasks.set_webhook")
     def test_webhook_does_not_update_when_already_registered(
         self,
@@ -778,7 +753,6 @@ class WebhookManagementTests(TestCase):
 
         mock_info.return_value = {
             "url": "https://example.com/webhook/",
-            "secret_token": self.bot.webhook_secret,
             "pending_update_count": 0,
         }
         telegram_ingest()
