@@ -9,7 +9,9 @@ from apps.inference.models import Profile, Provider
 from apps.jobs.models import Job
 from apps.jobs.tasks import (
     Q2_LLM_STALE_JOB_SECONDS,
+    QUEUE_ACK_TEXT,
     llm_worker,
+    telegram_ack,
     telegram_deliver,
     telegram_ingest,
 )
@@ -158,10 +160,8 @@ class PipelineTaskBranchTests(TestCase):
         self.assertEqual(
             list(Job.objects.values_list("raw_input", flat=True)), ["hello"]
         )
-        send_message.assert_called_once()
 
     @patch("apps.jobs.tasks.logger")
-    @patch("apps.jobs.tasks.send_message", side_effect=RuntimeError("ack down"))
     @patch(
         "apps.jobs.tasks.get_updates",
         return_value=[
@@ -172,10 +172,9 @@ class PipelineTaskBranchTests(TestCase):
             },
         ],
     )
-    def test_ingest_skips_non_message_update_and_logs_ack_failure(
+    def test_ingest_skips_non_message_update(
         self,
         get_updates,
-        send_message,
         logger,
     ):
         telegram_ingest()
@@ -183,8 +182,6 @@ class PipelineTaskBranchTests(TestCase):
         self.assertTrue(Job.objects.filter(raw_input="hello").exists())
         self.bot.refresh_from_db()
         self.assertEqual(self.bot.telegram_update_offset, 12)
-        send_message.assert_called_once()
-        logger.error.assert_called_once()
 
     @patch("apps.jobs.tasks.logger")
     @patch("apps.jobs.tasks.get_updates", side_effect=RuntimeError("telegram down"))
@@ -779,3 +776,62 @@ class WebhookManagementTests(TestCase):
 
         self.bot.refresh_from_db()
         self.assertIsNotNone(self.bot.webhook_disabled_at)
+
+
+class TelegramAckTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        skill = Skill.objects.create(name="ack-skill", content="s")
+        wrapper = Wrapper.objects.create(name="ack-wrapper", skill=skill, content="w")
+        provider = Provider.objects.create(
+            name="ack-provider",
+            api_type="openai",
+            base_url="https://example.com",
+            auth_token="tok",
+        )
+        profile = Profile.objects.create(
+            provider=provider, name="ack-pr", model="gpt-4o"
+        )
+        cls.bot = Bot.objects.create(
+            name="ack-bot",
+            telegram_api_token="telegram-token",
+            profile=profile,
+            wrapper=wrapper,
+        )
+
+    @patch("apps.jobs.tasks.send_message")
+    def test_ack_sends_message(self, mock_send):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            reply_to_message_id=456,
+            raw_input="hello",
+        )
+
+        telegram_ack(job.pk)
+
+        mock_send.assert_called_once_with(
+            "telegram-token",
+            "123",
+            QUEUE_ACK_TEXT,
+            reply_to_message_id=456,
+        )
+
+    @patch("apps.jobs.tasks.logger")
+    def test_ack_warns_when_job_not_found(self, mock_logger):
+        telegram_ack(999)
+
+        mock_logger.warning.assert_called_once()
+
+    @patch("apps.jobs.tasks.send_message", side_effect=RuntimeError("ack down"))
+    @patch("apps.jobs.tasks.logger")
+    def test_ack_logs_error_on_failure(self, mock_logger, mock_send):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="hello",
+        )
+
+        telegram_ack(job.pk)
+
+        mock_logger.error.assert_called_once()
