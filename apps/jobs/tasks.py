@@ -119,7 +119,9 @@ def telegram_ingest() -> None:
             try:
                 # Webhook management (if BASE_URL configured)
                 if settings.BASE_URL:
-                    _manage_webhook_for_bot(bot)
+                    webhook_active = _manage_webhook_for_bot(bot)
+                    if webhook_active:
+                        continue
 
                 with transaction.atomic():
                     locked = (
