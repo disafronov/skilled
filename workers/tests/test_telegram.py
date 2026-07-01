@@ -348,6 +348,31 @@ class TelegramHttpClientTests(TestCase):
             set_webhook("token", "https://example.com/webhook/token/")
 
     @patch("workers.telegram._http.request")
+    def test_set_webhook_with_secret_token(self, mock_request):
+        from workers.telegram import set_webhook
+
+        mock_request.return_value = httpx.Response(
+            200, request=self._request("POST"), json={"ok": True, "result": {}}
+        )
+
+        set_webhook(
+            "token",
+            "https://example.com/webhook/",
+            secret_token="my-secret-value",
+        )
+
+        mock_request.assert_called_once_with(
+            "post",
+            "https://api.telegram.org/bottoken/setWebhook",
+            json={
+                "url": "https://example.com/webhook/",
+                "secret_token": "my-secret-value",
+                "drop_pending_updates": False,
+                "allowed_updates": ["message"],
+            },
+        )
+
+    @patch("workers.telegram._http.request")
     def test_delete_webhook_posts_expected_payload(self, mock_request):
         from workers.telegram import delete_webhook
 

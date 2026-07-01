@@ -185,25 +185,34 @@ def get_updates(token: str, offset: int | None = None) -> list[dict[str, Any]]:
     return results
 
 
-def set_webhook(token: str, url: str) -> dict[str, Any]:
+def set_webhook(
+    token: str,
+    url: str,
+    secret_token: str | None = None,
+) -> dict[str, Any]:
     """Register a webhook URL for the bot.
 
     Args:
         token: Bot API token.
-        url: Full HTTPS URL (including ``/webhook/<token>/``).
+        url: Full HTTPS URL.
+        secret_token: Optional secret token sent as
+            ``X-Telegram-Bot-Api-Secret-Token`` header with each update.
 
     Returns:
         The response ``result`` dict from Telegram API.
     """
     logger.info("Registering webhook for bot")
+    payload: dict[str, Any] = {
+        "url": url,
+        "drop_pending_updates": False,
+        "allowed_updates": ["message"],
+    }
+    if secret_token is not None:
+        payload["secret_token"] = secret_token
     response = _request(
         "post",
         _bot_url(token, "setWebhook"),
-        json={
-            "url": url,
-            "drop_pending_updates": False,
-            "allowed_updates": ["message"],
-        },
+        json=payload,
     )
     _raise_for_status(response)
     data: dict[str, Any] = response.json()

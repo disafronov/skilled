@@ -1,11 +1,13 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 from django import forms
 from django.contrib.admin.sites import AdminSite
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
 from apps.bots.admin import BotAdmin
 from apps.bots.models import Bot
+from apps.inference.models import Profile, Provider
+from apps.library.models import Skill, Wrapper
 
 
 class BotAdminTests(SimpleTestCase):
@@ -121,3 +123,37 @@ class BotAdminTests(SimpleTestCase):
 
         cleaned = form.clean()
         self.assertNotIn("telegram_api_token", cleaned)
+
+
+class BotAdminActionTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.skill = Skill.objects.create(name="s", content="s")
+        cls.wrapper = Wrapper.objects.create(name="w", skill=cls.skill, content="w")
+        cls.provider = Provider.objects.create(
+            name="p",
+            api_type="openai",
+            base_url="https://example.com",
+            auth_token="tok",
+        )
+        cls.profile = Profile.objects.create(
+            provider=cls.provider, name="pr", model="gpt-4o"
+        )
+
+    def test_rotate_webhook_secret_action_executes(self):
+        bot = Bot.objects.create(
+            name="action-bot",
+            telegram_api_token="telegram-token",
+            profile=self.profile,
+            wrapper=self.wrapper,
+        )
+        original_secret = bot.webhook_secret
+        admin = BotAdmin(Bot, AdminSite())
+        request = Mock()
+
+        admin.rotate_webhook_secret(request, Bot.objects.filter(pk=bot.pk))
+
+        bot.refresh_from_db()
+        self.assertNotEqual(bot.webhook_secret, original_secret)
+        self.assertIsNone(bot.webhook_enabled_at)
+        request.method  # verify Mock used correctly

@@ -14,5 +14,5 @@ urlpatterns = [
     ),
     path("admin/", admin.site.urls),
     path("health/", include("apps.health.urls")),
-    path("webhook/<str:token>/", bots_views.webhook, name="webhook"),
+    path("webhook/", bots_views.webhook, name="webhook"),
 ]
