@@ -69,13 +69,11 @@ def _manage_webhook_for_bot(bot: Bot) -> bool:
 
     expected_url = f"{settings.BASE_URL}/webhook/"
     current_url = info.get("url", "")
-    current_secret = info.get("secret_token")
     pending = info.get("pending_update_count", 0)
     last_error = info.get("last_error_message")
 
     is_healthy = (
         current_url == expected_url
-        and current_secret == bot.webhook_secret
         and pending < settings.WEBHOOK_FALLBACK_PENDING_THRESHOLD
         and not last_error
     )
@@ -89,11 +87,7 @@ def _manage_webhook_for_bot(bot: Bot) -> bool:
         return True
 
     # Register or fix webhook
-    if (
-        current_url != expected_url
-        or current_secret != bot.webhook_secret
-        or last_error
-    ):
+    if current_url != expected_url or last_error:
         try:
             set_webhook(
                 bot.telegram_api_token,
