@@ -24,7 +24,12 @@ def job_on_completion(
 ) -> None:
     if created:
         job_pk = instance.pk
-        logger.debug("Signal: job %d created — scheduling llm_worker", job_pk)
+        logger.debug(
+            "Signal: job %d created — scheduling send_ack + llm_worker", job_pk
+        )
+        transaction.on_commit(
+            lambda: async_task("apps.jobs.tasks.telegram_ack", job_pk)
+        )
         transaction.on_commit(lambda: async_task("apps.jobs.tasks.llm_worker", job_pk))
         return
 

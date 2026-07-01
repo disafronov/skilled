@@ -17,7 +17,6 @@ from apps.inference.models import Profile, Provider
 from apps.jobs.apps import create_schedules, protect_managed_schedule
 from apps.jobs.models import Job
 from apps.jobs.tasks import (
-    QUEUE_ACK_TEXT,
     cleanup_q2_successes,
     telegram_deliver,
     telegram_ingest,
@@ -680,12 +679,6 @@ class TelegramDeliveryTests(TestCase):
         job = Job.objects.get(raw_input="hello")
         self.assertEqual(job.reply_target, "123")
         self.assertEqual(job.reply_to_message_id, 456)
-        send_message.assert_called_once_with(
-            "telegram-token",
-            "123",
-            QUEUE_ACK_TEXT,
-            reply_to_message_id=456,
-        )
 
     @patch("apps.jobs.tasks.send_document")
     @patch("apps.jobs.tasks.send_message")

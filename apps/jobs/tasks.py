@@ -112,6 +112,25 @@ def _manage_webhook_for_bot(bot: Bot) -> bool:
     return False
 
 
+def telegram_ack(job_id: int) -> None:
+    """Send queue acknowledgement to the user who sent the message."""
+    job = Job.objects.select_related("bot").filter(pk=job_id).first()
+    if job is None:
+        logger.warning("telegram_ack: job %d not found", job_id)
+        return
+    try:
+        send_message(
+            job.bot.telegram_api_token,
+            job.reply_target,
+            QUEUE_ACK_TEXT,
+            reply_to_message_id=job.reply_to_message_id,
+        )
+    except Exception as exc:
+        logger.error(
+            "telegram_ack: job %d failed: %s", job_id, exc, exc_info=settings.DEBUG
+        )
+
+
 def telegram_ingest() -> None:
     """Poll Telegram for updates and manage webhook lifecycle."""
     try:
@@ -174,8 +193,6 @@ def telegram_ingest() -> None:
                     batch["messages"].append(text)
                     batch["reply_to_message_id"] = message_id
 
-                acknowledgements: list[tuple[str, int | None]] = []
-
                 # Offset gate + job creation + offset advance in one atomic block
                 with transaction.atomic():
                     current = (
@@ -198,7 +215,6 @@ def telegram_ingest() -> None:
                             reply_to_message_id=message_id,
                             raw_input=" ".join(messages),
                         )
-                        acknowledgements.append((chat_id, message_id))
 
                     if message_batches:
                         logger.info(
@@ -212,22 +228,6 @@ def telegram_ingest() -> None:
                     new_offset = max_id + 1
                     current.telegram_update_offset = new_offset
                     current.save(update_fields=["telegram_update_offset", "updated_at"])
-
-                for chat_id, message_id in acknowledgements:
-                    try:
-                        send_message(
-                            locked.telegram_api_token,
-                            chat_id,
-                            QUEUE_ACK_TEXT,
-                            reply_to_message_id=message_id,
-                        )
-                    except Exception as exc:
-                        logger.error(
-                            "Bot %s queue acknowledgement failed: %s",
-                            locked.id,
-                            exc,
-                            exc_info=settings.DEBUG,
-                        )
 
             except Exception as e:
                 logger.error(

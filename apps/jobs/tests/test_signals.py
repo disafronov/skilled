@@ -37,7 +37,9 @@ class SignalOrchestrationTests(TestCase):
             reply_target="123",
             raw_input="hello",
         )
-        mock_async_task.assert_called_once_with("apps.jobs.tasks.llm_worker", job.pk)
+        self.assertEqual(mock_async_task.call_count, 2)
+        mock_async_task.assert_any_call("apps.jobs.tasks.telegram_ack", job.pk)
+        mock_async_task.assert_any_call("apps.jobs.tasks.llm_worker", job.pk)
 
     @patch("apps.jobs.signals.transaction.on_commit", side_effect=lambda fn: fn())
     @patch("apps.jobs.signals.async_task")
