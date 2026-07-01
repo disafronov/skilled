@@ -1,3 +1,5 @@
+## [1.4.1](https://github.com/disafronov/skilled/compare/v1.4.0...v1.4.1) (2026-07-01)
+
 ## [1.4.1-rc.1](https://github.com/disafronov/skilled/compare/v1.4.0...v1.4.1-rc.1) (2026-07-01)
 
 ## [1.4.0](https://github.com/disafronov/skilled/compare/v1.3.0...v1.4.0) (2026-07-01)
