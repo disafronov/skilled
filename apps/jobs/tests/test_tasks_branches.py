@@ -84,6 +84,36 @@ class PipelineTaskBranchTests(TestCase):
         self.assertEqual(self.bot.telegram_update_offset, 100)
         self.assertFalse(Job.objects.exists())
 
+    @patch("apps.jobs.tasks.send_message")
+    @patch("apps.jobs.tasks.get_updates")
+    def test_ingest_skips_offset_update_when_bot_deleted_in_second_atomic(
+        self, mock_get_updates, mock_send_message
+    ):
+        """Bot deleted between the early exists check and the second atomic block."""
+        mock_get_updates.return_value = [
+            {
+                "update_id": 10,
+                "message": {"message_id": 1, "chat": {"id": 123}, "text": "hello"},
+            },
+        ]
+
+        original_sfu = Bot.objects.select_for_update
+        call_count = 0
+
+        def side_effect(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return original_sfu(*args, **kwargs)
+            return Bot.objects.none()
+
+        with patch.object(Bot.objects, "select_for_update", side_effect=side_effect):
+            telegram_ingest()
+
+        self.bot.refresh_from_db()
+        self.assertEqual(self.bot.telegram_update_offset, 0)
+        self.assertTrue(Job.objects.exists())
+
     @patch("apps.jobs.tasks.get_updates", return_value=[])
     def test_ingest_no_updates_leaves_offset_unchanged(self, get_updates):
         telegram_ingest()
