@@ -4,6 +4,7 @@ from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.text import Truncator
 
+from apps.admin_mixins import CHANGES_FIELDSET
 from apps.jobs.models import Job
 
 JOB_PREVIEW_LENGTH = 80
@@ -41,7 +42,35 @@ class JobAdmin(admin.ModelAdmin):
         "delivery_started_at",
         "delivery_finished_at",
     )
-    fields = (
+    fieldsets = (  # type: ignore[assignment]
+        (
+            None,
+            {
+                "fields": (
+                    "id",
+                    "bot",
+                    "reply_target",
+                    "reply_to_message_id",
+                    "raw_input",
+                    "raw_output",
+                    "error",
+                ),
+            },
+        ),
+        (
+            "Pipeline",
+            {
+                "fields": (
+                    "llm_started_at",
+                    "llm_finished_at",
+                    "delivery_started_at",
+                    "delivery_finished_at",
+                ),
+            },
+        ),
+        CHANGES_FIELDSET,
+    )
+    readonly_fields = (
         "id",
         "bot",
         "reply_target",
@@ -56,7 +85,6 @@ class JobAdmin(admin.ModelAdmin):
         "updated_at",
         "created_at",
     )
-    readonly_fields = fields
 
     @admin.display(description="Raw input", ordering="raw_input")
     def raw_input_preview(self, obj: Job) -> str:
