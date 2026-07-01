@@ -2,7 +2,7 @@ import os
 from unittest.mock import patch
 
 import pytest
-from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.ciphers.aead import AESSIV
 
 from apps.common.fields import EncryptedCharField, _cipher
 
@@ -51,6 +51,15 @@ def test_roundtrip():
     assert encrypted != value
 
 
+def test_deterministic():
+    """Same plaintext must always produce the same ciphertext."""
+    field = EncryptedCharField()
+    value = "deterministic-test"
+    ct1 = field.get_prep_value(value)
+    ct2 = field.get_prep_value(value)
+    assert ct1 == ct2
+
+
 def test_plaintext_migration(caplog):
     field = EncryptedCharField()
     result = field.from_db_value("old-plaintext-token", None, None)
@@ -59,7 +68,7 @@ def test_plaintext_migration(caplog):
 
 
 def test_field_encryption_key_roundtrip():
-    key = Fernet.generate_key().decode()
+    key = AESSIV.generate_key(256).hex()
     with patch.dict(os.environ, {"FIELD_ENCRYPTION_KEY": key}):
         _cipher.cache_clear()
         field = EncryptedCharField()
@@ -77,14 +86,22 @@ def test_cipher_raises_without_encryption_key():
             _cipher()
 
 
+def test_cipher_raises_on_bad_key_length():
+    bad_key = b"short".hex()
+    with patch.dict(os.environ, {"FIELD_ENCRYPTION_KEY": bad_key}):
+        _cipher.cache_clear()
+        with pytest.raises(RuntimeError, match="AES-SIV requires"):
+            _cipher()
+
+
 def test_field_encryption_key_change_makes_old_data_unreadable():
-    key1 = Fernet.generate_key().decode()
+    key1 = AESSIV.generate_key(256).hex()
     with patch.dict(os.environ, {"FIELD_ENCRYPTION_KEY": key1}):
         _cipher.cache_clear()
         field = EncryptedCharField()
         encrypted = field.get_prep_value("old-secret")
 
-    key2 = Fernet.generate_key().decode()
+    key2 = AESSIV.generate_key(256).hex()
     with patch.dict(os.environ, {"FIELD_ENCRYPTION_KEY": key2}):
         _cipher.cache_clear()
         result = field.from_db_value(encrypted, None, None)
