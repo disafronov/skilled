@@ -55,3 +55,7 @@ make run
 | `/health/readiness/` | Process can reach critical dependencies |
 
 The Docker image uses `/health/readiness/` for its `HEALTHCHECK`.
+
+## Security
+
+- Webhook URL (`/webhook/<token>/`) contains a bearer secret (Telegram bot token). Do not log full request paths or URIs for `/webhook/` in reverse proxy / CDN access logs.
