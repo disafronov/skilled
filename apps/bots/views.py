@@ -52,7 +52,7 @@ def webhook(request: HttpRequest, token: str) -> HttpResponse:
     )
 
     if bot is None:
-        logger.info("Webhook: bot not found for token=%s", token[:8])
+        logger.info("Webhook: bot not found")
         return HttpResponse("not found", status=404)
 
     chat_id = str(message["chat"]["id"])
