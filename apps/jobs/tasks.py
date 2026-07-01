@@ -12,7 +12,8 @@ from django.utils import timezone
 from django_q.models import Success
 
 from apps.bots.models import Bot
-from apps.jobs.models import Job
+from apps.jobs.intake import accept_telegram_message
+from apps.jobs.models import IntakeBuffer, Job
 from workers.llm import call_llm
 from workers.telegram import (
     delete_webhook,
@@ -231,14 +232,9 @@ def telegram_ingest() -> None:
                         continue
 
                     for chat_id, batch in message_batches.items():
-                        messages = batch["messages"]
                         message_id = batch["reply_to_message_id"]
-                        Job.objects.create(
-                            bot=current,
-                            reply_target=chat_id,
-                            reply_to_message_id=message_id,
-                            raw_input=" ".join(messages),
-                        )
+                        for text in batch["messages"]:
+                            accept_telegram_message(current, chat_id, message_id, text)
 
                     if message_batches:
                         logger.info(
@@ -409,6 +405,32 @@ def telegram_deliver(job_pk: int | None = None) -> None:
         raise
 
     job.save(update_fields=["delivery_finished_at", "error", "updated_at"])
+
+
+def flush_intake_buffers() -> None:
+    """Flush due intake buffers into Job records."""
+    debounce = getattr(settings, "TELEGRAM_INTAKE_DEBOUNCE_SECONDS", 10)
+    cutoff = timezone.now() - timedelta(seconds=debounce)
+    buffers = IntakeBuffer.objects.filter(
+        flushed_at__isnull=True, last_message_at__lt=cutoff
+    )
+    for buffer in buffers:
+        with transaction.atomic():
+            refetched = (
+                IntakeBuffer.objects.select_for_update()
+                .filter(pk=buffer.pk, flushed_at__isnull=True)
+                .first()
+            )
+            if refetched is None:
+                continue
+            Job.objects.create(
+                bot=refetched.bot,
+                reply_target=refetched.chat_id,
+                reply_to_message_id=refetched.reply_to_message_id,
+                raw_input=refetched.text,
+            )
+            refetched.flushed_at = timezone.now()
+            refetched.save(update_fields=["flushed_at", "updated_at"])
 
 
 def cleanup_q2_successes() -> None:

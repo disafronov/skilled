@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django.db import models
+from django.db.models import Q
 
 
 class JobQuerySet(models.QuerySet["Job"]):
@@ -125,3 +126,31 @@ class Job(models.Model):
 
     def __str__(self) -> str:
         return f"Job #{self.pk} [{self.bot.name}]"
+
+
+class IntakeBuffer(models.Model):
+    """Mutable accumulator for consecutive Telegram messages before Job creation."""
+
+    bot = models.ForeignKey("bots.Bot", on_delete=models.CASCADE)
+    chat_id = models.CharField(max_length=255)
+    reply_to_message_id = models.PositiveBigIntegerField(null=True, blank=True)
+    text = models.TextField()
+    message_count = models.PositiveIntegerField(default=1)
+    last_message_at = models.DateTimeField()
+    flushed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Intake Buffer"
+        verbose_name_plural = "Intake Buffers"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["bot", "chat_id"],
+                condition=Q(flushed_at__isnull=True),
+                name="uniq_open_intake_buffer_per_bot_chat",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"IntakeBuffer #{self.pk} [{self.bot.name}] #{self.chat_id}"
