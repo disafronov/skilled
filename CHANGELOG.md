@@ -1,3 +1,9 @@
+## [1.8.0](https://github.com/disafronov/skilled/compare/v1.7.0...v1.8.0) (2026-07-01)
+
+### Features
+
+* **jobs:** add IntakeBuffer to buffer Telegram messages before Job creation ([aa4fe4b](https://github.com/disafronov/skilled/commit/aa4fe4b4cf73b9f34491c063aace2d72663b7e07))
+
 ## [1.8.0-rc.2](https://github.com/disafronov/skilled/compare/v1.8.0-rc.1...v1.8.0-rc.2) (2026-07-01)
 
 ## [1.8.0-rc.1](https://github.com/disafronov/skilled/compare/v1.7.0...v1.8.0-rc.1) (2026-07-01)
