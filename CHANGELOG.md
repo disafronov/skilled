@@ -1,3 +1,14 @@
+## [1.6.0-rc.1](https://github.com/disafronov/skilled/compare/v1.5.0...v1.6.0-rc.1) (2026-07-01)
+
+### Features
+
+* **webhook:** replace URL token auth with X-Telegram-Bot-Api-Secret-Token header ([a36b263](https://github.com/disafronov/skilled/commit/a36b263c26a4a7ed44343bc64848a6aeda0824c1))
+
+### Bug Fixes
+
+* **webhook:** lossless fallback — drop_pending_updates=False in delete_webhook ([045f7d1](https://github.com/disafronov/skilled/commit/045f7d1c288175cc1307134d4f9fe8664bb76dac))
+* **webhook:** remove secret_token check from getWebhookInfo health check ([41b77c9](https://github.com/disafronov/skilled/commit/41b77c9f3698122c9e74a8bb29260eff3806a8f8))
+
 ## [1.5.0](https://github.com/disafronov/skilled/compare/v1.4.1...v1.5.0) (2026-07-01)
 
 ### Features
