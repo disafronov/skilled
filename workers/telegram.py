@@ -233,7 +233,7 @@ def delete_webhook(token: str) -> dict[str, Any]:
     response = _request(
         "post",
         _bot_url(token, "deleteWebhook"),
-        json={"drop_pending_updates": True},
+        json={"drop_pending_updates": False},
     )
     _raise_for_status(response)
     data: dict[str, Any] = response.json()
