@@ -33,6 +33,17 @@ def _cipher() -> AESSIV:
     return AESSIV(key)
 
 
+def encrypt_deterministic(value: str) -> str:
+    """Deterministically encrypt *value* for DB lookup against EncryptedCharField.
+
+    Returns base64-encoded ciphertext that matches what the field stores.
+    The raw token comes from a webhook URL; call this method, then use
+    ``.extra(where=[\"telegram_api_token = %s\"], params=[result])``
+    to bypass the field's own ``get_prep_value`` (which would double-encrypt).
+    """
+    return base64.b64encode(_cipher().encrypt(value.encode(), [])).decode()
+
+
 class EncryptedCharField(models.CharField):
     """CharField with deterministic AES-SIV encryption at rest.
 
