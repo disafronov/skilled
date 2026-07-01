@@ -35,6 +35,13 @@ MANAGED_SCHEDULES = (
         "minutes_env": "Q2_SUCCESS_CLEANUP_MINUTES",
         "default_minutes": 60,
     },
+    {
+        "id": 5,
+        "name": "intake_flush",
+        "func": "apps.jobs.tasks.flush_intake_buffers",
+        "minutes_env": "Q2_INTAKE_FLUSH_MINUTES",
+        "default_minutes": 1,
+    },
 )
 
 

@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.bots.models import Bot
-from apps.jobs.models import Job
+from apps.jobs.intake import accept_telegram_message
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +52,5 @@ def webhook(request: HttpRequest) -> HttpResponse:
 
     chat_id = str(message["chat"]["id"])
     message_id = message.get("message_id")
-
-    Job.objects.create(
-        bot=bot,
-        reply_target=chat_id,
-        reply_to_message_id=message_id,
-        raw_input=text,
-    )
-
+    accept_telegram_message(bot, chat_id, message_id, text)
     return HttpResponse("ok")
