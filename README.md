@@ -20,7 +20,7 @@ Works with any OpenAI-compatible provider.
 
 ## Pipeline
 
-```
+```text
 Telegram ──> telegram_ingest (Q2) ──> Job ──> llm_worker (Q2) ──> telegram_deliver (Q2) ──> Telegram
 ```
 
@@ -43,14 +43,14 @@ make run
 ## Management Commands
 
 | Command | Description |
-|---------|-------------|
+| ------- | ----------- |
 | `dev` | qcluster + runserver (development) |
 | `start` | qcluster + gunicorn (production) |
 
 ## Health Checks
 
 | Endpoint | Purpose |
-|----------|---------|
+| ---------- | ----------- |
 | `/health/liveness/` | Process is running |
 | `/health/readiness/` | Process can reach critical dependencies |
 
