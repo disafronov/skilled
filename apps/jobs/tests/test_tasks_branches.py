@@ -197,6 +197,34 @@ class PipelineTaskBranchTests(TestCase):
 
         logger.critical.assert_called_once()
 
+    @patch("apps.jobs.tasks.delete_webhook")
+    def test_ingest_cleans_up_webhook_for_disabled_bot(self, delete_webhook):
+        self.bot.enabled = False
+        self.bot.webhook_enabled_at = self.now
+        self.bot.save()
+
+        telegram_ingest()
+
+        delete_webhook.assert_called_once_with("telegram-token")
+        self.bot.refresh_from_db()
+        self.assertIsNone(self.bot.webhook_enabled_at)
+
+    @patch("apps.jobs.tasks.logger")
+    @patch("apps.jobs.tasks.delete_webhook", side_effect=RuntimeError("telegram down"))
+    def test_ingest_logs_warning_when_disabled_bot_cleanup_fails(
+        self, delete_webhook, logger
+    ):
+        self.bot.enabled = False
+        self.bot.webhook_enabled_at = self.now
+        self.bot.save()
+
+        telegram_ingest()
+
+        delete_webhook.assert_called_once()
+        logger.warning.assert_called_once()
+        self.bot.refresh_from_db()
+        self.assertIsNotNone(self.bot.webhook_enabled_at)
+
     def test_llm_worker_returns_when_no_job_exists(self):
         llm_worker()
 
