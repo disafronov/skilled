@@ -23,6 +23,16 @@ class Bot(models.Model):
         default=0,
         help_text="Last processed Telegram update_id",
     )
+    webhook_enabled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the webhook was last successfully registered",
+    )
+    webhook_disabled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the webhook was last disabled (fallback to polling)",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
