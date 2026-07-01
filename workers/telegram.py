@@ -220,6 +220,29 @@ def set_webhook(
     return result
 
 
+def set_message_reaction(
+    token: str,
+    chat_id: int | str,
+    message_id: int,
+    emoji: str,
+) -> None:
+    """React to a message with the given emoji via ``setMessageReaction``."""
+    logger.info(
+        "Setting reaction %s on message %s in chat %s", emoji, message_id, chat_id
+    )
+    payload: dict[str, Any] = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "reaction": [{"type": "emoji", "emoji": emoji}],
+    }
+    response = _request(
+        "post",
+        _bot_url(token, "setMessageReaction"),
+        json=payload,
+    )
+    _raise_for_status(response)
+
+
 def delete_webhook(token: str) -> dict[str, Any]:
     """Remove the registered webhook and fall back to polling.
 

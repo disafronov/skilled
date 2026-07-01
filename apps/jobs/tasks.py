@@ -24,12 +24,11 @@ from workers.telegram import (
     sanitize_error,
     send_document,
     send_message,
+    set_message_reaction,
     set_webhook,
 )
 
 logger = logging.getLogger(__name__)
-
-QUEUE_ACK_TEXT = "Added to the processing queue, please wait..."
 Q2_SUCCESS_RETENTION_SECONDS = 86400
 Q2_LLM_STALE_JOB_SECONDS = 3600
 
@@ -117,17 +116,22 @@ def _manage_webhook_for_bot(bot: Bot) -> bool:
 
 
 def telegram_ack(job_id: int) -> None:
-    """Send queue acknowledgement to the user who sent the message."""
+    """React to the user's message to acknowledge queueing."""
+    reaction = settings.TELEGRAM_ACK_REACTION
+    if not reaction:
+        return
     job = Job.objects.select_related("bot").filter(pk=job_id).first()
     if job is None:
         logger.warning("telegram_ack: job %d not found", job_id)
         return
+    if job.reply_to_message_id is None:
+        return
     try:
-        send_message(
+        set_message_reaction(
             job.bot.telegram_api_token,
             job.reply_target,
-            QUEUE_ACK_TEXT,
-            reply_to_message_id=job.reply_to_message_id,
+            job.reply_to_message_id,
+            reaction,
         )
     except Exception as exc:
         logger.error(
