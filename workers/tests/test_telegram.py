@@ -385,7 +385,7 @@ class TelegramHttpClientTests(TestCase):
         mock_request.assert_called_once_with(
             "post",
             "https://api.telegram.org/bottoken/deleteWebhook",
-            json={"drop_pending_updates": True},
+            json={"drop_pending_updates": False},
         )
 
     @patch("workers.telegram._http.request")
