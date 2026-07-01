@@ -4,7 +4,10 @@ from django.db import models
 
 
 class JobQuerySet(models.QuerySet["Job"]):
+    """QuerySet methods for Job pipeline state queries."""
+
     def stale_llm(self, cutoff: datetime) -> "JobQuerySet":
+        """LLM jobs started but not finished before cutoff — candidates for re-queue."""
         return self.filter(
             llm_started_at__lt=cutoff,
             llm_finished_at__isnull=True,
@@ -12,6 +15,7 @@ class JobQuerySet(models.QuerySet["Job"]):
         )
 
     def ready_for_llm(self) -> "JobQuerySet":
+        """Jobs waiting for LLM processing (never started, no error)."""
         return self.filter(
             llm_started_at__isnull=True,
             llm_finished_at__isnull=True,
@@ -19,6 +23,7 @@ class JobQuerySet(models.QuerySet["Job"]):
         )
 
     def ready_for_delivery(self) -> "JobQuerySet":
+        """Jobs with LLM output ready to be sent to the user."""
         return self.filter(
             llm_finished_at__isnull=False,
             delivery_started_at__isnull=True,
@@ -27,6 +32,8 @@ class JobQuerySet(models.QuerySet["Job"]):
 
 
 class Job(models.Model):
+    """A single pipeline execution artifact — from Telegram message to LLM response."""
+
     bot = models.ForeignKey("bots.Bot", on_delete=models.PROTECT)
     reply_target = models.TextField()
     reply_to_message_id = models.PositiveBigIntegerField(null=True, blank=True)

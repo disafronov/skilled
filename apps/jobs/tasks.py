@@ -134,7 +134,9 @@ def telegram_ack(job_id: int) -> None:
 def telegram_ingest() -> None:
     """Poll Telegram for updates and manage webhook lifecycle."""
     try:
-        # Clean up webhooks for disabled bots
+        # Clean up webhooks for disabled bots.
+        # Done here rather than on Bot.save to avoid adding Telegram API calls
+        # to the admin save flow. The periodic ingest cycle handles it naturally.
         for bot in Bot.objects.filter(enabled=False, webhook_enabled_at__isnull=False):
             try:
                 delete_webhook(bot.telegram_api_token)
@@ -151,6 +153,8 @@ def telegram_ingest() -> None:
                     if webhook_active:
                         continue
 
+                # Lightweight lock on the Bot row: skip_locked=True avoids
+                # queueing behind another worker already processing this bot.
                 with transaction.atomic():
                     locked = (
                         Bot.objects.select_for_update(skip_locked=True)
@@ -202,7 +206,10 @@ def telegram_ingest() -> None:
                     batch["messages"].append(text)
                     batch["reply_to_message_id"] = message_id
 
-                # Offset gate + job creation + offset advance in one atomic block
+                # Offset gate + job creation + offset advance in one atomic block.
+                # The second select_for_update re-reads the Bot row (now locked with
+                # no skip_locked) to verify the offset hasn't been claimed by another
+                # worker between the first lock and get_updates.
                 with transaction.atomic():
                     current = (
                         Bot.objects.select_for_update().filter(pk=locked.pk).first()

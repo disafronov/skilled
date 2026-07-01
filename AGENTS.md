@@ -1,5 +1,16 @@
 # AGENTS.md
 
+## Documentation Convention
+
+- **Docstrings**: required on all model classes, QuerySet methods, public functions, and modules.
+- **WHY comments**: required when the code takes a non-obvious approach:
+  - `.extra()` in `bots/views.py` — AES-SIV ciphertext bypasses ORM value preparation.
+  - `protect_managed_schedule` in `jobs/apps.py` — prevents drift from code-defined Q2 config.
+  - `transaction.on_commit` in `jobs/signals.py` — avoids orphan Q2 tasks on rollback.
+  - Disabled bot webhook cleanup in `telegram_ingest` — not in Bot.save to avoid API calls in admin flow.
+  - `skip_locked=True` in `telegram_ingest` — avoids queueing behind other workers.
+  - Double `select_for_update` in `telegram_ingest` — re-reads offset after get_updates.
+
 ## Commands
 
 ```sh

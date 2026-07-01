@@ -42,6 +42,9 @@ def webhook(request: HttpRequest, token: str) -> HttpResponse:
         logger.error("Webhook: FIELD_ENCRYPTION_KEY not configured")
         return HttpResponse("encryption error", status=500)
 
+    # AES-SIV ciphertext is raw bytes; Django's ORM would run it through
+    # get_prep_value → EncryptedCharField.get_prep_value, which encrypts again.
+    # Use .extra() with raw SQL to compare the already-encrypted value directly.
     bot = (
         Bot.objects.filter(enabled=True)
         .extra(

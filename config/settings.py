@@ -5,6 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def env_bool(name: str, default: bool) -> bool:
+    """Parse an env var as a boolean (truthy: 1, true, yes, on)."""
     value = os.getenv(name, "").strip().lower()
     if not value:
         return default

@@ -4,10 +4,14 @@ from apps.common.fields import EncryptedCharField
 
 
 class ApiType(models.TextChoices):
+    """Supported LLM API protocol types."""
+
     OPENAI = "openai", "OpenAI Compatible"
 
 
 class Provider(models.Model):
+    """LLM API provider configuration (endpoint URL + auth token)."""
+
     name = models.CharField(max_length=255, unique=True)
     api_type = models.CharField(
         max_length=32,
@@ -30,6 +34,8 @@ class Provider(models.Model):
 
 
 class Profile(models.Model):
+    """LLM model profile — model name, parameters, and provider link."""
+
     name = models.CharField(max_length=255)
     provider = models.ForeignKey(
         Provider,

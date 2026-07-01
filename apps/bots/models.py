@@ -4,6 +4,8 @@ from apps.common.fields import EncryptedCharField
 
 
 class Bot(models.Model):
+    """Telegram bot endpoint — ties an LLM profile + wrapper to a Telegram API token."""
+
     name = models.CharField(max_length=255, unique=True)
     telegram_api_token = EncryptedCharField(max_length=512)
 

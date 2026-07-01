@@ -2,6 +2,8 @@ from django.db import models
 
 
 class Skill(models.Model):
+    """System-level instruction content used as the system prompt for the LLM."""
+
     name = models.CharField(max_length=255, unique=True)
     content = models.TextField()
 
@@ -18,6 +20,8 @@ class Skill(models.Model):
 
 
 class Wrapper(models.Model):
+    """Per-bot wrapper instruction content, combined with the skill for the LLM."""
+
     name = models.CharField(max_length=255)
     skill = models.ForeignKey(
         Skill,

@@ -64,7 +64,12 @@ def protect_managed_schedule(
     instance: Any,
     **kwargs: Any,
 ) -> None:
-    """Force managed django-q schedules back to their code-defined values."""
+    """Force managed django-q schedules back to their code-defined values.
+
+    Q2 schedule configuration is versioned in MANAGED_SCHEDULES (this file).
+    Admin edits would be lost on the next post_migrate signal anyway.
+    This pre_save hook prevents accidental drift from the code-defined config.
+    """
     schedules_by_id = {schedule["id"]: schedule for schedule in MANAGED_SCHEDULES}
     schedule = schedules_by_id.get(instance.pk)
     if not schedule:
