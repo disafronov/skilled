@@ -195,7 +195,7 @@ def set_webhook(token: str, url: str) -> dict[str, Any]:
     Returns:
         The response ``result`` dict from Telegram API.
     """
-    logger.info("Registering webhook for bot token ending in %s", token[-4:])
+    logger.info("Registering webhook for bot")
     response = _request(
         "post",
         _bot_url(token, "setWebhook"),
@@ -220,7 +220,7 @@ def delete_webhook(token: str) -> dict[str, Any]:
     Returns:
         The response ``result`` dict from Telegram API.
     """
-    logger.info("Removing webhook for bot token ending in %s", token[-4:])
+    logger.info("Removing webhook for bot")
     response = _request(
         "post",
         _bot_url(token, "deleteWebhook"),
@@ -240,7 +240,7 @@ def get_webhook_info(token: str) -> dict[str, Any]:
         pending_update_count, last_error_date, last_error_message,
         max_connections, allowed_updates).
     """
-    logger.debug("Fetching webhook info for bot token ending in %s", token[-4:])
+    logger.debug("Fetching webhook info for bot")
     response = _request("get", _bot_url(token, "getWebhookInfo"))
     _raise_for_status(response)
     data: dict[str, Any] = response.json()
