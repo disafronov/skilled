@@ -313,3 +313,99 @@ class TelegramHttpClientTests(TestCase):
             document_format_content_type(TELEGRAM_DOCUMENT_FORMAT_TEXT),
             "text/plain",
         )
+
+    @patch("workers.telegram._http.request")
+    def test_set_webhook_posts_expected_payload(self, mock_request):
+        from workers.telegram import set_webhook
+
+        mock_request.return_value = httpx.Response(
+            200, request=self._request("POST"), json={"ok": True, "result": {}}
+        )
+
+        set_webhook("token", "https://example.com/webhook/token/")
+
+        mock_request.assert_called_once_with(
+            "post",
+            "https://api.telegram.org/bottoken/setWebhook",
+            json={
+                "url": "https://example.com/webhook/token/",
+                "drop_pending_updates": False,
+                "allowed_updates": ["message"],
+            },
+        )
+
+    @patch("workers.telegram._http.request")
+    def test_set_webhook_raises_on_api_error(self, mock_request):
+        from workers.telegram import set_webhook
+
+        mock_request.return_value = httpx.Response(
+            400,
+            request=self._request("POST"),
+            json={"ok": False, "description": "Bad webhook"},
+        )
+
+        with self.assertRaises(RuntimeError):
+            set_webhook("token", "https://example.com/webhook/token/")
+
+    @patch("workers.telegram._http.request")
+    def test_delete_webhook_posts_expected_payload(self, mock_request):
+        from workers.telegram import delete_webhook
+
+        mock_request.return_value = httpx.Response(
+            200, request=self._request("POST"), json={"ok": True, "result": {}}
+        )
+
+        delete_webhook("token")
+
+        mock_request.assert_called_once_with(
+            "post",
+            "https://api.telegram.org/bottoken/deleteWebhook",
+            json={"drop_pending_updates": True},
+        )
+
+    @patch("workers.telegram._http.request")
+    def test_delete_webhook_raises_on_api_error(self, mock_request):
+        from workers.telegram import delete_webhook
+
+        mock_request.return_value = httpx.Response(
+            400,
+            request=self._request("POST"),
+            json={"ok": False, "description": "Bad request"},
+        )
+
+        with self.assertRaises(RuntimeError):
+            delete_webhook("token")
+
+    @patch("workers.telegram._http.request")
+    def test_get_webhook_info_returns_result(self, mock_request):
+        from workers.telegram import get_webhook_info
+
+        mock_request.return_value = httpx.Response(
+            200,
+            request=self._request("GET"),
+            json={
+                "ok": True,
+                "result": {
+                    "url": "https://example.com/webhook/token/",
+                    "pending_update_count": 0,
+                },
+            },
+        )
+
+        result = get_webhook_info("token")
+
+        self.assertEqual(result["url"], "https://example.com/webhook/token/")
+        self.assertEqual(result["pending_update_count"], 0)
+
+    @patch("workers.telegram._http.request")
+    def test_get_webhook_info_raises_on_api_error(self, mock_request):
+        from workers.telegram import get_webhook_info
+
+        mock_request.return_value = httpx.Response(
+            400,
+            request=self._request("GET"),
+            json={"ok": False, "description": "Not found"},
+        )
+
+        with self.assertRaises(RuntimeError):
+            get_webhook_info("token")
