@@ -1,3 +1,5 @@
+"""Tests for telegram pipeline Q2 schedule setup (IDs 1–4)."""
+
 import os
 from unittest.mock import patch
 
@@ -5,18 +7,23 @@ from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 from django_q.models import Schedule
 
-from engine.telegram.apps import (
-    create_schedules,
-    protect_managed_schedule,
-    protect_managed_schedule_delete,
+from engine.common.schedules import (
+    make_deny_delete_handler,
+    make_restore_handler,
+    make_sync_handler,
 )
+from engine.telegram.apps import MANAGED_SCHEDULES
+
+_SYNC = make_sync_handler(MANAGED_SCHEDULES)
+_RESTORE = make_restore_handler(MANAGED_SCHEDULES)
+_DENY_DELETE = make_deny_delete_handler(MANAGED_SCHEDULES)
 
 
-class Q2ScheduleTests(TestCase):
+class TelegramQ2ScheduleTests(TestCase):
     """Test the pipeline schedule configuration."""
 
     def test_default_schedules_are_hardcoded_with_fixed_ids(self):
-        create_schedules(sender=None)
+        _SYNC(sender=None)
 
         schedules = {
             schedule.id: schedule
@@ -45,7 +52,7 @@ class Q2ScheduleTests(TestCase):
         self.assertEqual(schedules[3].repeats, -1)
 
     def test_managed_schedule_edits_are_overwritten_on_save(self):
-        create_schedules(sender=None)
+        _SYNC(sender=None)
         schedule = Schedule.objects.get(id=1)
 
         schedule.name = "changed"
@@ -68,7 +75,7 @@ class Q2ScheduleTests(TestCase):
             os.environ,
             {"Q2_TELEGRAM_INGEST_MINUTES": "5"},
         ):
-            create_schedules(sender=None)
+            _SYNC(sender=None)
 
             schedule = Schedule.objects.get(id=1)
             self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
@@ -93,7 +100,7 @@ class Q2ScheduleTests(TestCase):
             ]
         )
 
-        create_schedules(sender=None)
+        _SYNC(sender=None)
 
         self.assertEqual(Schedule.objects.filter(name="telegram_ingest").count(), 1)
         self.assertEqual(Schedule.objects.get(name="telegram_ingest").id, 1)
@@ -108,13 +115,13 @@ class Q2ScheduleTests(TestCase):
             repeats=-1,
         )
 
-        protect_managed_schedule(sender=Schedule, instance=schedule)
+        _RESTORE(Schedule, schedule)
 
         self.assertEqual(schedule.name, "custom")
         self.assertEqual(schedule.minutes, 10)
 
     def test_managed_schedule_delete_is_blocked(self):
-        create_schedules(sender=None)
+        _SYNC(sender=None)
         schedule = Schedule.objects.get(id=1)
 
         with self.assertRaises(ProtectedError):
@@ -130,7 +137,7 @@ class Q2ScheduleTests(TestCase):
             repeats=-1,
         )
 
-        protect_managed_schedule_delete(sender=Schedule, instance=schedule)
+        _DENY_DELETE(Schedule, schedule)
         schedule.delete()
 
         self.assertFalse(Schedule.objects.filter(id=99).exists())
