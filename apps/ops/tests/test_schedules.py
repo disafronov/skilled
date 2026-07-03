@@ -1,3 +1,5 @@
+"""Tests for ops Q2 schedule setup (ID 5)."""
+
 import os
 from unittest.mock import patch
 
@@ -5,18 +7,23 @@ from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 from django_q.models import Schedule
 
-from apps.ops.apps import (
-    create_schedules,
-    protect_managed_schedule,
-    protect_managed_schedule_delete,
+from apps.ops.apps import MANAGED_SCHEDULES
+from engine.common.schedules import (
+    make_deny_delete_handler,
+    make_restore_handler,
+    make_sync_handler,
 )
+
+_SYNC = make_sync_handler(MANAGED_SCHEDULES)
+_RESTORE = make_restore_handler(MANAGED_SCHEDULES)
+_DENY_DELETE = make_deny_delete_handler(MANAGED_SCHEDULES)
 
 
 class OpsQ2ScheduleTests(TestCase):
     """Test the ops schedule configuration."""
 
     def test_default_cleanup_schedule_is_hardcoded_with_fixed_id(self):
-        create_schedules(sender=None)
+        _SYNC(sender=None)
 
         schedule = Schedule.objects.get(id=5)
 
@@ -28,7 +35,7 @@ class OpsQ2ScheduleTests(TestCase):
         self.assertEqual(schedule.repeats, -1)
 
     def test_managed_schedule_edits_are_overwritten_on_save(self):
-        create_schedules(sender=None)
+        _SYNC(sender=None)
         schedule = Schedule.objects.get(id=5)
 
         schedule.name = "changed"
@@ -51,7 +58,7 @@ class OpsQ2ScheduleTests(TestCase):
             os.environ,
             {"Q2_SUCCESS_CLEANUP_MINUTES": "30"},
         ):
-            create_schedules(sender=None)
+            _SYNC(sender=None)
 
             schedule = Schedule.objects.get(id=5)
             self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
@@ -76,7 +83,7 @@ class OpsQ2ScheduleTests(TestCase):
             ]
         )
 
-        create_schedules(sender=None)
+        _SYNC(sender=None)
 
         self.assertEqual(Schedule.objects.filter(name="q2_success_cleanup").count(), 1)
         self.assertEqual(Schedule.objects.get(name="q2_success_cleanup").id, 5)
@@ -91,13 +98,13 @@ class OpsQ2ScheduleTests(TestCase):
             repeats=-1,
         )
 
-        protect_managed_schedule(sender=Schedule, instance=schedule)
+        _RESTORE(Schedule, schedule)
 
         self.assertEqual(schedule.name, "custom")
         self.assertEqual(schedule.minutes, 10)
 
     def test_managed_schedule_delete_is_blocked(self):
-        create_schedules(sender=None)
+        _SYNC(sender=None)
         schedule = Schedule.objects.get(id=5)
 
         with self.assertRaises(ProtectedError):
@@ -113,7 +120,7 @@ class OpsQ2ScheduleTests(TestCase):
             repeats=-1,
         )
 
-        protect_managed_schedule_delete(sender=Schedule, instance=schedule)
+        _DENY_DELETE(Schedule, schedule)
         schedule.delete()
 
         self.assertFalse(Schedule.objects.filter(id=99).exists())
