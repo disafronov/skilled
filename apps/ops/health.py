@@ -1,3 +1,5 @@
+"""Health check endpoints for Docker HEALTHCHECK."""
+
 import logging
 
 from django.db import DatabaseError, connection

@@ -1,3 +1,5 @@
+"""Q2 schedule management for ops infrastructure tasks."""
+
 import os
 from typing import Any
 
@@ -85,6 +87,7 @@ class OpsConfig(AppConfig):
     label = "ops"
 
     def ready(self) -> None:
+        # post_migrate (not ready()) avoids DB queries on every manage.py command
         post_migrate.connect(create_schedules, sender=self)
         from django_q.models import Schedule
 

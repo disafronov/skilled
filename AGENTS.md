@@ -4,7 +4,7 @@
 
 - **Docstrings**: required on all model classes, QuerySet methods, public functions, and modules.
 - **WHY comments**: required when the code takes a non-obvious approach:
-  - `.extra()` in `engine/telegram/views.py` — AES-SIV ciphertext bypasses ORM value preparation.
+  - `EncryptedCharField.get_prep_value` in `engine/common/fields.py` — AES-SIV ciphertext bypasses ORM value preparation (skips `CharField.get_prep_value` to avoid double-encryption).
   - `protect_managed_schedule` in `engine/telegram/apps.py` — prevents drift from code-defined Q2 config.
   - `transaction.on_commit` in `engine/telegram/signals.py` — avoids orphan Q2 tasks on rollback.
   - Disabled bot webhook cleanup in `telegram_ingest` — not in Bot.save to avoid API calls in admin flow.
@@ -58,7 +58,7 @@ Telegram → Job Queue (django-q2) → LLM Worker → Telegram delivery
 - `engine/workers/proxy.py` — Configurable Q2 task proxy — reads `Q2_WORKER_FUNC` from settings, dispatches to the real worker function
 - `engine/workers/telegram.py` — Telegram Bot API client
 - `apps/workers/llm.py` — LLM client (OpenAI-compatible)
-- `apps/worker/tasks.py` — Worker orchestrator (processes jobs via LLM)
+- `apps/llm/tasks.py` — Worker orchestrator (processes jobs via LLM)
 - `apps/library` — Skill & Wrapper models (prompt content)
 - `apps/inference` — Provider & Profile models (LLM config)
 - `config/` — Django settings, urls, wsgi

@@ -38,7 +38,7 @@ Worker        — Execution configuration for a bot. Currently stores LLM profil
 IntakeBuffer  — mutable pre-job accumulator (one open buffer per bot/chat)
 Job           — finalized execution artifact (immutable after creation)
 
-All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider & Profile), `apps/bots` (Bot), and `apps/jobs` (Job + Worker + pipeline).
+All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider & Profile), `apps/bots` (Bot), `engine/telegram` (Job + IntakeBuffer + pipeline), `engine/worker` (Worker), and `apps/ops` (health checks + Q2 cleanup).
 
 ## Pipeline
 
@@ -98,7 +98,19 @@ make run
 | `/health/liveness/` | Process is running |
 | `/health/readiness/` | Process can reach critical dependencies |
 
-Used by Docker `HEALTHCHECK`.
+Implemented in `apps/ops/health.py`. Used by Docker `HEALTHCHECK`.
+
+## Scheduled tasks
+
+| Schedule | Interval | Description |
+| -------- | -------- | ----------- |
+| `telegram_ingest` (ID 1) | 1 min | Polling fallback |
+| `processing` (ID 2) | 1 min | Stale LLM job re-queue |
+| `telegram_deliver` (ID 3) | 1 min | Stale delivery re-queue |
+| `telegram_intake_flush` (ID 4) | 1 min | Safety flush for open intake buffers |
+| `q2_success_cleanup` (ID 5) | 60 min | Cleanup successful Q2 tasks |
+
+Schedules with IDs 1–4 are managed by `engine/telegram/apps.py`, ID 5 by `apps/ops/apps.py`. Admin edits are overwritten on save via `pre_save` signal.
 
 ## Management commands
 
