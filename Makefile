@@ -54,7 +54,7 @@ lint: ## Run linting tools
 	@echo "Running linting tools..."
 	$(UV) black --check . && \
 	$(UV) isort --check-only . && \
-	$(UV) flake8 . --exclude .venv,htmlcov --max-line-length=88 && \
+	$(UV) flake8 . --exclude .venv,htmlcov,*/migrations/*.py --max-line-length=88 && \
 	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) mypy . && \
 	$(UV) bandit -r -c pyproject.toml .
 

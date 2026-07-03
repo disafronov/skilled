@@ -6,8 +6,8 @@ Skill-driven AI bot runtime — connects Telegram to any OpenAI-compatible LLM v
 
 ```text
 Telegram ──┬── webhook ──> IntakeBuffer ──> Job ──> llm_worker ──> telegram_deliver ──> Telegram
-           │                (flush)
-           └── poll ────────┘
+           │                (flush)               │
+           └── poll ────────┘                      └─ Worker (profile + wrapper)
            (Q2 schedule)
 ```
 
@@ -33,12 +33,12 @@ Skill    — system-level instruction content
 Wrapper  — per-bot wrapper instruction
 Profile  — model + temperature + other LLM parameters
 Provider — API endpoint + auth (OpenAI-compatible)
-Bot           — Telegram endpoint (ties skill + wrapper + profile + token + webhook_secret)
+Bot           — Telegram endpoint / transport identity
+Worker        — Execution configuration for a bot. Currently stores LLM profile and wrapper.
 IntakeBuffer  — mutable pre-job accumulator (one open buffer per bot/chat)
 Job           — finalized execution artifact (immutable after creation)
-```
 
-All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider & Profile), `apps/bots` (Bot), and `apps/jobs` (Job + pipeline).
+All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider & Profile), `apps/bots` (Bot), and `apps/jobs` (Job + Worker + pipeline).
 
 ## Pipeline
 

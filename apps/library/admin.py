@@ -1,8 +1,8 @@
 from django.contrib import admin
 
-from apps.admin_forms import AdminModelForm
-from apps.admin_mixins import CHANGES_FIELDSET
 from apps.library.models import Skill, Wrapper
+from engine.common.admin_forms import AdminModelForm
+from engine.common.admin_mixins import CHANGES_FIELDSET
 
 
 class SkillAdminForm(AdminModelForm):

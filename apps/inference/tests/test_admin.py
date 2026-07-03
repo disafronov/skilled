@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 from django import forms
 from django.contrib.admin.sites import AdminSite
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
 from apps.inference.admin import ProfileAdmin, ProviderAdmin
 from apps.inference.models import Profile, Provider
@@ -181,3 +181,28 @@ class ProfileAdminTests(SimpleTestCase):
             "width: 32rem; max-width: 100%;",
         )
         self.assertNotIn("style", form.fields["response_format"].widget.attrs)
+
+
+class MaskedFieldAdminFormTests(TestCase):
+    """AdminModelForm must never decrypt masked fields to check or preserve values."""
+
+    def test_provider_admin_form_skips_empty_masked_field_for_existing_instance(self):
+        from apps.inference.admin import ProviderAdminForm
+        from apps.inference.models import Provider
+
+        provider = Provider.objects.create(
+            name="p", api_type="openai", base_url="https://x.com", auth_token="t"
+        )
+
+        form = ProviderAdminForm(
+            data={
+                "name": "p",
+                "api_type": "openai",
+                "base_url": "https://x.com",
+                "auth_token": "",
+            },
+            instance=provider,
+        )
+
+        self.assertTrue(form.is_valid())
+        self.assertNotIn("auth_token", form.cleaned_data)
