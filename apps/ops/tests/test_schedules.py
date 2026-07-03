@@ -1,10 +1,15 @@
 import os
 from unittest.mock import patch
 
+from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 from django_q.models import Schedule
 
-from apps.ops.apps import create_schedules, protect_managed_schedule
+from apps.ops.apps import (
+    create_schedules,
+    protect_managed_schedule,
+    protect_managed_schedule_delete,
+)
 
 
 class OpsQ2ScheduleTests(TestCase):
@@ -90,3 +95,25 @@ class OpsQ2ScheduleTests(TestCase):
 
         self.assertEqual(schedule.name, "custom")
         self.assertEqual(schedule.minutes, 10)
+
+    def test_managed_schedule_delete_is_blocked(self):
+        create_schedules(sender=None)
+        schedule = Schedule.objects.get(id=5)
+
+        with self.assertRaises(ProtectedError):
+            schedule.delete()
+
+    def test_unmanaged_schedule_delete_allowed(self):
+        schedule = Schedule.objects.create(
+            id=99,
+            name="custom",
+            func="custom.func",
+            schedule_type=Schedule.MINUTES,
+            minutes=10,
+            repeats=-1,
+        )
+
+        protect_managed_schedule_delete(sender=Schedule, instance=schedule)
+        schedule.delete()
+
+        self.assertFalse(Schedule.objects.filter(id=99).exists())
