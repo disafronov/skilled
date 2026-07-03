@@ -1,9 +1,8 @@
 """Logging filter that masks Telegram bot tokens in log records."""
 
 import logging
-import re
 
-_BOT_TOKEN_RE = re.compile(r"\d+:[A-Za-z0-9_-]{20,}")
+from engine.common.sanitize import _BOT_TOKEN_RE
 
 
 class BotTokenFilter(logging.Filter):
