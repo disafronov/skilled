@@ -1,3 +1,9 @@
+## [1.9.0-rc.2](https://github.com/disafronov/skilled/compare/v1.9.0-rc.1...v1.9.0-rc.2) (2026-07-03)
+
+### Bug Fixes
+
+* update legacy migration to reference llm_worker after app rename ([07147af](https://github.com/disafronov/skilled/commit/07147afe08acb42f3eeac49d4b3c461ad69dc3c4))
+
 ## [1.9.0-rc.1](https://github.com/disafronov/skilled/compare/v1.8.0...v1.9.0-rc.1) (2026-07-03)
 
 ### Features
