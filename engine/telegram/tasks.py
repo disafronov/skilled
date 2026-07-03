@@ -321,7 +321,7 @@ def telegram_deliver(job_pk: int | None = None) -> None:
     job.save(update_fields=["delivery_finished_at", "error", "updated_at"])
 
 
-def flush_intake_buffers() -> None:
+def telegram_flush_intake_buffers() -> None:
     """Flush due intake buffers into Job records.
 
     Safety backstop for the last open group. The primary flush happens
