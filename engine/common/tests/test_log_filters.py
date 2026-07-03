@@ -4,7 +4,7 @@ import logging
 
 from django.test import SimpleTestCase
 
-from engine.log_filters import BotTokenFilter
+from engine.common.log_filters import BotTokenFilter
 
 
 class BotTokenFilterTests(SimpleTestCase):

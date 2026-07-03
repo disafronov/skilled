@@ -137,7 +137,7 @@ LOGGING = {
     "disable_existing_loggers": False,
     "filters": {
         "mask_bot_token": {
-            "()": "engine.log_filters.BotTokenFilter",
+            "()": "engine.common.log_filters.BotTokenFilter",
         },
     },
     "formatters": {
