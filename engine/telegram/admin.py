@@ -199,7 +199,7 @@ class JobAdmin(admin.ModelAdmin):
             updated_at=timezone.now(),
         )
         for pk in pks:
-            async_task("engine.processing.proxy.worker", pk)
+            async_task("engine.proxy.worker", pk)
         self.message_user(
             request,
             f"Retrying {count} job(s) for LLM processing.",

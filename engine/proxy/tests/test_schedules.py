@@ -11,15 +11,15 @@ from engine.common.schedules import (
     make_restore_handler,
     make_sync_handler,
 )
-from engine.processing.apps import MANAGED_SCHEDULES
+from engine.proxy.apps import MANAGED_SCHEDULES
 
 _SYNC = make_sync_handler(MANAGED_SCHEDULES)
 _RESTORE = make_restore_handler(MANAGED_SCHEDULES)
 _RECREATE = make_recreate_handler(MANAGED_SCHEDULES)
 
 
-class ProcessingQ2ScheduleTests(TestCase):
-    """Test the processing schedule configuration."""
+class ProxyQ2ScheduleTests(TestCase):
+    """Test the processing schedule configuration from engine.proxy."""
 
     def test_default_schedule_is_hardcoded_with_fixed_id(self):
         _SYNC(sender=None)
@@ -27,7 +27,7 @@ class ProcessingQ2ScheduleTests(TestCase):
         schedule = Schedule.objects.get(id=4)
 
         self.assertEqual(schedule.name, "processing")
-        self.assertEqual(schedule.func, "engine.processing.proxy.worker")
+        self.assertEqual(schedule.func, "engine.proxy.worker")
         self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
         self.assertEqual(schedule.minutes, 1)
         self.assertIsNone(schedule.cron)
@@ -46,7 +46,7 @@ class ProcessingQ2ScheduleTests(TestCase):
 
         schedule.refresh_from_db()
         self.assertEqual(schedule.name, "processing")
-        self.assertEqual(schedule.func, "engine.processing.proxy.worker")
+        self.assertEqual(schedule.func, "engine.proxy.worker")
         self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
         self.assertEqual(schedule.minutes, 1)
         self.assertIsNone(schedule.cron)
