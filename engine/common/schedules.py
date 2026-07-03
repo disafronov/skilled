@@ -1,7 +1,6 @@
 """Shared utilities for django-q2 schedule lifecycle management.
 
-Apps that own managed schedules (engine.telegram, engine.processing,
-apps.ops) use these factory functions to wire up
+Apps that own managed schedules use these factory functions to wire up
 pre_save/post_delete/post_migrate handlers without duplicating the core
 logic.
 """
