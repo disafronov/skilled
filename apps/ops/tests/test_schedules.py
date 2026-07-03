@@ -3,20 +3,19 @@
 import os
 from unittest.mock import patch
 
-from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 from django_q.models import Schedule
 
 from apps.ops.apps import MANAGED_SCHEDULES
 from engine.common.schedules import (
-    make_deny_delete_handler,
+    make_recreate_handler,
     make_restore_handler,
     make_sync_handler,
 )
 
 _SYNC = make_sync_handler(MANAGED_SCHEDULES)
 _RESTORE = make_restore_handler(MANAGED_SCHEDULES)
-_DENY_DELETE = make_deny_delete_handler(MANAGED_SCHEDULES)
+_RECREATE = make_recreate_handler(MANAGED_SCHEDULES)
 
 
 class OpsQ2ScheduleTests(TestCase):
@@ -103,14 +102,16 @@ class OpsQ2ScheduleTests(TestCase):
         self.assertEqual(schedule.name, "custom")
         self.assertEqual(schedule.minutes, 10)
 
-    def test_managed_schedule_delete_is_blocked(self):
+    def test_managed_schedule_is_recreated_on_delete(self):
         _SYNC(sender=None)
         schedule = Schedule.objects.get(id=5)
+        pk = schedule.pk
+        schedule.delete()
+        _RECREATE(Schedule, Schedule(pk=pk))
 
-        with self.assertRaises(ProtectedError):
-            schedule.delete()
+        self.assertTrue(Schedule.objects.filter(id=pk).exists())
 
-    def test_unmanaged_schedule_delete_allowed(self):
+    def test_unmanaged_schedule_delete_is_ignored_by_recreate(self):
         schedule = Schedule.objects.create(
             id=99,
             name="custom",
@@ -119,8 +120,7 @@ class OpsQ2ScheduleTests(TestCase):
             minutes=10,
             repeats=-1,
         )
-
-        _DENY_DELETE(Schedule, schedule)
         schedule.delete()
+        _RECREATE(Schedule, Schedule(pk=99))
 
         self.assertFalse(Schedule.objects.filter(id=99).exists())
