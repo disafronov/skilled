@@ -368,7 +368,7 @@ class JobAdminTests(TestCase):
         self.assertIsNone(job.error)
         self.assertIsNone(job.delivery_started_at)
         self.assertIsNone(job.delivery_finished_at)
-        mock_async.assert_called_once_with("engine.processing.proxy.worker", job.pk)
+        mock_async.assert_called_once_with("engine.proxy.worker", job.pk)
 
     @patch("engine.telegram.admin.async_task")
     def test_retry_delivery_jobs_resets_and_requeues(self, mock_async):
