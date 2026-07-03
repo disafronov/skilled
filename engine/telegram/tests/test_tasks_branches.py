@@ -551,9 +551,9 @@ class IntakeFlushTests(TestCase):
             last_received_at=old,
         )
 
-        from engine.telegram.tasks import flush_intake_buffers
+        from engine.telegram.tasks import telegram_flush_intake_buffers
 
-        flush_intake_buffers()
+        telegram_flush_intake_buffers()
 
         buffer.refresh_from_db()
         self.assertIsNotNone(buffer.flushed_at)
@@ -573,9 +573,9 @@ class IntakeFlushTests(TestCase):
             last_received_at=now,
         )
 
-        from engine.telegram.tasks import flush_intake_buffers
+        from engine.telegram.tasks import telegram_flush_intake_buffers
 
-        flush_intake_buffers()
+        telegram_flush_intake_buffers()
 
         self.assertFalse(Job.objects.exists())
         self.assertEqual(
@@ -593,9 +593,9 @@ class IntakeFlushTests(TestCase):
             flushed_at=timezone.now(),
         )
 
-        from engine.telegram.tasks import flush_intake_buffers
+        from engine.telegram.tasks import telegram_flush_intake_buffers
 
-        flush_intake_buffers()
+        telegram_flush_intake_buffers()
 
         self.assertFalse(Job.objects.exists())
         buffer.refresh_from_db()
@@ -611,12 +611,12 @@ class IntakeFlushTests(TestCase):
             last_received_at=old,
         )
 
-        from engine.telegram.tasks import flush_intake_buffers
+        from engine.telegram.tasks import telegram_flush_intake_buffers
 
         with patch.object(type(IntakeBuffer.objects), "select_for_update") as mock_sfu:
             mock_qs = MagicMock()
             mock_sfu.return_value = mock_qs
             mock_qs.filter.return_value.first.return_value = None
-            flush_intake_buffers()
+            telegram_flush_intake_buffers()
 
         self.assertFalse(Job.objects.exists())

@@ -5,7 +5,7 @@ Skill-driven AI bot runtime — connects Telegram to any OpenAI-compatible LLM v
 ## Architecture
 
 ```text
-Telegram ──┬── webhook ──> IntakeBuffer ──> Job ──> llm_worker ──> telegram_deliver ──> Telegram
+Telegram ──┬── webhook ──> IntakeBuffer ──> Job ──> telegram_llm ──> telegram_deliver ──> Telegram
            │                (flush)               │
            └── poll ────────┘                      └─ Worker (profile + wrapper)
            (Q2 schedule)
@@ -16,12 +16,12 @@ Telegram ──┬── webhook ──> IntakeBuffer ──> Job ──> llm_wo
 - **Webhook** (primary) — Telegram pushes updates to `/webhook/`. Inbound auth uses `X-Telegram-Bot-Api-Secret-Token` header matched against the bot's `webhook_secret`. Zero polling latency.
 - **Polling** (fallback) — scheduled Q2 task `telegram_ingest` periodically fetches updates via `getUpdates`. Webhook auto-registers, self-heals on errors, and falls back to polling with a configurable cooldown.
 
-Both paths accumulate messages into an **IntakeBuffer**, one per bot/chat. Messages are grouped by Telegram `message.date` timestamp — consecutive messages within the debounce window merge into one buffer. A message beyond the window triggers an immediate flush into a `Job`. A scheduled safety flush (`intake_flush`) catches any leftover open buffer. A Django `post_save` signal schedules downstream tasks via `transaction.on_commit`:
+Both paths accumulate messages into an **IntakeBuffer**, one per bot/chat. Messages are grouped by Telegram `message.date` timestamp — consecutive messages within the debounce window merge into one buffer. A message beyond the window triggers an immediate flush into a `Job`. A scheduled safety flush (`telegram_intake_flush`) catches any leftover open buffer. A Django `post_save` signal schedules downstream tasks via `transaction.on_commit`:
 
 | Signal trigger | Enqueued task |
 | -------------- | -------------- |
 | Job created | `telegram_ack` — confirm receipt to user |
-| Job created | `llm_worker` — call the LLM |
+| Job created | `telegram_llm` — call the LLM |
 | `llm_finished_at` set | `telegram_deliver` — send response to user |
 
 Scheduled Q2 tasks run the same workers as backup (1-minute interval), giving the system a hybrid push+pull resilience model.
@@ -43,9 +43,9 @@ All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provi
 ## Pipeline
 
 1. **Intake** — `telegram_ingest` or webhook view accumulates message into `IntakeBuffer`, groups by Telegram `message.date`
-2. **Flush** — immediate flush on group boundary, or `intake_flush` (scheduled Q2) as safety backstop
+2. **Flush** — immediate flush on group boundary, or `telegram_intake_flush` (scheduled Q2) as safety backstop
 3. **Ack** — `telegram_ack` replies "Added to the processing queue"
-4. **LLM** — `llm_worker` calls the configured OpenAI-compatible API
+4. **LLM** — `telegram_llm` calls the configured OpenAI-compatible API
 5. **Deliver** — `telegram_deliver` sends the response (text or file) to the user
 
 ## Security

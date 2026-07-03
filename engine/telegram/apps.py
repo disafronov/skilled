@@ -16,7 +16,7 @@ MANAGED_SCHEDULES = (
     },
     {
         "id": 2,
-        "name": "llm_worker",
+        "name": "telegram_llm",
         "func": "engine.workers.proxy.worker",
         "minutes_env": "Q2_LLM_WORKER_MINUTES",
         "default_minutes": 1,
@@ -37,8 +37,8 @@ MANAGED_SCHEDULES = (
     },
     {
         "id": 5,
-        "name": "intake_flush",
-        "func": "engine.telegram.tasks.flush_intake_buffers",
+        "name": "telegram_intake_flush",
+        "func": "engine.telegram.tasks.telegram_flush_intake_buffers",
         "minutes_env": "Q2_INTAKE_FLUSH_MINUTES",
         "default_minutes": 1,
     },
