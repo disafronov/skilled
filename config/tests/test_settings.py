@@ -37,6 +37,7 @@ def test_secure_ssl_redirect_exempts_health_paths(monkeypatch) -> None:
 
 def test_secure_flags_can_be_disabled_with_false_strings(monkeypatch) -> None:
     monkeypatch.setenv("DJANGO_DEBUG", "0")
+    monkeypatch.setenv("DJANGO_SECRET_KEY", "strong-test-key-for-test")
     monkeypatch.setenv("DJANGO_SECURE_SSL_REDIRECT", "false")
     monkeypatch.setenv("DJANGO_SESSION_COOKIE_SECURE", "0")
     monkeypatch.setenv("DJANGO_CSRF_COOKIE_SECURE", "off")

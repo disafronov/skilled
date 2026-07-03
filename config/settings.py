@@ -40,9 +40,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "apps.library",
     "apps.inference",
-    "apps.bots",
-    "apps.jobs",
-    "apps.health",
+    "engine.telegram",
+    "apps.llm",
     "django_q",
 ]
 
@@ -110,6 +109,9 @@ Q_CLUSTER = {
     "catch_up": False,
 }
 
+# Worker function path for Django Q2 tasks
+Q2_WORKER_FUNC = "apps.llm.tasks.worker"
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
@@ -131,7 +133,7 @@ LOGGING = {
     "disable_existing_loggers": False,
     "filters": {
         "mask_bot_token": {
-            "()": "apps.log_filters.BotTokenFilter",
+            "()": "engine.log_filters.BotTokenFilter",
         },
     },
     "formatters": {

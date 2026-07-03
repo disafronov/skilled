@@ -2,7 +2,7 @@
 
 from django.db import migrations
 
-import apps.common.fields
+import engine.common.fields
 
 
 class Migration(migrations.Migration):
@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="provider",
             name="auth_token",
-            field=apps.common.fields.EncryptedCharField(max_length=8192),
+            field=engine.common.fields.EncryptedCharField(max_length=8192),
         ),
     ]

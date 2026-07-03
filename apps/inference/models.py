@@ -1,6 +1,6 @@
 from django.db import models
 
-from apps.common.fields import EncryptedCharField
+from engine.common.fields import EncryptedCharField
 
 
 class ApiType(models.TextChoices):

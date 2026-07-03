@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("library", "0003_populate_wrapper_skill"),
+        ("library", "0002_wrapper_skill_alter_wrapper_name_and_more"),
     ]
 
     operations = [
