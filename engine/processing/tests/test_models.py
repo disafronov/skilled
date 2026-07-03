@@ -18,7 +18,7 @@ class WorkerPollSelectRelatedTests(TestCase):
             raw_input="hi",
         )
 
-        Worker._subclass_created = False
+        Worker._testing_reset_subclass()
 
         class Sub(Worker):
             poll_filters = {"bot__name": self.bot.name}
@@ -28,7 +28,6 @@ class WorkerPollSelectRelatedTests(TestCase):
                 return "ok", None
 
         Sub().run()
-        Worker._subclass_created = True
 
         self.assertTrue(
             Job.objects.filter(processing_finished_at__isnull=False).exists()
@@ -41,7 +40,7 @@ class WorkerPollSelectRelatedTests(TestCase):
             raw_input="hi",
         )
 
-        Worker._subclass_created = False
+        Worker._testing_reset_subclass()
 
         class Sub(Worker):
             poll_select_related = ("bot",)
@@ -50,7 +49,6 @@ class WorkerPollSelectRelatedTests(TestCase):
                 return "ok", None
 
         Sub().run()
-        Worker._subclass_created = True
 
         self.assertTrue(
             Job.objects.filter(processing_finished_at__isnull=False).exists()
@@ -59,7 +57,7 @@ class WorkerPollSelectRelatedTests(TestCase):
 
 class WorkerInitSubclassTests(TestCase):
     def test_cannot_subclass_worker_twice(self):
-        Worker._subclass_created = False
+        Worker._testing_reset_subclass()
 
         class _First(Worker):
             def process(self, job: Job) -> tuple[str | None, str | None]:
@@ -71,8 +69,6 @@ class WorkerInitSubclassTests(TestCase):
                 def process(self, job: Job) -> tuple[str | None, str | None]:
                     return "ok", None
 
-        Worker._subclass_created = True
-
 
 class WorkerExtendedTests(TestCase):
     """Extended coverage for pk mode, error handling, and edge cases."""
@@ -82,17 +78,16 @@ class WorkerExtendedTests(TestCase):
         cls.bot = Bot.objects.create(name="ext-test-bot", telegram_api_token="tok")
 
     def test_run_returns_when_no_job_exists(self):
-        Worker._subclass_created = False
+        Worker._testing_reset_subclass()
 
         class _Sub(Worker):
             def process(self, job):
                 return "ok", None
 
         _Sub().run()
-        Worker._subclass_created = True
 
     def test_run_by_pk_processes_job(self):
-        Worker._subclass_created = False
+        Worker._testing_reset_subclass()
 
         class _Sub(Worker):
             def process(self, job):
@@ -102,10 +97,9 @@ class WorkerExtendedTests(TestCase):
         _Sub().run(job_pk=job.pk)
         job.refresh_from_db()
         self.assertEqual(job.raw_output, "result")
-        Worker._subclass_created = True
 
     def test_run_by_pk_missing_job_returns(self):
-        Worker._subclass_created = False
+        Worker._testing_reset_subclass()
 
         class _Sub(Worker):
             def process(self, job):
@@ -113,10 +107,9 @@ class WorkerExtendedTests(TestCase):
 
         _Sub().run(job_pk=99999)
         self.assertFalse(Job.objects.exists())
-        Worker._subclass_created = True
 
     def test_run_by_pk_skips_already_processed_job(self):
-        Worker._subclass_created = False
+        Worker._testing_reset_subclass()
 
         class _Sub(Worker):
             def process(self, job):
@@ -130,10 +123,9 @@ class WorkerExtendedTests(TestCase):
         _Sub().run(job_pk=job.pk)
         job.refresh_from_db()
         self.assertEqual(job.raw_output, "existing")
-        Worker._subclass_created = True
 
     def test_save_result_with_error(self):
-        Worker._subclass_created = False
+        Worker._testing_reset_subclass()
 
         class _Sub(Worker):
             def process(self, job):
@@ -144,10 +136,9 @@ class WorkerExtendedTests(TestCase):
         job.refresh_from_db()
         self.assertEqual(job.error, "handled error")
         self.assertIsNotNone(job.processing_finished_at)
-        Worker._subclass_created = True
 
     def test_run_raises_and_saves_error_when_process_fails(self):
-        Worker._subclass_created = False
+        Worker._testing_reset_subclass()
 
         class _Sub(Worker):
             def process(self, job):
@@ -159,10 +150,9 @@ class WorkerExtendedTests(TestCase):
         job.refresh_from_db()
         self.assertIsNotNone(job.error)
         self.assertIsNotNone(job.processing_finished_at)
-        Worker._subclass_created = True
 
     def test_poll_without_select_related(self):
-        Worker._subclass_created = False
+        Worker._testing_reset_subclass()
 
         class _Sub(Worker):
             poll_filters = {"bot__name": self.bot.name}
@@ -175,4 +165,3 @@ class WorkerExtendedTests(TestCase):
         self.assertTrue(
             Job.objects.filter(processing_finished_at__isnull=False).exists()
         )
-        Worker._subclass_created = True

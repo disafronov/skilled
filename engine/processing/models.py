@@ -36,7 +36,7 @@ class Worker(abc.ABC):
     **Only one subclass is allowed.**  A second attempt raises ``TypeError``.
     """
 
-    _subclass_created = False
+    _subclass_registered: type | None = None
     _stale_default_seconds: int = 3600
 
     poll_filters: dict = {}
@@ -45,12 +45,23 @@ class Worker(abc.ABC):
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
-        if Worker._subclass_created:
+        if Worker._subclass_registered is not None:
+            registered = Worker._subclass_registered.__name__
             raise TypeError(
                 f"Cannot subclass Worker more than once — "
-                f"``{cls.__name__}`` would be the second subclass"
+                f"``{cls.__name__}`` would be the second subclass "
+                f"(``{registered}`` is already registered)"
             )
-        Worker._subclass_created = True
+        Worker._subclass_registered = cls
+
+    @classmethod
+    def _testing_reset_subclass(cls) -> None:
+        """Temporarily release the singleton for test subclasses.
+
+        Only intended for tests that need to create a temporary Worker
+        subclass without triggering the singleton guard.
+        """
+        cls._subclass_registered = None
 
     def run(self, job_pk: int | None = None) -> None:
         """Main entry point — select a Job, run process(), save result."""

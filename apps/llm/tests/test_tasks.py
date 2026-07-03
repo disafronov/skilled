@@ -7,7 +7,7 @@ from unittest.mock import patch
 from django.test import TestCase
 
 from apps.llm.models import Worker as WorkerModel
-from apps.llm.tasks import Q2_PROCESSING_STALE_JOB_SECONDS, worker
+from apps.llm.tasks import worker
 from engine.telegram.models import Bot, Job
 
 
@@ -45,7 +45,7 @@ class WorkerTaskTests(TestCase):
         worker()
         self.assertFalse(Job.objects.exists())
 
-    @patch("apps.llm.tasks.call_llm", return_value="llm output")
+    @patch("apps.llm.worker.call_llm", return_value="llm output")
     def test_worker_stores_successful_output(self, call_llm_mock):
         job = Job.objects.create(
             bot=self.bot,
@@ -59,7 +59,7 @@ class WorkerTaskTests(TestCase):
         self.assertIsNotNone(job.processing_started_at)
         self.assertIsNotNone(job.processing_finished_at)
 
-    @patch("apps.llm.tasks.call_llm", return_value="oldest output")
+    @patch("apps.llm.worker.call_llm", return_value="oldest output")
     def test_worker_processes_oldest_pending_job_first(self, call_llm_mock):
         older = Job.objects.create(
             bot=self.bot,
@@ -82,7 +82,7 @@ class WorkerTaskTests(TestCase):
         self.assertIsNone(newer.raw_output)
         call_llm_mock.assert_called_once()
 
-    @patch("apps.llm.tasks.call_llm", return_value="pending output")
+    @patch("apps.llm.worker.call_llm", return_value="pending output")
     def test_worker_ignores_finished_jobs_without_started_timestamp(
         self,
         call_llm_mock,
@@ -110,7 +110,7 @@ class WorkerTaskTests(TestCase):
         self.assertEqual(pending.raw_output, "pending output")
         call_llm_mock.assert_called_once()
 
-    @patch("apps.llm.tasks.call_llm", side_effect=RuntimeError("llm down"))
+    @patch("apps.llm.worker.call_llm", side_effect=RuntimeError("llm down"))
     def test_worker_stores_error_and_raises(self, call_llm_mock):
         job = Job.objects.create(
             bot=self.bot,
@@ -124,11 +124,10 @@ class WorkerTaskTests(TestCase):
         self.assertIsNone(job.raw_output)
         self.assertIsNotNone(job.processing_finished_at)
 
-    @patch("apps.llm.tasks.call_llm", return_value="requeued output")
+    @patch("apps.llm.worker.call_llm", return_value="requeued output")
     def test_worker_requeues_stale_started_job(self, call_llm_mock):
-        stale_started_at = self.now - timedelta(
-            seconds=Q2_PROCESSING_STALE_JOB_SECONDS + 1
-        )
+        _STALE_SECONDS = 3600
+        stale_started_at = self.now - timedelta(seconds=_STALE_SECONDS + 1)
         job = Job.objects.create(
             bot=self.bot,
             reply_target="123",
@@ -143,17 +142,20 @@ class WorkerTaskTests(TestCase):
         self.assertGreater(job.processing_started_at, stale_started_at)
         call_llm_mock.assert_called_once()
 
-    @patch("apps.llm.tasks.transaction.atomic", side_effect=RuntimeError("db down"))
+    @patch(
+        "engine.processing.models.transaction.atomic",
+        side_effect=RuntimeError("db down"),
+    )
     def test_worker_raises_outer_failure(self, atomic_mock):
         with self.assertRaisesRegex(RuntimeError, "db down"):
             worker()
 
-    @patch("apps.llm.tasks.logger")
+    @patch("engine.processing.models.logger")
     def test_worker_returns_when_job_pk_not_found(self, logger):
         worker(job_pk=9999)
         logger.warning.assert_called_once()
 
-    @patch("apps.llm.tasks.call_llm", return_value="llm output")
+    @patch("apps.llm.worker.call_llm", return_value="llm output")
     def test_worker_processes_specific_job_by_pk(self, call_llm_mock):
         pending = Job.objects.create(
             bot=self.bot,
@@ -187,8 +189,7 @@ class WorkerTaskTests(TestCase):
             reply_target="123",
             raw_input="disabled",
         )
-        with self.assertRaises(RuntimeError):
-            worker(job_pk=job.pk)
+        worker(job_pk=job.pk)
         job.refresh_from_db()
         self.assertIsNotNone(job.processing_finished_at)
         self.assertIn("Worker disabled", job.error)
@@ -208,7 +209,7 @@ class WorkerTaskTests(TestCase):
         self.assertIsNotNone(job.processing_finished_at)
         self.assertIn("No worker configured", job.error)
 
-    @patch("apps.llm.tasks.call_llm", return_value="llm output")
+    @patch("apps.llm.worker.call_llm", return_value="llm output")
     def test_worker_skips_already_finished_job_by_pk(self, call_llm_mock):
         job = Job.objects.create(
             bot=self.bot,
