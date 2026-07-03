@@ -10,8 +10,8 @@ from django.utils import timezone
 
 from apps.llm.models import Worker as WorkerModel
 from apps.workers.llm import call_llm
+from engine.telegram.client import sanitize_error
 from engine.telegram.models import Job
-from engine.workers.telegram import sanitize_error
 
 logger = logging.getLogger(__name__)
 Q2_PROCESSING_STALE_JOB_SECONDS = 3600
