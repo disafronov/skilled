@@ -8,7 +8,7 @@ from django.test import TestCase
 
 from apps.inference.models import Profile, Provider
 from apps.library.models import Skill, Wrapper
-from apps.workers.llm import (
+from apps.llm.client import (
     _get_openai_client,
     build_request_body,
     call_llm,
@@ -41,8 +41,8 @@ class LlmCallTests(TestCase):
             response_format={"type": "json_object"},
         )
 
-    @patch("apps.workers.llm.get_global_system_prompt", return_value="policy")
-    @patch("apps.workers.llm.OpenAI")
+    @patch("apps.llm.client.get_global_system_prompt", return_value="policy")
+    @patch("apps.llm.client.OpenAI")
     def test_call_llm_returns_first_choice_content(self, openai, get_prompt):
         client = openai.return_value
         client.chat.completions.create.return_value = SimpleNamespace(
@@ -69,8 +69,8 @@ class LlmCallTests(TestCase):
             {"type": "json_object"},
         )
 
-    @patch("apps.workers.llm.get_global_system_prompt", return_value="policy")
-    @patch("apps.workers.llm.OpenAI")
+    @patch("apps.llm.client.get_global_system_prompt", return_value="policy")
+    @patch("apps.llm.client.OpenAI")
     def test_call_llm_raises_when_content_is_none(self, openai, get_prompt):
         client = openai.return_value
         client.chat.completions.create.return_value = SimpleNamespace(
@@ -94,7 +94,7 @@ class LlmCallTests(TestCase):
             path.write_text("Relative policy\n", encoding="utf-8")
 
             with patch.dict("os.environ", {"POLICY_FILE": "policy.md"}):
-                with patch("apps.workers.llm.settings.BASE_DIR", base_dir):
+                with patch("apps.llm.client.settings.BASE_DIR", base_dir):
                     self.assertEqual(get_global_system_prompt(), "Relative policy")
 
     def test_global_system_prompt_returns_empty_on_directory_as_policy_file(self):
@@ -102,14 +102,14 @@ class LlmCallTests(TestCase):
             base_dir = Path(tmpdir)
             dir_path = base_dir / "policy.md"
             dir_path.mkdir()
-            with patch("apps.workers.llm.settings.BASE_DIR", base_dir):
+            with patch("apps.llm.client.settings.BASE_DIR", base_dir):
                 self.assertEqual(get_global_system_prompt(), "")
 
     def test_global_system_prompt_returns_empty_on_non_utf8_file(self):
         with TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "policy.md"
             path.write_bytes(b"\xff\xfe")
-            with patch("apps.workers.llm.settings.BASE_DIR", Path(tmpdir)):
+            with patch("apps.llm.client.settings.BASE_DIR", Path(tmpdir)):
                 self.assertEqual(get_global_system_prompt(), "")
 
 
@@ -193,7 +193,7 @@ class OpenAiRequestAssemblyTests(TestCase):
             path = Path(tmpdir) / "missing.md"
 
             with patch.dict(os.environ, {"POLICY_FILE": str(path)}):
-                with self.assertLogs("apps.workers.llm", level="WARNING") as logs:
+                with self.assertLogs("apps.llm.client", level="WARNING") as logs:
                     self.assertEqual(get_global_system_prompt(), "")
                     self.assertIn("without global policy", logs.output[0])
 

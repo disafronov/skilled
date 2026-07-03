@@ -2,8 +2,8 @@
 
 import logging
 
+from apps.llm.client import call_llm
 from apps.llm.models import Worker as WorkerModel
-from apps.workers.llm import call_llm
 from engine.processing import Worker as BaseWorker
 from engine.telegram.models import Job
 
