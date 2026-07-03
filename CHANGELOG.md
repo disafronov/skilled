@@ -1,3 +1,9 @@
+## [1.9.0-rc.3](https://github.com/disafronov/skilled/compare/v1.9.0-rc.2...v1.9.0-rc.3) (2026-07-03)
+
+### Bug Fixes
+
+* guard legacy migration against missing source tables ([3d94d61](https://github.com/disafronov/skilled/commit/3d94d61918fbea9000918448271e29d7f0a911ba))
+
 ## [1.9.0-rc.2](https://github.com/disafronov/skilled/compare/v1.9.0-rc.1...v1.9.0-rc.2) (2026-07-03)
 
 ### Bug Fixes
