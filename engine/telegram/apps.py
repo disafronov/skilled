@@ -4,7 +4,8 @@ from typing import Any
 from django.apps import AppConfig
 from django.core.management.color import no_style
 from django.db import connection
-from django.db.models.signals import post_migrate, pre_save
+from django.db.models.deletion import ProtectedError
+from django.db.models.signals import post_migrate, pre_delete, pre_save
 
 MANAGED_SCHEDULES = (
     {
@@ -79,6 +80,22 @@ def protect_managed_schedule(
         setattr(instance, field, value)
 
 
+def protect_managed_schedule_delete(
+    sender: Any,
+    instance: Any,
+    **kwargs: Any,
+) -> None:
+    """Prevent deletion of managed django-q schedules.
+
+    Managed schedule IDs (1–4 in engine/telegram) are defined in this file.
+    This pre_delete hook prevents accidental removal that would break the pipeline.
+    """
+    if instance.pk in {schedule["id"] for schedule in MANAGED_SCHEDULES}:
+        raise ProtectedError(
+            f"Cannot delete managed schedule id={instance.pk}", instance
+        )
+
+
 def create_schedules(sender: Any, **kwargs: Any) -> None:
     """Ensure core pipeline schedules exist in django-q2."""
     from django_q.models import Schedule
@@ -116,4 +133,9 @@ class TelegramConfig(AppConfig):
             protect_managed_schedule,
             sender=Schedule,
             dispatch_uid="telegram.protect_managed_q2_schedules",
+        )
+        pre_delete.connect(
+            protect_managed_schedule_delete,
+            sender=Schedule,
+            dispatch_uid="telegram.protect_managed_q2_schedule_delete",
         )
