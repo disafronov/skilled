@@ -1,13 +1,10 @@
 import os
-from datetime import timedelta
 from unittest.mock import patch
 
 from django.test import TestCase
-from django.utils import timezone
-from django_q.models import Schedule, Task
+from django_q.models import Schedule
 
 from engine.telegram.apps import create_schedules, protect_managed_schedule
-from engine.telegram.tasks import cleanup_q2_successes
 
 
 class Q2ScheduleTests(TestCase):
@@ -18,7 +15,7 @@ class Q2ScheduleTests(TestCase):
 
         schedules = {
             schedule.id: schedule
-            for schedule in Schedule.objects.filter(id__in=[1, 2, 3, 4])
+            for schedule in Schedule.objects.filter(id__in=[1, 2, 3])
         }
 
         self.assertEqual(schedules[1].name, "telegram_ingest")
@@ -42,15 +39,6 @@ class Q2ScheduleTests(TestCase):
         self.assertIsNone(schedules[3].cron)
         self.assertEqual(schedules[3].repeats, -1)
 
-        self.assertEqual(schedules[4].name, "q2_success_cleanup")
-        self.assertEqual(
-            schedules[4].func, "engine.telegram.tasks.cleanup_q2_successes"
-        )
-        self.assertEqual(schedules[4].schedule_type, Schedule.MINUTES)
-        self.assertEqual(schedules[4].minutes, 60)
-        self.assertIsNone(schedules[4].cron)
-        self.assertEqual(schedules[4].repeats, -1)
-
     def test_managed_schedule_edits_are_overwritten_on_save(self):
         create_schedules(sender=None)
         schedule = Schedule.objects.get(id=1)
@@ -73,10 +61,7 @@ class Q2ScheduleTests(TestCase):
     def test_managed_schedule_uses_env_minutes(self):
         with patch.dict(
             os.environ,
-            {
-                "Q2_TELEGRAM_INGEST_MINUTES": "5",
-                "Q2_SUCCESS_CLEANUP_MINUTES": "30",
-            },
+            {"Q2_TELEGRAM_INGEST_MINUTES": "5"},
         ):
             create_schedules(sender=None)
 
@@ -84,10 +69,6 @@ class Q2ScheduleTests(TestCase):
             self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
             self.assertEqual(schedule.minutes, 5)
             self.assertIsNone(schedule.cron)
-            cleanup_schedule = Schedule.objects.get(id=4)
-            self.assertEqual(cleanup_schedule.schedule_type, Schedule.MINUTES)
-            self.assertEqual(cleanup_schedule.minutes, 30)
-            self.assertIsNone(cleanup_schedule.cron)
 
             schedule.minutes = 1
             schedule.save()
@@ -126,44 +107,3 @@ class Q2ScheduleTests(TestCase):
 
         self.assertEqual(schedule.name, "custom")
         self.assertEqual(schedule.minutes, 10)
-
-
-class Q2SuccessCleanupTests(TestCase):
-    """Test django-q2 successful task retention cleanup."""
-
-    def test_cleanup_deletes_only_expired_success_tasks(self):
-        now = timezone.now()
-        old = now - timedelta(seconds=120)
-        fresh = now - timedelta(seconds=30)
-
-        old_success = Task.objects.create(
-            id="old_success",
-            name="old_success",
-            func="tests.task",
-            started=old,
-            stopped=old,
-            success=True,
-        )
-        fresh_success = Task.objects.create(
-            id="fresh_success",
-            name="fresh_success",
-            func="tests.task",
-            started=fresh,
-            stopped=fresh,
-            success=True,
-        )
-        old_failure = Task.objects.create(
-            id="old_failure",
-            name="old_failure",
-            func="tests.task",
-            started=old,
-            stopped=old,
-            success=False,
-        )
-
-        with patch.dict(os.environ, {"Q2_SUCCESS_TASK_RETENTION_SECONDS": "60"}):
-            cleanup_q2_successes()
-
-        self.assertFalse(Task.objects.filter(id=old_success.id).exists())
-        self.assertTrue(Task.objects.filter(id=fresh_success.id).exists())
-        self.assertTrue(Task.objects.filter(id=old_failure.id).exists())
