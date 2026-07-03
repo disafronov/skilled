@@ -69,7 +69,7 @@ strict_equality = true
 django_settings_module = "config.settings"
 
 [tool.bandit]
-exclude_dirs = [ ".venv", "htmlcov", "tests" ]
+exclude_dirs = [ ".venv", "htmlcov", "tests", "*/migrations/*" ]
 
 [tool.coverage.run]
 source = [ "." ]
