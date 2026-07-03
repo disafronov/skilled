@@ -16,9 +16,9 @@ MANAGED_SCHEDULES = (
     },
     {
         "id": 2,
-        "name": "telegram_llm",
+        "name": "processing",
         "func": "engine.workers.proxy.worker",
-        "minutes_env": "Q2_LLM_WORKER_MINUTES",
+        "minutes_env": "Q2_PROCESSING_MINUTES",
         "default_minutes": 1,
     },
     {
