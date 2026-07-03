@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "apps.inference",
     "engine.telegram",
     "apps.llm",
+    "apps.ops",
     "django_q",
 ]
 
@@ -111,6 +112,9 @@ Q_CLUSTER = {
 
 # Worker function path for Django Q2 tasks
 Q2_WORKER_FUNC = "apps.llm.tasks.worker"
+
+# django-q2 success task retention (seconds, default 24h)
+Q2_SUCCESS_RETENTION_SECONDS = 86400
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
