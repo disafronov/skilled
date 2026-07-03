@@ -1,4 +1,4 @@
-"""AppConfig for engine.workers — pipeline schedule (ID 4)."""
+"""AppConfig for engine.processing — pipeline schedule (ID 4)."""
 
 from django.apps import AppConfig
 from django.db.models.signals import post_migrate, pre_delete, pre_save
@@ -13,17 +13,17 @@ MANAGED_SCHEDULES = (
     {
         "id": 4,
         "name": "processing",
-        "func": "engine.workers.proxy.worker",
+        "func": "engine.processing.proxy.worker",
         "minutes_env": "Q2_PROCESSING_MINUTES",
         "default_minutes": 1,
     },
 )
 
 
-class WorkersConfig(AppConfig):
+class ProcessingConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "engine.workers"
-    label = "workers"
+    name = "engine.processing"
+    label = "processing"
 
     def ready(self) -> None:
         # post_migrate (not ready()) avoids DB queries on every manage.py command
@@ -34,10 +34,10 @@ class WorkersConfig(AppConfig):
         pre_save.connect(
             make_restore_handler(MANAGED_SCHEDULES),
             sender=Schedule,
-            dispatch_uid="workers.protect_managed_q2_schedules",
+            dispatch_uid="processing.protect_managed_q2_schedules",
         )
         pre_delete.connect(
             make_deny_delete_handler(MANAGED_SCHEDULES),
             sender=Schedule,
-            dispatch_uid="workers.protect_managed_q2_schedule_delete",
+            dispatch_uid="processing.protect_managed_q2_schedule_delete",
         )

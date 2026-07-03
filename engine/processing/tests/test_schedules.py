@@ -1,4 +1,4 @@
-"""Tests for workers Q2 schedule setup (ID 4)."""
+"""Tests for processing Q2 schedule setup (ID 4)."""
 
 import os
 from unittest.mock import patch
@@ -12,15 +12,15 @@ from engine.common.schedules import (
     make_restore_handler,
     make_sync_handler,
 )
-from engine.workers.apps import MANAGED_SCHEDULES
+from engine.processing.apps import MANAGED_SCHEDULES
 
 _SYNC = make_sync_handler(MANAGED_SCHEDULES)
 _RESTORE = make_restore_handler(MANAGED_SCHEDULES)
 _DENY_DELETE = make_deny_delete_handler(MANAGED_SCHEDULES)
 
 
-class WorkersQ2ScheduleTests(TestCase):
-    """Test the worker schedule configuration."""
+class ProcessingQ2ScheduleTests(TestCase):
+    """Test the processing schedule configuration."""
 
     def test_default_schedule_is_hardcoded_with_fixed_id(self):
         _SYNC(sender=None)
@@ -28,7 +28,7 @@ class WorkersQ2ScheduleTests(TestCase):
         schedule = Schedule.objects.get(id=4)
 
         self.assertEqual(schedule.name, "processing")
-        self.assertEqual(schedule.func, "engine.workers.proxy.worker")
+        self.assertEqual(schedule.func, "engine.processing.proxy.worker")
         self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
         self.assertEqual(schedule.minutes, 1)
         self.assertIsNone(schedule.cron)
@@ -47,7 +47,7 @@ class WorkersQ2ScheduleTests(TestCase):
 
         schedule.refresh_from_db()
         self.assertEqual(schedule.name, "processing")
-        self.assertEqual(schedule.func, "engine.workers.proxy.worker")
+        self.assertEqual(schedule.func, "engine.processing.proxy.worker")
         self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
         self.assertEqual(schedule.minutes, 1)
         self.assertIsNone(schedule.cron)

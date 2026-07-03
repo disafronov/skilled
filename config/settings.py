@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     "apps.library",
     "apps.inference",
     "engine.telegram",
-    "engine.workers",
+    "engine.processing",
     "apps.llm",
     "apps.ops",
     "django_q",
