@@ -1,4 +1,4 @@
-"""AppConfig for engine.telegram — pipeline schedules (IDs 1–4)."""
+"""AppConfig for engine.telegram — pipeline schedules (IDs 1–3)."""
 
 from django.apps import AppConfig
 from django.db.models.signals import post_migrate, pre_delete, pre_save
@@ -19,20 +19,13 @@ MANAGED_SCHEDULES = (
     },
     {
         "id": 2,
-        "name": "processing",
-        "func": "engine.workers.proxy.worker",
-        "minutes_env": "Q2_PROCESSING_MINUTES",
-        "default_minutes": 1,
-    },
-    {
-        "id": 3,
         "name": "telegram_deliver",
         "func": "engine.telegram.tasks.telegram_deliver",
         "minutes_env": "Q2_TELEGRAM_DELIVER_MINUTES",
         "default_minutes": 1,
     },
     {
-        "id": 4,
+        "id": 3,
         "name": "telegram_intake_flush",
         "func": "engine.telegram.tasks.telegram_flush_intake_buffers",
         "minutes_env": "Q2_INTAKE_FLUSH_MINUTES",
