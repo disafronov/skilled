@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from apps.llm.models import Worker as WorkerModel
 from apps.workers.llm import call_llm
-from engine.telegram.client import sanitize_error
+from engine.common.sanitize import sanitize_error
 from engine.telegram.models import Job
 
 logger = logging.getLogger(__name__)

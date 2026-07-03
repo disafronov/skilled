@@ -7,8 +7,6 @@ from typing import Any
 
 import httpx
 
-from engine.log_filters import _BOT_TOKEN_RE
-
 logger = logging.getLogger(__name__)
 
 _BOT_API_BASE = "https://api.telegram.org/bot"
@@ -49,10 +47,6 @@ def _request(method: str, url: str, **kwargs: Any) -> httpx.Response:
         logger.error("Telegram API request failed: %s", method)
         raise RuntimeError("Telegram API request failed") from exc
     return response
-
-
-def sanitize_error(text: str) -> str:
-    return _BOT_TOKEN_RE.sub("***", text)
 
 
 def _raise_for_status(response: httpx.Response) -> None:
