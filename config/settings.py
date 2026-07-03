@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     "apps.library",
     "apps.inference",
     "engine.telegram",
-    "engine.processing",
     "engine.proxy",
     "apps.llm",
     "apps.ops",
