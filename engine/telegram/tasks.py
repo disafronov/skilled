@@ -8,9 +8,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from engine.telegram.intake import accept_telegram_message
-from engine.telegram.models import Bot, IntakeBuffer, Job
-from engine.workers.telegram import (
+from engine.telegram.client import (
     delete_webhook,
     detect_document_format,
     document_format_content_type,
@@ -23,6 +21,8 @@ from engine.workers.telegram import (
     set_message_reaction,
     set_webhook,
 )
+from engine.telegram.intake import accept_telegram_message
+from engine.telegram.models import Bot, IntakeBuffer, Job
 
 logger = logging.getLogger(__name__)
 
