@@ -31,7 +31,9 @@ def job_on_completion(
         transaction.on_commit(
             lambda: async_task("engine.telegram.tasks.telegram_ack", job_pk)
         )
-        transaction.on_commit(lambda: async_task("engine.workers.proxy.worker", job_pk))
+        transaction.on_commit(
+            lambda: async_task("engine.processing.proxy.worker", job_pk)
+        )
         return
 
     if (

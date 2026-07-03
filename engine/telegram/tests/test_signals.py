@@ -23,7 +23,7 @@ class SignalOrchestrationTests(TestCase):
         )
         self.assertEqual(mock_async_task.call_count, 2)
         mock_async_task.assert_any_call("engine.telegram.tasks.telegram_ack", job.pk)
-        mock_async_task.assert_any_call("engine.workers.proxy.worker", job.pk)
+        mock_async_task.assert_any_call("engine.processing.proxy.worker", job.pk)
 
     @patch("engine.telegram.signals.transaction.on_commit", side_effect=lambda fn: fn())
     @patch("engine.telegram.signals.async_task")

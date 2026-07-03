@@ -4,11 +4,11 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
 
-from engine.workers import proxy
+from engine.processing import proxy
 
 
 class ProxyWorkerTest(SimpleTestCase):
-    @override_settings(Q2_WORKER_FUNC="engine.workers.proxy.worker")
+    @override_settings(Q2_WORKER_FUNC="engine.processing.proxy.worker")
     def test_proxy_delegates_to_configured_func(self) -> None:
         called = []
 
@@ -16,7 +16,7 @@ class ProxyWorkerTest(SimpleTestCase):
             called.append(arg)
             return "result"
 
-        with patch("engine.workers.proxy.import_string", return_value=fake):
+        with patch("engine.processing.proxy.import_string", return_value=fake):
             result = proxy.worker("input")
 
         assert called == ["input"]
