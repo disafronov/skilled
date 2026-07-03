@@ -106,6 +106,7 @@ class TelegramConfig(AppConfig):
     label = "telegram"
 
     def ready(self) -> None:
+        # post_migrate (not ready()) avoids DB queries on every manage.py command
         post_migrate.connect(create_schedules, sender=self)
         from django_q.models import Schedule
 
