@@ -1,9 +1,9 @@
 from django import forms
 from django.contrib import admin
 
-from apps.admin_forms import AdminModelForm
-from apps.admin_mixins import CHANGES_FIELDSET
 from apps.inference.models import Profile, Provider
+from engine.common.admin_forms import AdminModelForm
+from engine.common.admin_mixins import CHANGES_FIELDSET
 
 
 class ProviderAdminForm(AdminModelForm):
