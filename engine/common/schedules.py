@@ -1,8 +1,9 @@
 """Shared utilities for django-q2 schedule lifecycle management.
 
-Apps that own managed schedules (engine.telegram, apps.ops) use these
-factory functions to wire up pre_save/pre_delete/post_migrate handlers
-without duplicating the core logic.
+Apps that own managed schedules (engine.telegram, engine.processing,
+apps.ops) use these factory functions to wire up
+pre_save/post_delete/post_migrate handlers without duplicating the core
+logic.
 """
 
 import os
@@ -11,7 +12,6 @@ from typing import Any
 
 from django.core.management.color import no_style
 from django.db import connection
-from django.db.models.deletion import ProtectedError
 
 
 def schedule_defaults(
@@ -55,19 +55,28 @@ def make_restore_handler(
     return _restore
 
 
-def make_deny_delete_handler(
+def make_recreate_handler(
     managed_schedules: tuple[dict[str, Any], ...],
 ) -> Callable[[Any, Any], None]:
-    """Return a pre_delete handler that blocks deletion of managed schedules."""
+    """Return a post_delete handler that recreates managed schedules.
 
-    def _deny_delete(sender: Any, instance: Any, **kwargs: Any) -> None:
-        managed_ids = {s["id"] for s in managed_schedules}
-        if instance.pk in managed_ids:
-            raise ProtectedError(
-                f"Cannot delete managed schedule id={instance.pk}", instance
-            )
+    Post_delete (not pre_delete) allows the deletion to proceed, then
+    immediately recreates the row with the canonical code-defined values.
+    Safer than blocking the delete — no ProtectedError surprises.
+    """
 
-    return _deny_delete
+    def _recreate(sender: Any, instance: Any, **kwargs: Any) -> None:
+        for entry in managed_schedules:
+            if entry["id"] == instance.pk:
+                from django_q.models import Schedule
+
+                Schedule.objects.update_or_create(
+                    id=entry["id"],
+                    defaults=schedule_defaults(entry, Schedule),
+                )
+                break
+
+    return _recreate
 
 
 def make_sync_handler(

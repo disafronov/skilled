@@ -3,12 +3,11 @@
 import os
 from unittest.mock import patch
 
-from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 from django_q.models import Schedule
 
 from engine.common.schedules import (
-    make_deny_delete_handler,
+    make_recreate_handler,
     make_restore_handler,
     make_sync_handler,
     schedule_defaults,
@@ -91,20 +90,42 @@ class RestoreHandlerTests(TestCase):
         self.assertEqual(schedule.minutes, 5)
 
 
-class DenyDeleteHandlerTests(TestCase):
-    def test_blocks_managed_schedule_deletion(self):
-        handler = make_deny_delete_handler(_SAMPLE_SCHEDULES)
-        schedule = Schedule(id=_SAMPLE_SCHEDULES[0]["id"])
+class RecreateHandlerTests(TestCase):
+    def test_recreates_managed_schedule(self):
+        handler = make_recreate_handler(_SAMPLE_SCHEDULES)
+        schedule = Schedule(
+            id=_SAMPLE_SCHEDULES[0]["id"],
+            name=_SAMPLE_SCHEDULES[0]["name"],
+            func=_SAMPLE_SCHEDULES[0]["func"],
+            schedule_type=Schedule.MINUTES,
+            minutes=_SAMPLE_SCHEDULES[0]["default_minutes"],
+            repeats=-1,
+        )
+        schedule.save()
+        pk = schedule.pk
+        schedule.delete()
 
-        with self.assertRaises(ProtectedError):
-            handler(sender=Schedule, instance=schedule)
+        # Simulate post_delete: pass a fresh instance with the original pk
+        # (Django's Collector.delete() sends the signal before nulling pk)
+        handler(sender=Schedule, instance=Schedule(pk=pk))
 
-    def test_allows_unmanaged_schedule_deletion(self):
-        handler = make_deny_delete_handler(_SAMPLE_SCHEDULES)
-        schedule = Schedule(id=999)
+        self.assertTrue(Schedule.objects.filter(id=pk).exists())
 
-        # Should not raise
-        handler(sender=Schedule, instance=schedule)
+    def test_ignores_unmanaged_schedule(self):
+        handler = make_recreate_handler(_SAMPLE_SCHEDULES)
+        schedule = Schedule.objects.create(
+            id=999,
+            name="unmanaged",
+            func="unmanaged.func",
+            schedule_type=Schedule.MINUTES,
+            minutes=10,
+            repeats=-1,
+        )
+        schedule.delete()
+
+        handler(sender=Schedule, instance=Schedule(pk=999))
+
+        self.assertFalse(Schedule.objects.filter(id=999).exists())
 
 
 class SyncHandlerTests(TestCase):
