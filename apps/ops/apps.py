@@ -1,10 +1,10 @@
 """Q2 schedule management for ops infrastructure tasks (ID 5)."""
 
 from django.apps import AppConfig
-from django.db.models.signals import post_migrate, pre_delete, pre_save
+from django.db.models.signals import post_delete, post_migrate, pre_save
 
 from engine.common.schedules import (
-    make_deny_delete_handler,
+    make_recreate_handler,
     make_restore_handler,
     make_sync_handler,
 )
@@ -35,8 +35,8 @@ class OpsConfig(AppConfig):
             sender=Schedule,
             dispatch_uid="ops.protect_managed_q2_schedules",
         )
-        pre_delete.connect(
-            make_deny_delete_handler(MANAGED_SCHEDULES),
+        post_delete.connect(
+            make_recreate_handler(MANAGED_SCHEDULES),
             sender=Schedule,
-            dispatch_uid="ops.protect_managed_q2_schedule_delete",
+            dispatch_uid="ops.recreate_managed_q2_schedules",
         )
