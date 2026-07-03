@@ -28,7 +28,7 @@ class Q2ScheduleTests(TestCase):
         self.assertIsNone(schedules[1].cron)
         self.assertEqual(schedules[1].repeats, -1)
 
-        self.assertEqual(schedules[2].name, "llm_worker")
+        self.assertEqual(schedules[2].name, "telegram_llm")
         self.assertEqual(schedules[2].func, "engine.workers.proxy.worker")
         self.assertEqual(schedules[2].schedule_type, Schedule.MINUTES)
         self.assertEqual(schedules[2].minutes, 1)
