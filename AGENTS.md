@@ -50,7 +50,7 @@ Order: `lint` → `test` → `dead-code`
 
 Telegram → Job Queue (django-q2) → LLM Worker → Telegram delivery
 
-- `engine/telegram` — Bot, Job, IntakeBuffer models; pipeline tasks (telegram_ingest, telegram_llm, telegram_deliver, cleanup_q2_successes, telegram_flush_intake_buffers); webhook view; admin; signals; Q2 schedule management via `apps.py`
+- `engine/telegram` — Bot, Job, IntakeBuffer models; pipeline tasks (telegram_ingest, processing, telegram_deliver, cleanup_q2_successes, telegram_flush_intake_buffers); webhook view; admin; signals; Q2 schedule management via `apps.py`
 - `engine/worker` — Worker model (execution config for a bot)
 - `engine/workers/proxy.py` — Configurable Q2 task proxy — reads `Q2_WORKER_FUNC` from settings, dispatches to the real worker function
 - `engine/workers/telegram.py` — Telegram Bot API client

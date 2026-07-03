@@ -5,7 +5,7 @@ Skill-driven AI bot runtime — connects Telegram to any OpenAI-compatible LLM v
 ## Architecture
 
 ```text
-Telegram ──┬── webhook ──> IntakeBuffer ──> Job ──> telegram_llm ──> telegram_deliver ──> Telegram
+Telegram ──┬── webhook ──> IntakeBuffer ──> Job ──> processing ──> telegram_deliver ──> Telegram
            │                (flush)               │
            └── poll ────────┘                      └─ Worker (profile + wrapper)
            (Q2 schedule)
@@ -21,7 +21,7 @@ Both paths accumulate messages into an **IntakeBuffer**, one per bot/chat. Messa
 | Signal trigger | Enqueued task |
 | -------------- | -------------- |
 | Job created | `telegram_ack` — confirm receipt to user |
-| Job created | `telegram_llm` — call the LLM |
+| Job created | `processing` — call the LLM |
 | `llm_finished_at` set | `telegram_deliver` — send response to user |
 
 Scheduled Q2 tasks run the same workers as backup (1-minute interval), giving the system a hybrid push+pull resilience model.
@@ -45,7 +45,7 @@ All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provi
 1. **Intake** — `telegram_ingest` or webhook view accumulates message into `IntakeBuffer`, groups by Telegram `message.date`
 2. **Flush** — immediate flush on group boundary, or `telegram_intake_flush` (scheduled Q2) as safety backstop
 3. **Ack** — `telegram_ack` replies "Added to the processing queue"
-4. **LLM** — `telegram_llm` calls the configured OpenAI-compatible API
+4. **LLM** — `processing` calls the configured OpenAI-compatible API
 5. **Deliver** — `telegram_deliver` sends the response (text or file) to the user
 
 ## Security
@@ -67,7 +67,7 @@ Key environment variables (see `env.example` for full list):
 | `WEBHOOK_FALLBACK_PENDING_THRESHOLD` | `5` | Max pending updates before falling back to polling |
 | `POLICY_FILE` | `policy.md` | Global system prompt appended to every LLM call |
 | `Q2_TELEGRAM_INGEST_MINUTES` | `1` | Polling interval |
-| `Q2_LLM_WORKER_MINUTES` | `1` | LLM worker schedule interval |
+| `Q2_PROCESSING_MINUTES` | `1` | LLM processing schedule interval |
 | `Q2_TELEGRAM_DELIVER_MINUTES` | `1` | Delivery worker schedule interval |
 | `TELEGRAM_ACK_REACTION` | `🤔` | Emoji reaction for queue acknowledgement (empty = disabled) |
 | `Q2_LLM_STALE_JOB_SECONDS` | `3600` | Timeout for re-queueing stalled LLM jobs |
