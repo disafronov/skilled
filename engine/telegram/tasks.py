@@ -1,14 +1,12 @@
 """Q2-callable task functions for the core pipeline."""
 
 import logging
-import os
 from datetime import timedelta
 from typing import NotRequired, TypedDict, cast
 
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from django_q.models import Success
 
 from engine.telegram.intake import accept_telegram_message
 from engine.telegram.models import Bot, IntakeBuffer, Job
@@ -27,7 +25,6 @@ from engine.workers.telegram import (
 )
 
 logger = logging.getLogger(__name__)
-Q2_SUCCESS_RETENTION_SECONDS = 86400
 
 
 class _TelegramChat(TypedDict):
@@ -351,15 +348,3 @@ def telegram_flush_intake_buffers() -> None:
             )
             refetched.flushed_at = timezone.now()
             refetched.save(update_fields=["flushed_at", "updated_at"])
-
-
-def cleanup_q2_successes() -> None:
-    """Delete successful django-q2 task records older than the retention window."""
-    retention_seconds = int(
-        os.environ.get(
-            "Q2_SUCCESS_TASK_RETENTION_SECONDS",
-            str(Q2_SUCCESS_RETENTION_SECONDS),
-        )
-    )
-    cutoff = timezone.now() - timedelta(seconds=retention_seconds)
-    Success.objects.filter(stopped__lt=cutoff).delete()
