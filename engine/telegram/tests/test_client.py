@@ -166,27 +166,6 @@ class TelegramHttpClientTests(TestCase):
         with self.assertRaisesRegex(RuntimeError, "Telegram API request failed"):
             send_message("token", "chat", "hello")
 
-    def test_sanitize_error_strips_token(self):
-        from engine.telegram.client import sanitize_error
-
-        url = (
-            "https://api.telegram.org/"
-            "bot7347420035:AAFJ20UAtLRp2Dzq_63bsj5a4wxlWJleh_4/"
-            "sendMessage"
-        )
-        original = f"Client error '400 Bad Request' for url '{url}'"
-        sanitized = sanitize_error(original)
-        self.assertNotIn(
-            "7347420035:AAFJ20UAtLRp2Dzq_63bsj5a4wxlWJleh_4",
-            sanitized,
-        )
-        self.assertIn("sendMessage", sanitized)
-
-    def test_sanitize_error_leaves_clean_text(self):
-        from engine.telegram.client import sanitize_error
-
-        self.assertEqual(sanitize_error("normal error text"), "normal error text")
-
     def test_http_error_sanitizes_response_body(self):
         from engine.telegram.client import _raise_for_status
 

@@ -8,6 +8,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from engine.common.sanitize import sanitize_error
 from engine.telegram.client import (
     delete_webhook,
     detect_document_format,
@@ -15,7 +16,6 @@ from engine.telegram.client import (
     document_format_filename,
     get_updates,
     get_webhook_info,
-    sanitize_error,
     send_document,
     send_message,
     set_message_reaction,
