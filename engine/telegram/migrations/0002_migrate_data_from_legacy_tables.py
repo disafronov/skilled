@@ -75,7 +75,7 @@ def copy_legacy_data(apps, schema_editor):
         )
 
         cursor.execute(r"""
-            INSERT INTO worker_worker (
+            INSERT INTO llm_worker (
                 id, bot_id, profile_id, wrapper_id,
                 enabled, created_at, updated_at
             )
@@ -85,8 +85,8 @@ def copy_legacy_data(apps, schema_editor):
             FROM jobs_worker
             """)
         cursor.execute(
-            "SELECT setval(pg_get_serial_sequence('worker_worker', 'id'),"
-            " COALESCE((SELECT MAX(id) FROM worker_worker), 0) + 1, false)"
+            "SELECT setval(pg_get_serial_sequence('llm_worker', 'id'),"
+            " COALESCE((SELECT MAX(id) FROM llm_worker), 0) + 1, false)"
         )
 
         cursor.execute("DROP TABLE IF EXISTS bots_bot CASCADE")
