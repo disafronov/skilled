@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, reverse_lazy
 from django.views.generic import RedirectView
 
-from config.health import liveness, readiness
+from apps.ops.health import liveness, readiness
 from engine.telegram import views as bots_views
 
 urlpatterns = [

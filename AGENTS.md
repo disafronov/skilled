@@ -50,7 +50,10 @@ Order: `lint` → `test` → `dead-code`
 
 Telegram → Job Queue (django-q2) → LLM Worker → Telegram delivery
 
-- `engine/telegram` — Bot, Job, IntakeBuffer models; pipeline tasks (telegram_ingest, processing, telegram_deliver, cleanup_q2_successes, telegram_flush_intake_buffers); webhook view; admin; signals; Q2 schedule management via `apps.py`
+- `apps/ops/q2.py` — django-q2 scheduled task functions (cleanup_q2_successes)
+- `apps/ops/health.py` — `/health/liveness/`, `/health/readiness/` (Docker HEALTHCHECK)
+- `apps/ops/apps.py` — Q2 schedule management for cleanup task (ID 5)
+- `engine/telegram` — Bot, Job, IntakeBuffer models; pipeline tasks (telegram_ingest, processing, telegram_deliver, telegram_flush_intake_buffers); webhook view; admin; signals; Q2 schedule management via `apps.py` (IDs 1–4)
 - `engine/worker` — Worker model (execution config for a bot)
 - `engine/workers/proxy.py` — Configurable Q2 task proxy — reads `Q2_WORKER_FUNC` from settings, dispatches to the real worker function
 - `engine/workers/telegram.py` — Telegram Bot API client
@@ -58,13 +61,12 @@ Telegram → Job Queue (django-q2) → LLM Worker → Telegram delivery
 - `apps/worker/tasks.py` — Worker orchestrator (processes jobs via LLM)
 - `apps/library` — Skill & Wrapper models (prompt content)
 - `apps/inference` — Provider & Profile models (LLM config)
-- `config/health.py` — `/health/liveness/`, `/health/readiness/` (Docker HEALTHCHECK)
 - `config/` — Django settings, urls, wsgi
 
 ## Gotchas
 
 - **DJANGO_SECRET_KEY**: Must be set for any `manage.py` command. Makefile uses `unsafe-secret-key-for-tooling`.
-- **Q2 schedules** (IDs 1–5) are managed in `engine/telegram/apps.py` — admin edits are overwritten on save via `pre_save` signal.
+- **Q2 schedules** (IDs 1–4) are managed in `engine/telegram/apps.py`, ID 5 in `apps/ops/apps.py` — admin edits are overwritten on save via `pre_save` signal.
 - **Proxy pattern**: `engine.workers.proxy.worker` is the single Q2 entry point; it dispatches to the function configured via `Q2_WORKER_FUNC` setting/env var.
 - **`policy.md`** is gitignored, loaded at runtime via `POLICY_FILE` env var.
 - **Pre-commit**: runs `make lint` + `uv lock` on commit; `make test` + `make dead-code` on push.

@@ -7,7 +7,7 @@ import pytest
 from django.db import DatabaseError
 from django.test import Client, RequestFactory, override_settings
 
-from config import health
+from apps.ops import health
 
 
 def test_check_database_ok(monkeypatch) -> None:
