@@ -48,12 +48,12 @@ RUN --mount=from=uv,source=/uv,target=/bin/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --link-mode=copy --no-editable --no-group dev
-    
+
 # Compile translations and collect static files inside the build image.
 WORKDIR /home/ubuntu/app
-RUN export SECRET_KEY=unsafe-secret-key-for-tooling && \
+RUN export DJANGO_SECRET_KEY=unsafe-secret-key-for-tooling && \
     python3 manage.py collectstatic --noinput
-    
+
 ##########################
 
 FROM base AS runtime
