@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import abc
 import logging
-import os
 from datetime import timedelta
 
 from django.conf import settings
@@ -37,7 +36,6 @@ class Worker(abc.ABC):
     """
 
     _subclass_registered: type | None = None
-    _stale_default_seconds: int = 3600
 
     poll_filters: dict = {}
     poll_select_related: tuple[str, ...] = ()
@@ -125,13 +123,9 @@ class Worker(abc.ABC):
 
     def _reset_stale_jobs(self) -> None:
         """Unstick Jobs that were claimed but never finished."""
-        stale_seconds = int(
-            os.environ.get(
-                "Q2_PROCESSING_STALE_JOB_SECONDS",
-                str(self._stale_default_seconds),
-            )
+        stale_cutoff = timezone.now() - timedelta(
+            seconds=settings.Q2_PROCESSING_STALE_JOB_SECONDS
         )
-        stale_cutoff = timezone.now() - timedelta(seconds=stale_seconds)
         Job.objects.select_for_update(skip_locked=True).stale_processing(
             stale_cutoff
         ).update(processing_started_at=None, updated_at=timezone.now())
