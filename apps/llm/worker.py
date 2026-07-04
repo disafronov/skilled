@@ -5,7 +5,6 @@ import logging
 from apps.llm.client import call_llm
 from apps.llm.models import Worker as WorkerModel
 from engine.processing import Worker as BaseWorker
-from engine.telegram.models import Job
 
 logger = logging.getLogger(__name__)
 
@@ -20,23 +19,23 @@ class LlmWorker(BaseWorker):
     poll_select_related: tuple[str, ...] = ()
     pk_select_related: tuple[str, ...] = ()
 
-    def process(self, job: Job) -> tuple[str | None, str | None]:
+    def process(self, *, bot_id: int, raw_input: str) -> tuple[str | None, str | None]:
         try:
             wm = WorkerModel.objects.select_related(
                 "profile__provider", "wrapper__skill"
-            ).get(bot=job.bot)
+            ).get(bot_id=bot_id)
         except WorkerModel.DoesNotExist:
             return None, "No worker configured for bot"
 
         if not wm.enabled:
-            return None, f"Worker disabled for bot {job.bot.pk}"
+            return None, f"Worker disabled for bot {bot_id}"
 
-        logger.info("Processing job %d for bot %d", job.pk, job.bot.pk)
+        logger.info("Processing job for bot %d", bot_id)
         result = call_llm(
             provider=wm.profile.provider,
             profile=wm.profile,
             skill=wm.wrapper.skill,
             wrapper=wm.wrapper,
-            raw_input=job.raw_input,
+            raw_input=raw_input,
         )
         return result, None

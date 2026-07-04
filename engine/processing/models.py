@@ -73,7 +73,7 @@ class Worker(abc.ABC):
             job.save(update_fields=["processing_started_at", "updated_at"])
 
         try:
-            raw_output, error = self.process(job)
+            raw_output, error = self.process(bot_id=job.bot_id, raw_input=job.raw_input)
         except Exception as exc:
             logger.error(
                 "Worker %s: job %d failed",
@@ -166,8 +166,11 @@ class Worker(abc.ABC):
         )
 
     @abc.abstractmethod
-    def process(self, job: Job) -> tuple[str | None, str | None]:
+    def process(self, *, bot_id: int, raw_input: str) -> tuple[str | None, str | None]:
         """Business logic — return ``(raw_output, error)``.
+
+        Subclasses receive the minimum required data (``bot_id``, ``raw_input``)
+        rather than the full ``Job`` model, keeping the engine boundary clean.
 
         Return ``(result, None)`` on success.
         Return ``(None, error_message)`` on handled error (no re-raise).

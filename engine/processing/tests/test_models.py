@@ -24,7 +24,9 @@ class WorkerPollSelectRelatedTests(TestCase):
             poll_filters = {"bot__name": self.bot.name}
             poll_select_related = ("bot",)
 
-            def process(self, job: Job) -> tuple[str | None, str | None]:
+            def process(
+                self, *, bot_id: int, raw_input: str
+            ) -> tuple[str | None, str | None]:
                 return "ok", None
 
         Sub().run()
@@ -45,7 +47,9 @@ class WorkerPollSelectRelatedTests(TestCase):
         class Sub(Worker):
             poll_select_related = ("bot",)
 
-            def process(self, job: Job) -> tuple[str | None, str | None]:
+            def process(
+                self, *, bot_id: int, raw_input: str
+            ) -> tuple[str | None, str | None]:
                 return "ok", None
 
         Sub().run()
@@ -60,13 +64,17 @@ class WorkerInitSubclassTests(TestCase):
         Worker._testing_reset_subclass()
 
         class _First(Worker):
-            def process(self, job: Job) -> tuple[str | None, str | None]:
+            def process(
+                self, *, bot_id: int, raw_input: str
+            ) -> tuple[str | None, str | None]:
                 return "ok", None
 
         with self.assertRaises(TypeError):
 
             class _Second(Worker):  # type: ignore[no-redef]
-                def process(self, job: Job) -> tuple[str | None, str | None]:
+                def process(
+                    self, *, bot_id: int, raw_input: str
+                ) -> tuple[str | None, str | None]:
                     return "ok", None
 
 
@@ -81,7 +89,7 @@ class WorkerExtendedTests(TestCase):
         Worker._testing_reset_subclass()
 
         class _Sub(Worker):
-            def process(self, job):
+            def process(self, *, bot_id, raw_input):
                 return "ok", None
 
         _Sub().run()
@@ -90,7 +98,7 @@ class WorkerExtendedTests(TestCase):
         Worker._testing_reset_subclass()
 
         class _Sub(Worker):
-            def process(self, job):
+            def process(self, *, bot_id, raw_input):
                 return "result", None
 
         job = Job.objects.create(bot=self.bot, reply_target="1", raw_input="hi")
@@ -102,7 +110,7 @@ class WorkerExtendedTests(TestCase):
         Worker._testing_reset_subclass()
 
         class _Sub(Worker):
-            def process(self, job):
+            def process(self, *, bot_id, raw_input):
                 return "ok", None
 
         _Sub().run(job_pk=99999)
@@ -112,7 +120,7 @@ class WorkerExtendedTests(TestCase):
         Worker._testing_reset_subclass()
 
         class _Sub(Worker):
-            def process(self, job):
+            def process(self, *, bot_id, raw_input):
                 return "overwritten", None
 
         job = Job.objects.create(bot=self.bot, reply_target="1", raw_input="hi")
@@ -128,7 +136,7 @@ class WorkerExtendedTests(TestCase):
         Worker._testing_reset_subclass()
 
         class _Sub(Worker):
-            def process(self, job):
+            def process(self, *, bot_id, raw_input):
                 return None, "handled error"
 
         job = Job.objects.create(bot=self.bot, reply_target="1", raw_input="hi")
@@ -141,7 +149,7 @@ class WorkerExtendedTests(TestCase):
         Worker._testing_reset_subclass()
 
         class _Sub(Worker):
-            def process(self, job):
+            def process(self, *, bot_id, raw_input):
                 raise RuntimeError("boom")
 
         job = Job.objects.create(bot=self.bot, reply_target="1", raw_input="hi")
@@ -157,7 +165,7 @@ class WorkerExtendedTests(TestCase):
         class _Sub(Worker):
             poll_filters = {"bot__name": self.bot.name}
 
-            def process(self, job):
+            def process(self, *, bot_id, raw_input):
                 return "ok", None
 
         Job.objects.create(bot=self.bot, reply_target="1", raw_input="hi")
