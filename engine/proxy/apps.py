@@ -27,7 +27,9 @@ class ProxyConfig(AppConfig):
 
     def ready(self) -> None:
         # post_migrate (not ready()) avoids DB queries on every manage.py command
-        post_migrate.connect(make_sync_handler(MANAGED_SCHEDULES), sender=self)
+        post_migrate.connect(
+            make_sync_handler(MANAGED_SCHEDULES), sender=self, weak=False
+        )
 
         from django_q.models import Schedule
 
@@ -35,9 +37,11 @@ class ProxyConfig(AppConfig):
             make_restore_handler(MANAGED_SCHEDULES),
             sender=Schedule,
             dispatch_uid="proxy.protect_managed_q2_schedules",
+            weak=False,
         )
         post_delete.connect(
             make_recreate_handler(MANAGED_SCHEDULES),
             sender=Schedule,
             dispatch_uid="proxy.recreate_managed_q2_schedules",
+            weak=False,
         )
