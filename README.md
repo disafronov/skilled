@@ -38,7 +38,7 @@ Worker        — Execution configuration for a bot. Currently stores LLM profil
 IntakeBuffer  — mutable pre-job accumulator (one open buffer per bot/chat)
 Job           — finalized execution artifact (immutable after creation)
 
-All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider & Profile), `apps/bots` (Bot), `engine/telegram` (Job + IntakeBuffer + pipeline), `engine/worker` (Worker), and `apps/ops` (health checks + Q2 cleanup).
+All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider & Profile), `engine/telegram` (Bot, Job, IntakeBuffer + pipeline), `engine/processing` (Worker abstract base), `apps/llm` (Worker model + LLM client), and `apps/ops` (health checks + Q2 cleanup).
 
 ## Pipeline
 
