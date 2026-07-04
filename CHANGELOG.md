@@ -1,3 +1,5 @@
+## [1.9.0](https://github.com/disafronov/skilled/compare/v1.8.0...v1.9.0) (2026-07-04)
+
 ## [1.9.0-rc.10](https://github.com/disafronov/skilled/compare/v1.9.0-rc.9...v1.9.0-rc.10) (2026-07-04)
 
 ## [1.9.0-rc.9](https://github.com/disafronov/skilled/compare/v1.9.0-rc.8...v1.9.0-rc.9) (2026-07-04)
