@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     "apps.library",
     "apps.inference",
     "engine.telegram",
-    "apps.llm",
     "apps.ops",
     "django_q",
 ]
@@ -111,7 +110,7 @@ Q_CLUSTER = {
 }
 
 # Worker function path for Django Q2 tasks
-Q2_PROCESSING_FUNC = "apps.llm.tasks.worker"
+Q2_PROCESSING_FUNC = "apps.inference.tasks.worker"
 
 # django-q2 success task retention (seconds, default 24h)
 Q2_SUCCESS_RETENTION_SECONDS = 86400
