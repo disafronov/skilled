@@ -1,6 +1,6 @@
 """Worker task — LLM pipeline processing via LlmWorker."""
 
-from apps.llm.worker import LlmWorker
+from apps.inference.worker import LlmWorker
 
 
 def worker(job_pk: int | None = None) -> None:

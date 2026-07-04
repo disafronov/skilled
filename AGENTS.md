@@ -55,10 +55,8 @@ Telegram → Job Queue (django-q2) → LLM Worker → Telegram delivery
 - `engine/telegram` — Bot, Job, IntakeBuffer models; pipeline tasks (telegram_ingest, processing, telegram_deliver, telegram_flush_intake_buffers); webhook view; admin; signals; Q2 schedule management via `apps.py` (IDs 1–4)
 - `engine/processing` — Abstract Worker base class (processing pipeline foundation)
 - `engine/telegram/client.py` — Telegram Bot API client
-- `apps/llm/client.py` — LLM client (OpenAI-compatible)
-- `apps/llm/tasks.py` — Worker orchestrator (processes jobs via LLM)
 - `apps/library` — Skill & Wrapper models (prompt content)
-- `apps/inference` — Provider & Profile models (LLM config)
+- `apps/inference` — Provider, Profile & Worker models; LLM client; task orchestrator
 - `config/` — Django settings, urls, wsgi
 
 ## Gotchas

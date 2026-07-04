@@ -1,10 +1,9 @@
-"""Worker model tests — moved from engine/jobs/tests/test_models.py."""
+"""Worker model tests — moved from apps/llm/tests/test_models.py."""
 
 from django.test import TestCase
 
-from apps.inference.models import Profile, Provider
+from apps.inference.models import Profile, Provider, Worker
 from apps.library.models import Skill, Wrapper
-from apps.llm.models import Worker
 from engine.telegram.models import Bot
 
 
