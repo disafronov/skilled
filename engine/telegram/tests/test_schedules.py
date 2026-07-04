@@ -1,5 +1,6 @@
-"""Tests for telegram pipeline Q2 schedule setup (IDs 1–3)."""
+"""Tests for Q2 schedule setup (IDs 1–4)."""
 
+from django.conf import settings
 from django.test import TestCase
 from django_q.models import Schedule
 
@@ -16,14 +17,14 @@ _RECREATE = make_recreate_handler(MANAGED_SCHEDULES)
 
 
 class TelegramQ2ScheduleTests(TestCase):
-    """Test the pipeline schedule configuration."""
+    """Test the pipeline schedule configuration (IDs 1–3)."""
 
     def test_default_schedules_are_hardcoded_with_fixed_ids(self):
         _SYNC(sender=None)
 
         schedules = {
             schedule.id: schedule
-            for schedule in Schedule.objects.filter(id__in=[1, 2, 3])
+            for schedule in Schedule.objects.filter(id__in=[1, 2, 3, 4])
         }
 
         self.assertEqual(schedules[1].name, "telegram_ingest")
@@ -48,6 +49,13 @@ class TelegramQ2ScheduleTests(TestCase):
         self.assertEqual(schedules[3].minutes, 1)
         self.assertIsNone(schedules[3].cron)
         self.assertEqual(schedules[3].repeats, -1)
+
+        self.assertEqual(schedules[4].name, "processing")
+        self.assertEqual(schedules[4].func, settings.Q2_PROCESSING_FUNC)
+        self.assertEqual(schedules[4].schedule_type, Schedule.MINUTES)
+        self.assertEqual(schedules[4].minutes, 1)
+        self.assertIsNone(schedules[4].cron)
+        self.assertEqual(schedules[4].repeats, -1)
 
     def test_managed_schedule_edits_are_overwritten_on_save(self):
         _SYNC(sender=None)
@@ -137,3 +145,67 @@ class TelegramQ2ScheduleTests(TestCase):
         _RECREATE(Schedule, Schedule(pk=99))
 
         self.assertFalse(Schedule.objects.filter(id=99).exists())
+
+
+class ProcessingQ2ScheduleTests(TestCase):
+    """Test the processing schedule configuration (ID 4)."""
+
+    def test_processing_edits_are_overwritten_on_save(self):
+        _SYNC(sender=None)
+
+        schedule = Schedule.objects.get(id=4)
+        schedule.name = "changed"
+        schedule.func = "changed.func"
+        schedule.schedule_type = Schedule.HOURLY
+        schedule.minutes = 15
+        schedule.repeats = 10
+        schedule.save()
+
+        schedule.refresh_from_db()
+        self.assertEqual(schedule.name, "processing")
+        self.assertEqual(schedule.func, settings.Q2_PROCESSING_FUNC)
+        self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
+        self.assertEqual(schedule.minutes, 1)
+        self.assertIsNone(schedule.cron)
+        self.assertEqual(schedule.repeats, -1)
+
+    def test_processing_uses_settings_minutes(self):
+        with self.settings(Q2_PROCESSING_MINUTES=5):
+            _SYNC(sender=None)
+
+            schedule = Schedule.objects.get(id=4)
+            self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
+            self.assertEqual(schedule.minutes, 5)
+            self.assertIsNone(schedule.cron)
+
+            schedule.minutes = 1
+            schedule.save()
+            schedule.refresh_from_db()
+            self.assertEqual(schedule.minutes, 5)
+
+    def test_duplicate_processing_schedule_is_removed(self):
+        Schedule.objects.bulk_create(
+            [
+                Schedule(
+                    name="processing",
+                    func="wrong.func",
+                    schedule_type=Schedule.MINUTES,
+                    minutes=1,
+                    repeats=-1,
+                )
+            ]
+        )
+
+        _SYNC(sender=None)
+
+        self.assertEqual(Schedule.objects.filter(name="processing").count(), 1)
+        self.assertEqual(Schedule.objects.get(name="processing").id, 4)
+
+    def test_processing_recreated_on_delete(self):
+        _SYNC(sender=None)
+        schedule = Schedule.objects.get(id=4)
+        pk = schedule.pk
+        schedule.delete()
+        _RECREATE(Schedule, Schedule(pk=pk))
+
+        self.assertTrue(Schedule.objects.filter(id=pk).exists())
