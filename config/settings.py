@@ -125,6 +125,11 @@ Q2_TELEGRAM_INTAKE_FLUSH_MINUTES = int(
 Q2_PROCESSING_MINUTES = int(os.getenv("Q2_PROCESSING_MINUTES", "1"))
 Q2_SUCCESS_CLEANUP_MINUTES = int(os.getenv("Q2_SUCCESS_CLEANUP_MINUTES", "60"))
 
+# Job processing stale timeout (seconds, default 1h)
+Q2_PROCESSING_STALE_JOB_SECONDS = int(
+    os.getenv("Q2_PROCESSING_STALE_JOB_SECONDS", "3600")
+)
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
