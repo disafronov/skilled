@@ -118,8 +118,8 @@ class JobAdmin(admin.ModelAdmin):
         "delivery_finished_at",
         "updated_at",
     )
-    list_select_related = ("bot",)
-    search_fields = ("raw_input",)
+    list_select_related = ["bot"]
+    search_fields = ["raw_input"]
     list_filter = (
         "created_at",
         "processing_started_at",
