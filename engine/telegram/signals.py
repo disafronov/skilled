@@ -4,6 +4,7 @@ import logging
 from collections.abc import Set as AbstractSet
 from typing import Any
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -31,7 +32,7 @@ def job_on_completion(
         transaction.on_commit(
             lambda: async_task("engine.telegram.tasks.telegram_ack", job_pk)
         )
-        transaction.on_commit(lambda: async_task("engine.proxy.worker", job_pk))
+        transaction.on_commit(lambda: async_task(settings.Q2_PROCESSING_FUNC, job_pk))
         return
 
     if (

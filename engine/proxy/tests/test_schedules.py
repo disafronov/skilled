@@ -1,8 +1,6 @@
 """Tests for processing Q2 schedule setup (ID 4)."""
 
-import os
-from unittest.mock import patch
-
+from django.conf import settings
 from django.test import TestCase
 from django_q.models import Schedule
 
@@ -27,7 +25,7 @@ class ProxyQ2ScheduleTests(TestCase):
         schedule = Schedule.objects.get(id=4)
 
         self.assertEqual(schedule.name, "processing")
-        self.assertEqual(schedule.func, "engine.proxy.worker.worker")
+        self.assertEqual(schedule.func, settings.Q2_PROCESSING_FUNC)
         self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
         self.assertEqual(schedule.minutes, 1)
         self.assertIsNone(schedule.cron)
@@ -46,17 +44,14 @@ class ProxyQ2ScheduleTests(TestCase):
 
         schedule.refresh_from_db()
         self.assertEqual(schedule.name, "processing")
-        self.assertEqual(schedule.func, "engine.proxy.worker.worker")
+        self.assertEqual(schedule.func, settings.Q2_PROCESSING_FUNC)
         self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
         self.assertEqual(schedule.minutes, 1)
         self.assertIsNone(schedule.cron)
         self.assertEqual(schedule.repeats, -1)
 
-    def test_managed_schedule_uses_env_minutes(self):
-        with patch.dict(
-            os.environ,
-            {"Q2_PROCESSING_MINUTES": "5"},
-        ):
+    def test_managed_schedule_uses_settings_minutes(self):
+        with self.settings(Q2_PROCESSING_MINUTES=5):
             _SYNC(sender=None)
 
             schedule = Schedule.objects.get(id=4)

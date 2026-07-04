@@ -1,9 +1,6 @@
 """Tests for shared django-q2 schedule lifecycle utilities."""
 
-import os
-from unittest.mock import patch
-
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django_q.models import Schedule
 
 from engine.common.schedules import (
@@ -18,13 +15,13 @@ _SAMPLE_SCHEDULES = (
         "id": 99,
         "name": "test_job",
         "func": "test.module.func",
-        "minutes_env": "TEST_JOB_MINUTES",
-        "default_minutes": 10,
+        "minutes": "TEST_JOB_MINUTES",
     },
 )
 
 
 class ScheduleDefaultsTests(TestCase):
+    @override_settings(TEST_JOB_MINUTES=10)
     def test_returns_expected_defaults(self):
         entry = _SAMPLE_SCHEDULES[0]
         defaults = schedule_defaults(entry, Schedule)
@@ -40,18 +37,20 @@ class ScheduleDefaultsTests(TestCase):
         self.assertIsNone(defaults["cluster"])
         self.assertEqual(defaults["repeats"], -1)
 
-    def test_reads_minutes_from_env(self):
-        with patch.dict(os.environ, {"TEST_JOB_MINUTES": "7"}):
-            defaults = schedule_defaults(_SAMPLE_SCHEDULES[0], Schedule)
-            self.assertEqual(defaults["minutes"], 7)
+    @override_settings(TEST_JOB_MINUTES=7)
+    def test_reads_minutes_from_settings(self):
+        defaults = schedule_defaults(_SAMPLE_SCHEDULES[0], Schedule)
+        self.assertEqual(defaults["minutes"], 7)
 
-    def test_falls_back_to_default_minutes_when_env_unset(self):
+    @override_settings(TEST_JOB_MINUTES=10)
+    def test_uses_default_minutes_from_settings(self):
         entry = _SAMPLE_SCHEDULES[0]
         defaults = schedule_defaults(entry, Schedule)
         self.assertEqual(defaults["minutes"], 10)
 
 
 class RestoreHandlerTests(TestCase):
+    @override_settings(TEST_JOB_MINUTES=10)
     def test_restores_managed_schedule_on_pre_save(self):
         handler = make_restore_handler(_SAMPLE_SCHEDULES)
         entry = _SAMPLE_SCHEDULES[0]
@@ -91,6 +90,7 @@ class RestoreHandlerTests(TestCase):
 
 
 class RecreateHandlerTests(TestCase):
+    @override_settings(TEST_JOB_MINUTES=10)
     def test_recreates_managed_schedule(self):
         handler = make_recreate_handler(_SAMPLE_SCHEDULES)
         schedule = Schedule(
@@ -98,7 +98,7 @@ class RecreateHandlerTests(TestCase):
             name=_SAMPLE_SCHEDULES[0]["name"],
             func=_SAMPLE_SCHEDULES[0]["func"],
             schedule_type=Schedule.MINUTES,
-            minutes=_SAMPLE_SCHEDULES[0]["default_minutes"],
+            minutes=10,
             repeats=-1,
         )
         schedule.save()
@@ -129,6 +129,7 @@ class RecreateHandlerTests(TestCase):
 
 
 class SyncHandlerTests(TestCase):
+    @override_settings(TEST_JOB_MINUTES=10)
     def test_creates_managed_schedules(self):
         handler = make_sync_handler(_SAMPLE_SCHEDULES)
         handler(sender=None)
@@ -140,6 +141,7 @@ class SyncHandlerTests(TestCase):
         self.assertEqual(schedule.minutes, 10)
         self.assertEqual(schedule.repeats, -1)
 
+    @override_settings(TEST_JOB_MINUTES=10)
     def test_removes_duplicate_names(self):
         Schedule.objects.create(
             name="test_job",
@@ -155,6 +157,7 @@ class SyncHandlerTests(TestCase):
         self.assertEqual(Schedule.objects.filter(name="test_job").count(), 1)
         self.assertEqual(Schedule.objects.get(name="test_job").id, 99)
 
+    @override_settings(TEST_JOB_MINUTES=10)
     def test_updates_existing_schedule(self):
         Schedule.objects.create(
             id=_SAMPLE_SCHEDULES[0]["id"],
