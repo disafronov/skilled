@@ -1,6 +1,6 @@
 [project]
 name = "skilled"
-version = "1.9.1rc2"
+version = "1.9.1rc3"
 description = "Skill-driven AI bot runtime"
 readme = "README.md"
 requires-python = ">=3.13,<3.15"
