@@ -22,7 +22,7 @@ Both paths accumulate messages into an **IntakeBuffer**, one per bot/chat. Messa
 | -------------- | -------------- |
 | Job created | `telegram_ack` — confirm receipt to user |
 | Job created | `processing` — call the LLM |
-| `llm_finished_at` set | `telegram_deliver` — send response to user |
+| `processing_finished_at` set | `telegram_deliver` — send response to user |
 
 Scheduled Q2 tasks run the same workers as backup (1-minute interval), giving the system a hybrid push+pull resilience model.
 
@@ -38,14 +38,14 @@ Worker        — Execution configuration for a bot. Currently stores LLM profil
 IntakeBuffer  — mutable pre-job accumulator (one open buffer per bot/chat)
 Job           — finalized execution artifact (immutable after creation)
 
-All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider & Profile), `engine/telegram` (Bot, Job, IntakeBuffer + pipeline), `engine/processing` (Worker abstract base), `apps/llm` (Worker model + LLM client), and `apps/ops` (health checks + Q2 cleanup).
+All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider, Profile & Worker), `engine/telegram` (Bot, Job, IntakeBuffer + pipeline), `engine/processing` (Worker abstract lifecycle), and `apps/ops` (health checks + Q2 cleanup).
 
 ## Pipeline
 
 1. **Intake** — `telegram_ingest` or webhook view accumulates message into `IntakeBuffer`, groups by Telegram `message.date`
 2. **Flush** — immediate flush on group boundary, or `telegram_intake_flush` (scheduled Q2) as safety backstop
-3. **Ack** — `telegram_ack` replies "Added to the processing queue"
-4. **LLM** — `processing` calls the configured OpenAI-compatible API
+3. **Ack** — `telegram_ack` sets a reaction emoji on the user's message
+4. **Processing** — `processing` calls the configured OpenAI-compatible API
 5. **Deliver** — `telegram_deliver` sends the response (text or file) to the user
 
 ## Security
@@ -70,7 +70,7 @@ Key environment variables (see `env.example` for full list):
 | `Q2_PROCESSING_MINUTES` | `1` | LLM processing schedule interval |
 | `Q2_TELEGRAM_DELIVER_MINUTES` | `1` | Delivery worker schedule interval |
 | `TELEGRAM_ACK_REACTION` | `🤔` | Emoji reaction for queue acknowledgement (empty = disabled) |
-| `Q2_LLM_STALE_JOB_SECONDS` | `3600` | Timeout for re-queueing stalled LLM jobs |
+| `Q2_PROCESSING_STALE_JOB_SECONDS` | `3600` | Timeout for re-queueing stalled processing jobs |
 
 ## Running
 
@@ -105,12 +105,31 @@ Implemented in `apps/ops/health.py`. Used by Docker `HEALTHCHECK`.
 | Schedule | Interval | Description |
 | -------- | -------- | ----------- |
 | `telegram_ingest` (ID 1) | 1 min | Polling fallback |
-| `processing` (ID 2) | 1 min | Stale LLM job re-queue |
+| `processing` (ID 2) | 1 min | Stale processing job re-queue |
 | `telegram_deliver` (ID 3) | 1 min | Stale delivery re-queue |
 | `telegram_intake_flush` (ID 4) | 1 min | Safety flush for open intake buffers |
 | `q2_success_cleanup` (ID 5) | 60 min | Cleanup successful Q2 tasks |
 
 Schedules with IDs 1–4 are managed by `engine/telegram/apps.py`, ID 5 by `apps/ops/apps.py`. Admin edits are overwritten on save via `pre_save` signal.
+
+## Project structure
+
+```text
+engine/            — reusable Django apps (transport, processing, common)
+  telegram/        — Telegram transport (Bot, Job, IntakeBuffer, pipeline)
+  processing/      — abstract Worker lifecycle, job selection, stale reset
+  common/          — shared utilities (encryption, logging)
+
+apps/              — skilled-specific consumer code
+  inference/       — concrete LLM implementation (Provider, Profile, Worker)
+  library/         — Skill & Wrapper models (prompt content)
+  ops/             — health checks, Q2 cleanup
+
+config/            — Django settings, URLs, WSGI
+```
+
+`engine` is designed to be extracted as a reusable Django Telegram job pipeline.
+`skilled` is a working reference implementation that consumes it.
 
 ## Management commands
 

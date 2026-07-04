@@ -113,7 +113,7 @@ Q_CLUSTER = {
 Q2_PROCESSING_FUNC = "apps.inference.tasks.worker"
 
 # django-q2 success task retention (seconds, default 24h)
-Q2_SUCCESS_RETENTION_SECONDS = 86400
+Q2_SUCCESS_RETENTION_SECONDS = int(os.getenv("Q2_SUCCESS_RETENTION_SECONDS", "86400"))
 
 # Q2 schedule intervals (minutes)
 Q2_TELEGRAM_INGEST_MINUTES = int(os.getenv("Q2_TELEGRAM_INGEST_MINUTES", "1"))
