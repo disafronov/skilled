@@ -2,8 +2,8 @@
 
 import logging
 
-from apps.llm.client import call_llm
-from apps.llm.models import Worker as WorkerModel
+from apps.inference.client import call_llm
+from apps.inference.models import Worker as WorkerModel
 from engine.processing import Worker as BaseWorker
 
 logger = logging.getLogger(__name__)

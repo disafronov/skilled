@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import admin
 
-from apps.inference.models import Profile, Provider
+from apps.inference.models import Profile, Provider, Worker
 from engine.common.admin_forms import AdminModelForm
 from engine.common.admin_mixins import CHANGES_FIELDSET
 
@@ -82,3 +82,38 @@ class ProfileAdmin(admin.ModelAdmin):
     list_select_related = ["provider"]
     search_fields = ["name", "provider__name"]
     list_filter = ["provider"]
+
+
+class WorkerAdminForm(AdminModelForm):
+    class Meta:
+        model = Worker
+        fields = "__all__"
+
+
+@admin.register(Worker)
+class WorkerAdmin(admin.ModelAdmin):
+    form = WorkerAdminForm
+    fieldsets = (  # type: ignore[assignment]
+        (
+            None,
+            {
+                "fields": (
+                    "bot",
+                    "profile",
+                    "wrapper",
+                    "enabled",
+                ),
+            },
+        ),
+        CHANGES_FIELDSET,
+    )
+    readonly_fields = ("created_at", "updated_at")
+    list_display = (
+        "bot",
+        "profile",
+        "wrapper",
+        "enabled",
+        "updated_at",
+    )
+    list_select_related = ["bot", "profile", "wrapper"]
+    search_fields = ["bot__name"]
