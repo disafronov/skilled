@@ -13,7 +13,7 @@ MANAGED_SCHEDULES = (
     {
         "id": 4,
         "name": "processing",
-        "func": "engine.proxy.worker",
+        "func": "engine.proxy.worker.worker",
         "minutes_env": "Q2_PROCESSING_MINUTES",
         "default_minutes": 1,
     },

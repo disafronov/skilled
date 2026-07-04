@@ -27,7 +27,7 @@ class ProxyQ2ScheduleTests(TestCase):
         schedule = Schedule.objects.get(id=4)
 
         self.assertEqual(schedule.name, "processing")
-        self.assertEqual(schedule.func, "engine.proxy.worker")
+        self.assertEqual(schedule.func, "engine.proxy.worker.worker")
         self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
         self.assertEqual(schedule.minutes, 1)
         self.assertIsNone(schedule.cron)
@@ -46,7 +46,7 @@ class ProxyQ2ScheduleTests(TestCase):
 
         schedule.refresh_from_db()
         self.assertEqual(schedule.name, "processing")
-        self.assertEqual(schedule.func, "engine.proxy.worker")
+        self.assertEqual(schedule.func, "engine.proxy.worker.worker")
         self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
         self.assertEqual(schedule.minutes, 1)
         self.assertIsNone(schedule.cron)
