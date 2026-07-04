@@ -5,10 +5,10 @@ pre_save/post_delete/post_migrate handlers without duplicating the core
 logic.
 """
 
-import os
 from collections.abc import Callable
 from typing import Any
 
+from django.conf import settings
 from django.core.management.color import no_style
 from django.db import connection
 
@@ -18,7 +18,6 @@ def schedule_defaults(
     schedule_model: Any,
 ) -> dict[str, Any]:
     """Compute the authoritative field values for a managed schedule entry."""
-    raw: str | None = os.environ.get(schedule["minutes_env"])
     return {
         "name": schedule["name"],
         "func": schedule["func"],
@@ -26,7 +25,7 @@ def schedule_defaults(
         "args": None,
         "kwargs": None,
         "schedule_type": schedule_model.MINUTES,
-        "minutes": int(raw) if raw is not None else schedule["default_minutes"],
+        "minutes": getattr(settings, schedule["minutes"]),
         "cron": None,
         "cluster": None,
         "repeats": -1,

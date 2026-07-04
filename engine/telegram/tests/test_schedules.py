@@ -1,8 +1,5 @@
 """Tests for telegram pipeline Q2 schedule setup (IDs 1–3)."""
 
-import os
-from unittest.mock import patch
-
 from django.test import TestCase
 from django_q.models import Schedule
 
@@ -71,11 +68,8 @@ class TelegramQ2ScheduleTests(TestCase):
         self.assertIsNone(schedule.cron)
         self.assertEqual(schedule.repeats, -1)
 
-    def test_managed_schedule_uses_env_minutes(self):
-        with patch.dict(
-            os.environ,
-            {"Q2_TELEGRAM_INGEST_MINUTES": "5"},
-        ):
+    def test_managed_schedule_uses_settings_minutes(self):
+        with self.settings(Q2_TELEGRAM_INGEST_MINUTES=5):
             _SYNC(sender=None)
 
             schedule = Schedule.objects.get(id=1)

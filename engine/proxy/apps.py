@@ -1,6 +1,7 @@
 """AppConfig for engine.proxy — Q2 schedule (ID 4)."""
 
 from django.apps import AppConfig
+from django.conf import settings
 from django.db.models.signals import post_delete, post_migrate, pre_save
 
 from engine.common.schedules import (
@@ -13,9 +14,8 @@ MANAGED_SCHEDULES = (
     {
         "id": 4,
         "name": "processing",
-        "func": "engine.proxy.worker.worker",
-        "minutes_env": "Q2_PROCESSING_MINUTES",
-        "default_minutes": 1,
+        "func": settings.Q2_PROCESSING_FUNC,
+        "minutes": "Q2_PROCESSING_MINUTES",
     },
 )
 

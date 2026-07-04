@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, Mock, patch
 
 from django import forms
+from django.conf import settings
 from django.contrib.admin.sites import AdminSite
 from django.test import SimpleTestCase, TestCase
 
@@ -368,7 +369,7 @@ class JobAdminTests(TestCase):
         self.assertIsNone(job.error)
         self.assertIsNone(job.delivery_started_at)
         self.assertIsNone(job.delivery_finished_at)
-        mock_async.assert_called_once_with("engine.proxy.worker", job.pk)
+        mock_async.assert_called_once_with(settings.Q2_PROCESSING_FUNC, job.pk)
 
     @patch("engine.telegram.admin.async_task")
     def test_retry_delivery_jobs_resets_and_requeues(self, mock_async):
