@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.conf import settings
 from django.test import TestCase
 
 from engine.telegram.models import Bot, Job
@@ -23,7 +24,7 @@ class SignalOrchestrationTests(TestCase):
         )
         self.assertEqual(mock_async_task.call_count, 2)
         mock_async_task.assert_any_call("engine.telegram.tasks.telegram_ack", job.pk)
-        mock_async_task.assert_any_call("engine.proxy.worker", job.pk)
+        mock_async_task.assert_any_call(settings.Q2_PROCESSING_FUNC, job.pk)
 
     @patch("engine.telegram.signals.transaction.on_commit", side_effect=lambda fn: fn())
     @patch("engine.telegram.signals.async_task")

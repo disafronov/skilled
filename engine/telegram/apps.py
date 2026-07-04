@@ -14,22 +14,19 @@ MANAGED_SCHEDULES = (
         "id": 1,
         "name": "telegram_ingest",
         "func": "engine.telegram.tasks.telegram_ingest",
-        "minutes_env": "Q2_TELEGRAM_INGEST_MINUTES",
-        "default_minutes": 1,
+        "minutes": "Q2_TELEGRAM_INGEST_MINUTES",
     },
     {
         "id": 2,
         "name": "telegram_deliver",
         "func": "engine.telegram.tasks.telegram_deliver",
-        "minutes_env": "Q2_TELEGRAM_DELIVER_MINUTES",
-        "default_minutes": 1,
+        "minutes": "Q2_TELEGRAM_DELIVER_MINUTES",
     },
     {
         "id": 3,
         "name": "telegram_intake_flush",
         "func": "engine.telegram.tasks.telegram_flush_intake_buffers",
-        "minutes_env": "Q2_INTAKE_FLUSH_MINUTES",
-        "default_minutes": 1,
+        "minutes": "Q2_TELEGRAM_INTAKE_FLUSH_MINUTES",
     },
 )
 

@@ -14,8 +14,7 @@ MANAGED_SCHEDULES = (
         "id": 5,
         "name": "q2_success_cleanup",
         "func": "apps.ops.q2.cleanup_q2_successes",
-        "minutes_env": "Q2_SUCCESS_CLEANUP_MINUTES",
-        "default_minutes": 60,
+        "minutes": "Q2_SUCCESS_CLEANUP_MINUTES",
     },
 )
 

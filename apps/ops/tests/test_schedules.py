@@ -1,8 +1,5 @@
 """Tests for ops Q2 schedule setup (ID 5)."""
 
-import os
-from unittest.mock import patch
-
 from django.test import TestCase
 from django_q.models import Schedule
 
@@ -52,11 +49,8 @@ class OpsQ2ScheduleTests(TestCase):
         self.assertIsNone(schedule.cron)
         self.assertEqual(schedule.repeats, -1)
 
-    def test_cleanup_schedule_uses_env_minutes(self):
-        with patch.dict(
-            os.environ,
-            {"Q2_SUCCESS_CLEANUP_MINUTES": "30"},
-        ):
+    def test_cleanup_schedule_uses_settings_minutes(self):
+        with self.settings(Q2_SUCCESS_CLEANUP_MINUTES=30):
             _SYNC(sender=None)
 
             schedule = Schedule.objects.get(id=5)

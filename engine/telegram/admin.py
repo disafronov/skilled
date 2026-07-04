@@ -1,5 +1,6 @@
 from typing import Any
 
+from django.conf import settings
 from django.contrib import admin, messages
 from django.db.models import QuerySet
 from django.http import HttpRequest
@@ -199,7 +200,7 @@ class JobAdmin(admin.ModelAdmin):
             updated_at=timezone.now(),
         )
         for pk in pks:
-            async_task("engine.proxy.worker", pk)
+            async_task(settings.Q2_PROCESSING_FUNC, pk)
         self.message_user(
             request,
             f"Retrying {count} job(s) for LLM processing.",

@@ -54,7 +54,7 @@ Telegram → Job Queue (django-q2) → LLM Worker → Telegram delivery
 - `apps/ops/health.py` — `/health/liveness/`, `/health/readiness/` (Docker HEALTHCHECK)
 - `apps/ops/apps.py` — Q2 schedule management for cleanup task (ID 5)
 - `engine/telegram` — Bot, Job, IntakeBuffer models; pipeline tasks (telegram_ingest, processing, telegram_deliver, telegram_flush_intake_buffers); webhook view; admin; signals; Q2 schedule management via `apps.py` (IDs 1–3)
-- `engine/proxy` — Configurable Q2 task proxy; Q2 schedule management via `apps.py` (ID 4)
+- `engine/proxy` — Q2 schedule management (ID 4)
 - `engine/processing` — Abstract Worker base class (processing pipeline foundation)
 - `engine/workers/telegram.py` — Telegram Bot API client
 - `apps/workers/llm.py` — LLM client (OpenAI-compatible)
@@ -67,7 +67,7 @@ Telegram → Job Queue (django-q2) → LLM Worker → Telegram delivery
 
 - **DJANGO_SECRET_KEY**: Must be set for any `manage.py` command. Makefile uses `unsafe-secret-key-for-tooling`.
 - **Q2 schedules** (IDs 1–3) are managed in `engine/telegram/apps.py`, ID 4 in `engine/proxy/apps.py`, ID 5 in `apps/ops/apps.py` — admin edits are overwritten on save via `pre_save` signal.
-- **Proxy pattern**: `engine.proxy.worker` is the single Q2 entry point; it dispatches to the function configured via `Q2_WORKER_FUNC` setting/env var.
+- **Proxy app**: `engine/proxy/apps.py` manages Q2 Schedule ID 4; its `func` comes from `settings.Q2_PROCESSING_FUNC` (default: `apps.llm.tasks.worker`, overridable via `Q2_WORKER_FUNC` env).
 - **`policy.md`** is gitignored, loaded at runtime via `POLICY_FILE` env var.
 - **Pre-commit**: runs `make lint` + `uv lock` on commit; `make test` + `make dead-code` on push.
 - **Conventional commits** enforced via `conventional-pre-commit` hook on commit messages.
