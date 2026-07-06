@@ -12,22 +12,22 @@ from engine.common.schedules import (
 
 MANAGED_SCHEDULES = (
     {
-        "name": "telegram_ingest",
+        "name": "engine.telegram.ingest",
         "func": "engine.telegram.tasks.telegram_ingest",
         "minutes": "Q2_TELEGRAM_INGEST_MINUTES",
     },
     {
-        "name": "telegram_deliver",
+        "name": "engine.telegram.deliver",
         "func": "engine.telegram.tasks.telegram_deliver",
         "minutes": "Q2_TELEGRAM_DELIVER_MINUTES",
     },
     {
-        "name": "telegram_intake_flush",
+        "name": "engine.telegram.intake_flush",
         "func": "engine.telegram.tasks.telegram_flush_intake_buffers",
         "minutes": "Q2_TELEGRAM_INTAKE_FLUSH_MINUTES",
     },
     {
-        "name": "processing",
+        "name": "engine.processing",
         "func": settings.Q2_PROCESSING_FUNC,
         "minutes": "Q2_PROCESSING_MINUTES",
     },
