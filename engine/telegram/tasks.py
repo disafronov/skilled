@@ -2,7 +2,7 @@
 
 import logging
 from datetime import timedelta
-from typing import NotRequired, TypedDict, cast
+from typing import NotRequired, TypedDict
 
 from django.conf import settings
 from django.db import transaction
@@ -45,7 +45,7 @@ class _TelegramUpdate(TypedDict):
 
 def _manage_webhook_for_bot(bot: Bot) -> bool:
     """Check webhook health and register / heal / fallback. Returns True if healthy."""
-    # Respect cooldown — skip API calls entirely if recently fell back
+    # Respect cooldown - skip API calls entirely if recently fell back.
     if bot.webhook_disabled_at:
         elapsed = (timezone.now() - bot.webhook_disabled_at).total_seconds()
         if elapsed < settings.WEBHOOK_COOLDOWN_SECONDS:
@@ -129,12 +129,12 @@ def telegram_ack(job_id: int) -> None:
         )
 
 
-def telegram_ingest() -> None:
-    """Poll Telegram for updates and manage webhook lifecycle."""
+def telegram_setup() -> None:
+    """Manage webhook lifecycle for enabled Telegram bots."""
     try:
         # Clean up webhooks for disabled bots.
         # Done here rather than on Bot.save to avoid adding Telegram API calls
-        # to the admin save flow. The periodic ingest cycle handles it naturally.
+        # to the admin save flow. The periodic setup cycle handles it naturally.
         for bot in Bot.objects.filter(enabled=False, webhook_enabled_at__isnull=False):
             try:
                 delete_webhook(bot.telegram_api_token)
@@ -145,11 +145,30 @@ def telegram_ingest() -> None:
 
         for bot in Bot.objects.filter(enabled=True):
             try:
-                # Webhook management (if BASE_URL configured)
-                if settings.BASE_URL:
-                    webhook_active = _manage_webhook_for_bot(bot)
-                    if webhook_active:
-                        continue
+                if not settings.BASE_URL:
+                    continue
+                _manage_webhook_for_bot(bot)
+            except Exception as exc:
+                logger.error(
+                    "Bot %s setup failed: %s", bot.id, exc, exc_info=settings.DEBUG
+                )
+    except Exception as exc:
+        logger.critical(
+            "telegram_setup global failure: %s", exc, exc_info=settings.DEBUG
+        )
+
+
+def telegram_ingest() -> None:
+    """Poll Telegram for updates and create Jobs from inbound messages."""
+    try:
+        for bot in Bot.objects.filter(enabled=True):
+            try:
+                if (
+                    settings.BASE_URL
+                    and bot.webhook_enabled_at
+                    and not bot.webhook_disabled_at
+                ):
+                    continue
 
                 # Lightweight lock on the Bot row: skip_locked=True avoids
                 # queueing behind another worker already processing this bot.
@@ -163,10 +182,7 @@ def telegram_ingest() -> None:
                         continue
                     offset = locked.telegram_update_offset or None
 
-                updates = cast(
-                    list[_TelegramUpdate],
-                    get_updates(locked.telegram_api_token, offset=offset),
-                )
+                updates = get_updates(locked.telegram_api_token, offset=offset)
                 if not updates:
                     continue
 

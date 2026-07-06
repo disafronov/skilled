@@ -26,6 +26,7 @@ class TelegramQ2ScheduleTests(TestCase):
             schedule.name: schedule
             for schedule in Schedule.objects.filter(
                 name__in=[
+                    "engine.telegram.setup",
                     "engine.telegram.ingest",
                     "engine.telegram.deliver",
                     "engine.telegram.intake_flush",
@@ -33,6 +34,17 @@ class TelegramQ2ScheduleTests(TestCase):
                 ]
             )
         }
+
+        self.assertEqual(
+            schedules["engine.telegram.setup"].func,
+            "engine.telegram.tasks.telegram_setup",
+        )
+        self.assertEqual(
+            schedules["engine.telegram.setup"].schedule_type, Schedule.MINUTES
+        )
+        self.assertEqual(schedules["engine.telegram.setup"].minutes, 1)
+        self.assertIsNone(schedules["engine.telegram.setup"].cron)
+        self.assertEqual(schedules["engine.telegram.setup"].repeats, -1)
 
         self.assertEqual(
             schedules["engine.telegram.ingest"].func,
@@ -93,6 +105,20 @@ class TelegramQ2ScheduleTests(TestCase):
         self.assertEqual(schedule.minutes, 1)
         self.assertIsNone(schedule.cron)
         self.assertEqual(schedule.repeats, -1)
+
+    def test_setup_schedule_uses_settings_minutes(self):
+        with self.settings(Q2_TELEGRAM_SETUP_MINUTES=5):
+            _SYNC(sender=None)
+
+            schedule = Schedule.objects.get(name="engine.telegram.setup")
+            self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
+            self.assertEqual(schedule.minutes, 5)
+            self.assertIsNone(schedule.cron)
+
+            schedule.minutes = 1
+            schedule.save()
+            schedule.refresh_from_db()
+            self.assertEqual(schedule.minutes, 5)
 
     def test_managed_schedule_uses_settings_minutes(self):
         with self.settings(Q2_TELEGRAM_INGEST_MINUTES=5):

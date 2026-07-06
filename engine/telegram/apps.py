@@ -12,6 +12,11 @@ from engine.common.schedules import (
 
 MANAGED_SCHEDULES = (
     {
+        "name": "engine.telegram.setup",
+        "func": "engine.telegram.tasks.telegram_setup",
+        "minutes": "Q2_TELEGRAM_SETUP_MINUTES",
+    },
+    {
         "name": "engine.telegram.ingest",
         "func": "engine.telegram.tasks.telegram_ingest",
         "minutes": "Q2_TELEGRAM_INGEST_MINUTES",
