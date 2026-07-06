@@ -200,6 +200,16 @@ class PipelineTaskBranchTests(TestCase):
 
     @patch("engine.telegram.tasks.logger")
     @patch(
+        "engine.telegram.tasks.get_updates",
+        side_effect=ValueError("unexpected error"),
+    )
+    def test_ingest_logs_error_on_non_runtime_exception(self, get_updates, logger):
+        telegram_ingest()
+
+        logger.error.assert_called_once()
+
+    @patch("engine.telegram.tasks.logger")
+    @patch(
         "engine.telegram.tasks.Bot.objects.filter", side_effect=RuntimeError("db down")
     )
     def test_ingest_logs_global_failure(self, filter_mock, logger):
