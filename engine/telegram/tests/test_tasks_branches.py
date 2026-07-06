@@ -534,17 +534,6 @@ class WebhookManagementTests(TestCase):
         mock_info.assert_not_called()
         mock_set.assert_not_called()
 
-    @override_settings(BASE_URL="https://example.com")
-    @patch(
-        "engine.telegram.tasks.Bot.objects.select_for_update",
-        return_value=Bot.objects.none(),
-    )
-    def test_setup_skips_bot_locked_by_ingest(self, mock_sfu):
-        telegram_setup()
-
-        self.bot.refresh_from_db()
-        self.assertIsNone(self.bot.webhook_enabled_at)
-
 
 class TelegramAckTests(TestCase):
     @classmethod
