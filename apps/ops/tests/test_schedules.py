@@ -1,4 +1,4 @@
-"""Tests for ops Q2 schedule setup (ID 5)."""
+"""Tests for ops Q2 schedule setup."""
 
 from django.test import TestCase
 from django_q.models import Schedule
@@ -18,10 +18,10 @@ _RECREATE = make_recreate_handler(MANAGED_SCHEDULES)
 class OpsQ2ScheduleTests(TestCase):
     """Test the ops schedule configuration."""
 
-    def test_default_cleanup_schedule_is_hardcoded_with_fixed_id(self):
+    def test_default_cleanup_schedule_is_created_by_name(self):
         _SYNC(sender=None)
 
-        schedule = Schedule.objects.get(id=5)
+        schedule = Schedule.objects.get(name="q2_success_cleanup")
 
         self.assertEqual(schedule.name, "q2_success_cleanup")
         self.assertEqual(schedule.func, "apps.ops.q2.cleanup_q2_successes")
@@ -32,7 +32,7 @@ class OpsQ2ScheduleTests(TestCase):
 
     def test_managed_schedule_edits_are_overwritten_on_save(self):
         _SYNC(sender=None)
-        schedule = Schedule.objects.get(id=5)
+        schedule = Schedule.objects.get(name="q2_success_cleanup")
 
         schedule.name = "changed"
         schedule.func = "changed.func"
@@ -53,7 +53,7 @@ class OpsQ2ScheduleTests(TestCase):
         with self.settings(Q2_SUCCESS_CLEANUP_MINUTES=30):
             _SYNC(sender=None)
 
-            schedule = Schedule.objects.get(id=5)
+            schedule = Schedule.objects.get(name="q2_success_cleanup")
             self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
             self.assertEqual(schedule.minutes, 30)
             self.assertIsNone(schedule.cron)
@@ -79,7 +79,6 @@ class OpsQ2ScheduleTests(TestCase):
         _SYNC(sender=None)
 
         self.assertEqual(Schedule.objects.filter(name="q2_success_cleanup").count(), 1)
-        self.assertEqual(Schedule.objects.get(name="q2_success_cleanup").id, 5)
 
     def test_unmanaged_schedule_edits_are_ignored(self):
         schedule = Schedule(
@@ -98,12 +97,11 @@ class OpsQ2ScheduleTests(TestCase):
 
     def test_managed_schedule_is_recreated_on_delete(self):
         _SYNC(sender=None)
-        schedule = Schedule.objects.get(id=5)
-        pk = schedule.pk
+        schedule = Schedule.objects.get(name="q2_success_cleanup")
         schedule.delete()
-        _RECREATE(Schedule, Schedule(pk=pk))
+        _RECREATE(Schedule, Schedule(name="q2_success_cleanup"))
 
-        self.assertTrue(Schedule.objects.filter(id=pk).exists())
+        self.assertTrue(Schedule.objects.filter(name="q2_success_cleanup").exists())
 
     def test_unmanaged_schedule_delete_is_ignored_by_recreate(self):
         schedule = Schedule.objects.create(
@@ -115,6 +113,6 @@ class OpsQ2ScheduleTests(TestCase):
             repeats=-1,
         )
         schedule.delete()
-        _RECREATE(Schedule, Schedule(pk=99))
+        _RECREATE(Schedule, Schedule(name="custom"))
 
         self.assertFalse(Schedule.objects.filter(id=99).exists())

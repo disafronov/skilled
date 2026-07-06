@@ -1,4 +1,4 @@
-"""Q2 schedule management for ops infrastructure tasks (ID 5)."""
+"""Q2 schedule management for ops infrastructure tasks."""
 
 from django.apps import AppConfig
 from django.db.models.signals import post_delete, post_migrate, pre_save
@@ -11,7 +11,6 @@ from engine.common.schedules import (
 
 MANAGED_SCHEDULES = (
     {
-        "id": 5,
         "name": "q2_success_cleanup",
         "func": "apps.ops.q2.cleanup_q2_successes",
         "minutes": "Q2_SUCCESS_CLEANUP_MINUTES",

@@ -107,13 +107,13 @@ Implemented in `apps/ops/health.py`. Used by Docker `HEALTHCHECK`.
 
 | Schedule | Interval | Description |
 | -------- | -------- | ----------- |
-| `telegram_ingest` (ID 1) | 1 min | Polling fallback |
-| `telegram_deliver` (ID 2) | 1 min | Drain completed jobs that have not started delivery |
-| `telegram_intake_flush` (ID 3) | 1 min | Safety flush for open intake buffers |
-| `processing` (ID 4) | 1 min | Stale processing job re-queue |
-| `q2_success_cleanup` (ID 5) | 60 min | Cleanup successful Q2 tasks |
+| `telegram_ingest` | 1 min | Polling fallback |
+| `telegram_deliver` | 1 min | Drain completed jobs that have not started delivery |
+| `telegram_intake_flush` | 1 min | Safety flush for open intake buffers |
+| `processing` | 1 min | Stale processing job re-queue |
+| `q2_success_cleanup` | 60 min | Cleanup successful Q2 tasks |
 
-Schedules with IDs 1–4 are managed by `engine/telegram/apps.py`, ID 5 by `apps/ops/apps.py`. Admin edits are overwritten on save via `pre_save` signal.
+Telegram pipeline schedules are managed by `engine/telegram/apps.py`; the Q2 cleanup schedule is managed by `apps/ops/apps.py`. Managed schedules are identified by stable names, not fixed primary keys. Admin edits are overwritten on save via `pre_save` signal.
 
 ## Project structure
 
