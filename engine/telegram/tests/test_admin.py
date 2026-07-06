@@ -381,6 +381,7 @@ class JobAdminTests(TestCase):
             reply_target="retry-delivery",
             raw_input="hello",
             raw_output="some result",
+            processing_started_at=self.job.created_at,
             processing_finished_at=self.job.created_at,
             delivery_started_at=self.job.created_at,
             error="delivery failed",

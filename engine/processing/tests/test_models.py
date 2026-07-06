@@ -113,6 +113,7 @@ class WorkerExtendedTests(TestCase):
         job = Job.objects.create(bot=self.bot, reply_target="1", raw_input="hi")
         Job.objects.filter(pk=job.pk).update(
             raw_output="existing",
+            processing_started_at="2024-01-01 00:00:00+00",
             processing_finished_at="2024-01-01 00:00:00+00",
         )
         _Sub().run(job_pk=job.pk)

@@ -92,6 +92,7 @@ class WorkerTaskTests(TestCase):
             reply_target="123",
             raw_input="finished",
             raw_output="already done",
+            processing_started_at=self.now,
             processing_finished_at=self.now,
         )
         pending = Job.objects.create(
@@ -216,6 +217,7 @@ class WorkerTaskTests(TestCase):
             reply_target="123",
             raw_input="done",
             raw_output="already done",
+            processing_started_at=self.now,
             processing_finished_at=self.now,
         )
         worker(job_pk=job.pk)

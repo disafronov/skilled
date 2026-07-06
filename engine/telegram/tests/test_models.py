@@ -1,6 +1,7 @@
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from engine.telegram.models import Bot, generate_webhook_secret
+from engine.telegram.models import Bot, Job, generate_webhook_secret
 
 
 class BotModelTests(TestCase):
@@ -38,3 +39,20 @@ class BotModelTests(TestCase):
         self.assertEqual(len(secret), 32)
         # hex chars = 0-9, a-f only
         int(secret, 16)
+
+
+class JobModelTests(TestCase):
+    def test_processing_finished_requires_processing_started(self):
+        bot = Bot.objects.create(
+            name="constraint-bot",
+            telegram_api_token="telegram-token",
+        )
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Job.objects.create(
+                bot=bot,
+                reply_target="1",
+                raw_input="hi",
+                raw_output="done",
+                processing_finished_at="2024-01-01 00:00:00+00",
+            )
