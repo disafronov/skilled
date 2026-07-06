@@ -4163,7 +4163,7 @@ version = "15.0.0"
 
 [[package]]
 name = "skilled"
-version = "1.9.2rc4"
+version = "1.9.2rc5"
 
   [package.source]
   virtual = "."
