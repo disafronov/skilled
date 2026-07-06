@@ -39,8 +39,15 @@ class SignalOrchestrationTests(TestCase):
         mock_async_task.reset_mock()
 
         job.raw_output = "some output"
+        job.processing_started_at = job.created_at
         job.processing_finished_at = job.created_at
-        job.save(update_fields=["raw_output", "processing_finished_at"])
+        job.save(
+            update_fields=[
+                "raw_output",
+                "processing_started_at",
+                "processing_finished_at",
+            ]
+        )
 
         mock_async_task.assert_called_once_with(
             "engine.telegram.tasks.telegram_deliver", job.pk

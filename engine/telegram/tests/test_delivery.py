@@ -32,6 +32,7 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output="short response",
+            processing_started_at=self.now,
             processing_finished_at=self.now,
         )
 
@@ -64,6 +65,7 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output="*bold*",
+            processing_started_at=self.now,
             processing_finished_at=self.now,
         )
 
@@ -92,6 +94,7 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output="<b>bold</b>",
+            processing_started_at=self.now,
             processing_finished_at=self.now,
         )
 
@@ -155,6 +158,7 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output=output,
+            processing_started_at=self.now,
             processing_finished_at=self.now,
         )
 
@@ -188,6 +192,7 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output=output,
+            processing_started_at=self.now,
             processing_finished_at=self.now,
         )
 
@@ -218,6 +223,7 @@ class TelegramDeliveryTests(TestCase):
             reply_to_message_id=456,
             raw_input="hi",
             raw_output=output,
+            processing_started_at=self.now,
             processing_finished_at=self.now,
         )
 
@@ -242,6 +248,7 @@ class TelegramDeliveryTests(TestCase):
             reply_target="123",
             raw_input="hi",
             raw_output="output",
+            processing_started_at=self.now,
             processing_finished_at=self.now,
         )
 
@@ -264,6 +271,7 @@ class TelegramDeliveryTests(TestCase):
             reply_target="123",
             raw_input="done",
             raw_output="done",
+            processing_started_at=self.now,
             processing_finished_at=self.now,
             delivery_started_at=self.now,
             delivery_finished_at=self.now,
@@ -287,6 +295,7 @@ class TelegramDeliveryTests(TestCase):
             raw_input="hi",
             raw_output="output",
             error="Something went wrong",
+            processing_started_at=self.now,
             processing_finished_at=self.now,
         )
 
@@ -310,6 +319,7 @@ class TelegramDeliveryTests(TestCase):
             reply_target="123",
             raw_input="hi",
             raw_output="output",
+            processing_started_at=self.now,
             processing_finished_at=self.now,
         )
 

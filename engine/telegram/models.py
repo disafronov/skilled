@@ -165,6 +165,13 @@ class Job(models.Model):
             ),
             models.CheckConstraint(
                 condition=(
+                    models.Q(processing_finished_at__isnull=True)
+                    | models.Q(processing_started_at__isnull=False)
+                ),
+                name="tg_job_processing_finished_requires_started",
+            ),
+            models.CheckConstraint(
+                condition=(
                     models.Q(delivery_started_at__isnull=True)
                     | (
                         models.Q(processing_finished_at__isnull=False)
