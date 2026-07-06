@@ -9,8 +9,6 @@ from collections.abc import Callable
 from typing import Any
 
 from django.conf import settings
-from django.core.management.color import no_style
-from django.db import connection
 
 
 def schedule_defaults(
@@ -33,6 +31,13 @@ def schedule_defaults(
     }
 
 
+def _schedule_by_name(
+    managed_schedules: tuple[dict[str, Any], ...],
+) -> dict[str, dict[str, Any]]:
+    """Index managed schedule definitions by their stable schedule name."""
+    return {schedule["name"]: schedule for schedule in managed_schedules}
+
+
 def make_restore_handler(
     managed_schedules: tuple[dict[str, Any], ...],
 ) -> Callable[[Any, Any], None]:
@@ -43,8 +48,15 @@ def make_restore_handler(
     """
 
     def _restore(sender: Any, instance: Any, **kwargs: Any) -> None:
-        schedules_by_id = {s["id"]: s for s in managed_schedules}
-        entry = schedules_by_id.get(instance.pk)
+        schedules_by_name = _schedule_by_name(managed_schedules)
+        entry = schedules_by_name.get(instance.name)
+        if entry is None and instance.pk:
+            current_name = (
+                sender.objects.filter(pk=instance.pk)
+                .values_list("name", flat=True)
+                .first()
+            )
+            entry = schedules_by_name.get(current_name)
         if entry is None:
             return
         for field, value in schedule_defaults(entry, sender).items():
@@ -64,15 +76,16 @@ def make_recreate_handler(
     """
 
     def _recreate(sender: Any, instance: Any, **kwargs: Any) -> None:
-        for entry in managed_schedules:
-            if entry["id"] == instance.pk:
-                from django_q.models import Schedule
+        entry = _schedule_by_name(managed_schedules).get(instance.name)
+        if entry is None:
+            return
 
-                Schedule.objects.update_or_create(
-                    id=entry["id"],
-                    defaults=schedule_defaults(entry, Schedule),
-                )
-                break
+        from django_q.models import Schedule
+
+        Schedule.objects.update_or_create(
+            name=entry["name"],
+            defaults=schedule_defaults(entry, Schedule),
+        )
 
     return _recreate
 
@@ -82,29 +95,27 @@ def make_sync_handler(
 ) -> Callable[..., None]:
     """Return a post_migrate handler that creates/updates managed schedules.
 
-    Removes any duplicate-named rows that have snuck in, then updates
-    or creates the expected rows at the canonical IDs.
+    Removes any duplicate-named rows that have snuck in, then updates or creates
+    the expected rows by stable schedule name instead of fixed primary keys.
     """
 
     def _sync(sender: Any, **kwargs: Any) -> None:
         # Lazy import to keep module-level imports cheap.
         from django_q.models import Schedule
 
-        schedule_ids = [s["id"] for s in managed_schedules]
-        schedule_names = [s["name"] for s in managed_schedules]
-
-        Schedule.objects.filter(name__in=schedule_names).exclude(
-            id__in=schedule_ids
-        ).delete()
-
         for entry in managed_schedules:
-            Schedule.objects.update_or_create(
-                id=entry["id"],
-                defaults=schedule_defaults(entry, Schedule),
-            )
+            defaults = schedule_defaults(entry, Schedule)
+            schedules = list(Schedule.objects.filter(name=entry["name"]).order_by("id"))
+            if not schedules:
+                Schedule.objects.create(**defaults)
+                continue
 
-        with connection.cursor() as cursor:
-            for sql in connection.ops.sequence_reset_sql(no_style(), [Schedule]):
-                cursor.execute(sql)
+            canonical = schedules[0]
+            Schedule.objects.filter(
+                id__in=[schedule.id for schedule in schedules[1:]]
+            ).delete()
+            for field, value in defaults.items():
+                setattr(canonical, field, value)
+            canonical.save(update_fields=list(defaults.keys()))
 
     return _sync

@@ -12,7 +12,6 @@ from engine.common.schedules import (
 
 _SAMPLE_SCHEDULES = (
     {
-        "id": 99,
         "name": "test_job",
         "func": "test.module.func",
         "minutes": "TEST_JOB_MINUTES",
@@ -53,11 +52,33 @@ class RestoreHandlerTests(TestCase):
     @override_settings(TEST_JOB_MINUTES=10)
     def test_restores_managed_schedule_on_pre_save(self):
         handler = make_restore_handler(_SAMPLE_SCHEDULES)
-        entry = _SAMPLE_SCHEDULES[0]
+        schedule = Schedule.objects.create(
+            name="test_job",
+            func="test.module.func",
+            schedule_type=Schedule.MINUTES,
+            minutes=10,
+            repeats=-1,
+        )
 
+        schedule.name = "changed"
+        schedule.func = "changed.func"
+        schedule.schedule_type = Schedule.HOURLY
+        schedule.minutes = 99
+        schedule.repeats = 10
+
+        handler(sender=Schedule, instance=schedule)
+
+        self.assertEqual(schedule.name, "test_job")
+        self.assertEqual(schedule.func, "test.module.func")
+        self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
+        self.assertEqual(schedule.minutes, 10)
+        self.assertEqual(schedule.repeats, -1)
+
+    @override_settings(TEST_JOB_MINUTES=10)
+    def test_restores_new_duplicate_by_managed_name(self):
+        handler = make_restore_handler(_SAMPLE_SCHEDULES)
         schedule = Schedule(
-            id=entry["id"],
-            name="changed",
+            name="test_job",
             func="changed.func",
             schedule_type=Schedule.HOURLY,
             minutes=99,
@@ -93,23 +114,18 @@ class RecreateHandlerTests(TestCase):
     @override_settings(TEST_JOB_MINUTES=10)
     def test_recreates_managed_schedule(self):
         handler = make_recreate_handler(_SAMPLE_SCHEDULES)
-        schedule = Schedule(
-            id=_SAMPLE_SCHEDULES[0]["id"],
-            name=_SAMPLE_SCHEDULES[0]["name"],
-            func=_SAMPLE_SCHEDULES[0]["func"],
+        schedule = Schedule.objects.create(
+            name="test_job",
+            func="test.module.func",
             schedule_type=Schedule.MINUTES,
             minutes=10,
             repeats=-1,
         )
-        schedule.save()
-        pk = schedule.pk
         schedule.delete()
 
-        # Simulate post_delete: pass a fresh instance with the original pk
-        # (Django's Collector.delete() sends the signal before nulling pk)
-        handler(sender=Schedule, instance=Schedule(pk=pk))
+        handler(sender=Schedule, instance=Schedule(name="test_job"))
 
-        self.assertTrue(Schedule.objects.filter(id=pk).exists())
+        self.assertTrue(Schedule.objects.filter(name="test_job").exists())
 
     def test_ignores_unmanaged_schedule(self):
         handler = make_recreate_handler(_SAMPLE_SCHEDULES)
@@ -123,7 +139,7 @@ class RecreateHandlerTests(TestCase):
         )
         schedule.delete()
 
-        handler(sender=Schedule, instance=Schedule(pk=999))
+        handler(sender=Schedule, instance=Schedule(name="unmanaged"))
 
         self.assertFalse(Schedule.objects.filter(id=999).exists())
 
@@ -134,7 +150,7 @@ class SyncHandlerTests(TestCase):
         handler = make_sync_handler(_SAMPLE_SCHEDULES)
         handler(sender=None)
 
-        schedule = Schedule.objects.get(id=_SAMPLE_SCHEDULES[0]["id"])
+        schedule = Schedule.objects.get(name="test_job")
         self.assertEqual(schedule.name, "test_job")
         self.assertEqual(schedule.func, "test.module.func")
         self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
@@ -155,13 +171,11 @@ class SyncHandlerTests(TestCase):
         handler(sender=None)
 
         self.assertEqual(Schedule.objects.filter(name="test_job").count(), 1)
-        self.assertEqual(Schedule.objects.get(name="test_job").id, 99)
 
     @override_settings(TEST_JOB_MINUTES=10)
     def test_updates_existing_schedule(self):
         Schedule.objects.create(
-            id=_SAMPLE_SCHEDULES[0]["id"],
-            name="old_name",
+            name="test_job",
             func="old.func",
             schedule_type=Schedule.HOURLY,
             minutes=5,
@@ -171,7 +185,25 @@ class SyncHandlerTests(TestCase):
         handler = make_sync_handler(_SAMPLE_SCHEDULES)
         handler(sender=None)
 
-        schedule = Schedule.objects.get(id=_SAMPLE_SCHEDULES[0]["id"])
+        schedule = Schedule.objects.get(name="test_job")
         self.assertEqual(schedule.name, "test_job")
         self.assertEqual(schedule.func, "test.module.func")
         self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
+
+    @override_settings(TEST_JOB_MINUTES=10)
+    def test_does_not_claim_unmanaged_fixed_id(self):
+        custom = Schedule.objects.create(
+            id=99,
+            name="custom",
+            func="custom.func",
+            schedule_type=Schedule.MINUTES,
+            minutes=5,
+            repeats=-1,
+        )
+
+        handler = make_sync_handler(_SAMPLE_SCHEDULES)
+        handler(sender=None)
+
+        custom.refresh_from_db()
+        self.assertEqual(custom.name, "custom")
+        self.assertTrue(Schedule.objects.filter(name="test_job").exists())

@@ -1,4 +1,4 @@
-"""Tests for Q2 schedule setup (IDs 1–4)."""
+"""Tests for Q2 schedule setup."""
 
 from django.conf import settings
 from django.test import TestCase
@@ -17,49 +17,59 @@ _RECREATE = make_recreate_handler(MANAGED_SCHEDULES)
 
 
 class TelegramQ2ScheduleTests(TestCase):
-    """Test the pipeline schedule configuration (IDs 1–3)."""
+    """Test the pipeline schedule configuration."""
 
-    def test_default_schedules_are_hardcoded_with_fixed_ids(self):
+    def test_default_schedules_are_created_by_name(self):
         _SYNC(sender=None)
 
         schedules = {
-            schedule.id: schedule
-            for schedule in Schedule.objects.filter(id__in=[1, 2, 3, 4])
+            schedule.name: schedule
+            for schedule in Schedule.objects.filter(
+                name__in=[
+                    "telegram_ingest",
+                    "telegram_deliver",
+                    "telegram_intake_flush",
+                    "processing",
+                ]
+            )
         }
 
-        self.assertEqual(schedules[1].name, "telegram_ingest")
-        self.assertEqual(schedules[1].func, "engine.telegram.tasks.telegram_ingest")
-        self.assertEqual(schedules[1].schedule_type, Schedule.MINUTES)
-        self.assertEqual(schedules[1].minutes, 1)
-        self.assertIsNone(schedules[1].cron)
-        self.assertEqual(schedules[1].repeats, -1)
-
-        self.assertEqual(schedules[2].name, "telegram_deliver")
-        self.assertEqual(schedules[2].func, "engine.telegram.tasks.telegram_deliver")
-        self.assertEqual(schedules[2].schedule_type, Schedule.MINUTES)
-        self.assertEqual(schedules[2].minutes, 1)
-        self.assertIsNone(schedules[2].cron)
-        self.assertEqual(schedules[2].repeats, -1)
-
-        self.assertEqual(schedules[3].name, "telegram_intake_flush")
         self.assertEqual(
-            schedules[3].func, "engine.telegram.tasks.telegram_flush_intake_buffers"
+            schedules["telegram_ingest"].func, "engine.telegram.tasks.telegram_ingest"
         )
-        self.assertEqual(schedules[3].schedule_type, Schedule.MINUTES)
-        self.assertEqual(schedules[3].minutes, 1)
-        self.assertIsNone(schedules[3].cron)
-        self.assertEqual(schedules[3].repeats, -1)
+        self.assertEqual(schedules["telegram_ingest"].schedule_type, Schedule.MINUTES)
+        self.assertEqual(schedules["telegram_ingest"].minutes, 1)
+        self.assertIsNone(schedules["telegram_ingest"].cron)
+        self.assertEqual(schedules["telegram_ingest"].repeats, -1)
 
-        self.assertEqual(schedules[4].name, "processing")
-        self.assertEqual(schedules[4].func, settings.Q2_PROCESSING_FUNC)
-        self.assertEqual(schedules[4].schedule_type, Schedule.MINUTES)
-        self.assertEqual(schedules[4].minutes, 1)
-        self.assertIsNone(schedules[4].cron)
-        self.assertEqual(schedules[4].repeats, -1)
+        self.assertEqual(
+            schedules["telegram_deliver"].func, "engine.telegram.tasks.telegram_deliver"
+        )
+        self.assertEqual(schedules["telegram_deliver"].schedule_type, Schedule.MINUTES)
+        self.assertEqual(schedules["telegram_deliver"].minutes, 1)
+        self.assertIsNone(schedules["telegram_deliver"].cron)
+        self.assertEqual(schedules["telegram_deliver"].repeats, -1)
+
+        self.assertEqual(
+            schedules["telegram_intake_flush"].func,
+            "engine.telegram.tasks.telegram_flush_intake_buffers",
+        )
+        self.assertEqual(
+            schedules["telegram_intake_flush"].schedule_type, Schedule.MINUTES
+        )
+        self.assertEqual(schedules["telegram_intake_flush"].minutes, 1)
+        self.assertIsNone(schedules["telegram_intake_flush"].cron)
+        self.assertEqual(schedules["telegram_intake_flush"].repeats, -1)
+
+        self.assertEqual(schedules["processing"].func, settings.Q2_PROCESSING_FUNC)
+        self.assertEqual(schedules["processing"].schedule_type, Schedule.MINUTES)
+        self.assertEqual(schedules["processing"].minutes, 1)
+        self.assertIsNone(schedules["processing"].cron)
+        self.assertEqual(schedules["processing"].repeats, -1)
 
     def test_managed_schedule_edits_are_overwritten_on_save(self):
         _SYNC(sender=None)
-        schedule = Schedule.objects.get(id=1)
+        schedule = Schedule.objects.get(name="telegram_ingest")
 
         schedule.name = "changed"
         schedule.func = "changed.func"
@@ -80,7 +90,7 @@ class TelegramQ2ScheduleTests(TestCase):
         with self.settings(Q2_TELEGRAM_INGEST_MINUTES=5):
             _SYNC(sender=None)
 
-            schedule = Schedule.objects.get(id=1)
+            schedule = Schedule.objects.get(name="telegram_ingest")
             self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
             self.assertEqual(schedule.minutes, 5)
             self.assertIsNone(schedule.cron)
@@ -106,7 +116,6 @@ class TelegramQ2ScheduleTests(TestCase):
         _SYNC(sender=None)
 
         self.assertEqual(Schedule.objects.filter(name="telegram_ingest").count(), 1)
-        self.assertEqual(Schedule.objects.get(name="telegram_ingest").id, 1)
 
     def test_unmanaged_schedule_edits_are_ignored(self):
         schedule = Schedule(
@@ -125,12 +134,11 @@ class TelegramQ2ScheduleTests(TestCase):
 
     def test_managed_schedule_is_recreated_on_delete(self):
         _SYNC(sender=None)
-        schedule = Schedule.objects.get(id=1)
-        pk = schedule.pk
+        schedule = Schedule.objects.get(name="telegram_ingest")
         schedule.delete()
-        _RECREATE(Schedule, Schedule(pk=pk))
+        _RECREATE(Schedule, Schedule(name="telegram_ingest"))
 
-        self.assertTrue(Schedule.objects.filter(id=pk).exists())
+        self.assertTrue(Schedule.objects.filter(name="telegram_ingest").exists())
 
     def test_unmanaged_schedule_delete_is_ignored_by_recreate(self):
         schedule = Schedule.objects.create(
@@ -142,18 +150,18 @@ class TelegramQ2ScheduleTests(TestCase):
             repeats=-1,
         )
         schedule.delete()
-        _RECREATE(Schedule, Schedule(pk=99))
+        _RECREATE(Schedule, Schedule(name="custom"))
 
         self.assertFalse(Schedule.objects.filter(id=99).exists())
 
 
 class ProcessingQ2ScheduleTests(TestCase):
-    """Test the processing schedule configuration (ID 4)."""
+    """Test the processing schedule configuration."""
 
     def test_processing_edits_are_overwritten_on_save(self):
         _SYNC(sender=None)
 
-        schedule = Schedule.objects.get(id=4)
+        schedule = Schedule.objects.get(name="processing")
         schedule.name = "changed"
         schedule.func = "changed.func"
         schedule.schedule_type = Schedule.HOURLY
@@ -173,7 +181,7 @@ class ProcessingQ2ScheduleTests(TestCase):
         with self.settings(Q2_PROCESSING_MINUTES=5):
             _SYNC(sender=None)
 
-            schedule = Schedule.objects.get(id=4)
+            schedule = Schedule.objects.get(name="processing")
             self.assertEqual(schedule.schedule_type, Schedule.MINUTES)
             self.assertEqual(schedule.minutes, 5)
             self.assertIsNone(schedule.cron)
@@ -199,13 +207,11 @@ class ProcessingQ2ScheduleTests(TestCase):
         _SYNC(sender=None)
 
         self.assertEqual(Schedule.objects.filter(name="processing").count(), 1)
-        self.assertEqual(Schedule.objects.get(name="processing").id, 4)
 
     def test_processing_recreated_on_delete(self):
         _SYNC(sender=None)
-        schedule = Schedule.objects.get(id=4)
-        pk = schedule.pk
+        schedule = Schedule.objects.get(name="processing")
         schedule.delete()
-        _RECREATE(Schedule, Schedule(pk=pk))
+        _RECREATE(Schedule, Schedule(name="processing"))
 
-        self.assertTrue(Schedule.objects.filter(id=pk).exists())
+        self.assertTrue(Schedule.objects.filter(name="processing").exists())
