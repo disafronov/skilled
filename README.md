@@ -37,6 +37,7 @@ Bot           — Telegram endpoint / transport identity
 Worker        — Execution configuration for a bot. Currently stores LLM profile and wrapper.
 IntakeBuffer  — mutable pre-job accumulator (one open buffer per bot/chat)
 Job           — finalized execution artifact (immutable after creation)
+```
 
 All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider, Profile & Worker), `engine/telegram` (Bot, Job, IntakeBuffer + pipeline), `engine/processing` (Worker abstract lifecycle), and `apps/ops` (health checks + Q2 cleanup).
 
@@ -46,7 +47,9 @@ All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provi
 2. **Flush** — immediate flush on group boundary, or `telegram_intake_flush` (scheduled Q2) as safety backstop
 3. **Ack** — `telegram_ack` sets a reaction emoji on the user's message
 4. **Processing** — `processing` calls the configured OpenAI-compatible API
-5. **Deliver** — `telegram_deliver` sends the response (text or file) to the user
+5. **Deliver** — `telegram_deliver` sends successful responses as files and errors as text messages
+
+Processing jobs can be re-queued when stale because no user-visible side effect has happened yet. Delivery is different: once `delivery_started_at` is set, Telegram may already have accepted the message even if the worker later sees an error. The scheduled `telegram_deliver` task therefore only drains jobs that have not started delivery yet; it does not automatically resend an ambiguous successful payload and risk duplicate replies.
 
 ## Security
 
@@ -105,9 +108,9 @@ Implemented in `apps/ops/health.py`. Used by Docker `HEALTHCHECK`.
 | Schedule | Interval | Description |
 | -------- | -------- | ----------- |
 | `telegram_ingest` (ID 1) | 1 min | Polling fallback |
-| `processing` (ID 2) | 1 min | Stale processing job re-queue |
-| `telegram_deliver` (ID 3) | 1 min | Stale delivery re-queue |
-| `telegram_intake_flush` (ID 4) | 1 min | Safety flush for open intake buffers |
+| `telegram_deliver` (ID 2) | 1 min | Drain completed jobs that have not started delivery |
+| `telegram_intake_flush` (ID 3) | 1 min | Safety flush for open intake buffers |
+| `processing` (ID 4) | 1 min | Stale processing job re-queue |
 | `q2_success_cleanup` (ID 5) | 60 min | Cleanup successful Q2 tasks |
 
 Schedules with IDs 1–4 are managed by `engine/telegram/apps.py`, ID 5 by `apps/ops/apps.py`. Admin edits are overwritten on save via `pre_save` signal.

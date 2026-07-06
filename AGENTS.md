@@ -9,6 +9,7 @@
   - Disabled bot webhook cleanup in `telegram_ingest` — not in Bot.save to avoid API calls in admin flow.
   - `skip_locked=True` in `telegram_ingest` — avoids queueing behind other workers.
   - Double `select_for_update` in `telegram_ingest` — re-reads offset after get_updates.
+  - Delivery retry semantics in `engine/telegram/tasks.py` — processing can be re-queued when stale, but delivery does not automatically resend an ambiguous payload after `delivery_started_at` because Telegram sends are not idempotent.
 
 ## Commands
 
@@ -63,6 +64,7 @@ Telegram → Job Queue (django-q2) → LLM Worker → Telegram delivery
 
 - **DJANGO_SECRET_KEY**: Must be set for any `manage.py` command. Makefile uses `unsafe-secret-key-for-tooling`.
 - **Q2 schedules** (IDs 1–4) are managed in `engine/telegram/apps.py`, ID 5 in `apps/ops/apps.py` — admin edits are overwritten on save via `pre_save` signal.
+- **Delivery retries**: scheduled `telegram_deliver` drains jobs that have not started delivery; it intentionally does not reset stale `delivery_started_at` jobs because an error after Telegram accepts a message would make an automatic resend duplicate the reply.
 - **`policy.md`** is gitignored, loaded at runtime via `POLICY_FILE` env var.
 - **Pre-commit**: runs `make lint` + `uv lock` on commit; `make test` + `make dead-code` + `make audit` on push.
 - **Conventional commits** enforced via `conventional-pre-commit` hook on commit messages.
