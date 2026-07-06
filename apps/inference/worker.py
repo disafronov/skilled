@@ -1,4 +1,4 @@
-"""LLM processing worker — single subclass of engine.processing.Worker."""
+"""LLM processing worker configured by ``Q2_PROCESSING_FUNC``."""
 
 import logging
 
@@ -10,10 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class LlmWorker(BaseWorker):
-    """Process a Job via LLM call.
-
-    Single Worker subclass (singleton enforced by ``__init_subclass__``).
-    """
+    """Process a Job via LLM call."""
 
     poll_filters = {"bot__worker__isnull": False, "bot__worker__enabled": True}
     poll_select_related: tuple[str, ...] = ()
