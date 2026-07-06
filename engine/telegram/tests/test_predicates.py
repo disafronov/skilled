@@ -45,7 +45,7 @@ class JobSelectionPredicatesTests(TestCase):
             raw_input="hi4",
             processing_started_at=now,
             processing_finished_at=now,
-            error="something went wrong",
+            processing_error="something went wrong",
         )
 
     def test_pending_job_selected(self):
@@ -99,30 +99,30 @@ class DerivedJobStatesTests(TestCase):
             raw_input="hi4",
             processing_started_at=now,
             processing_finished_at=now,
-            error="fail",
+            processing_error="fail",
         )
 
     def assert_state(self, job, pending, processing, completed, failed):
         self.assertEqual(
             job.processing_started_at is None
             and job.processing_finished_at is None
-            and job.error is None,
+            and job.processing_error is None,
             pending,
         )
         self.assertEqual(
             job.processing_started_at is not None
             and job.processing_finished_at is None
-            and job.error is None,
+            and job.processing_error is None,
             processing,
         )
         self.assertEqual(
             job.processing_finished_at is not None
             and job.raw_output is not None
-            and job.error is None,
+            and job.processing_error is None,
             completed,
         )
         self.assertEqual(
-            job.error is not None,
+            job.processing_error is not None,
             failed,
         )
 

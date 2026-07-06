@@ -128,7 +128,7 @@ class WorkerExtendedTests(TestCase):
         job = Job.objects.create(bot=self.bot, reply_target="1", raw_input="hi")
         _Sub().run(job_pk=job.pk)
         job.refresh_from_db()
-        self.assertEqual(job.error, "handled error")
+        self.assertEqual(job.processing_error, "handled error")
         self.assertIsNotNone(job.processing_finished_at)
 
     def test_run_raises_and_saves_error_when_process_fails(self):
@@ -140,7 +140,7 @@ class WorkerExtendedTests(TestCase):
         with self.assertRaises(RuntimeError):
             _Sub().run(job_pk=job.pk)
         job.refresh_from_db()
-        self.assertIsNotNone(job.error)
+        self.assertIsNotNone(job.processing_error)
         self.assertIsNotNone(job.processing_finished_at)
 
     def test_poll_without_select_related(self):

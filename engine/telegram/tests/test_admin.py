@@ -265,7 +265,8 @@ class JobAdminTests(TestCase):
                 "reply_to_message_id",
                 "raw_input_preview",
                 "raw_output_preview",
-                "error_preview",
+                "processing_error_preview",
+                "delivery_error_preview",
                 "processing_started_at",
                 "processing_finished_at",
                 "delivery_started_at",
@@ -286,7 +287,8 @@ class JobAdminTests(TestCase):
                             "reply_to_message_id",
                             "raw_input",
                             "raw_output",
-                            "error",
+                            "processing_error",
+                            "delivery_error",
                         )
                     },
                 ),
@@ -313,7 +315,8 @@ class JobAdminTests(TestCase):
                 "reply_to_message_id",
                 "raw_input",
                 "raw_output",
-                "error",
+                "processing_error",
+                "delivery_error",
                 "processing_started_at",
                 "processing_finished_at",
                 "delivery_started_at",
@@ -324,7 +327,7 @@ class JobAdminTests(TestCase):
         )
         self.assertNotIn("raw_input", admin.list_display)
         self.assertNotIn("raw_output", admin.list_display)
-        self.assertNotIn("error", admin.list_display)
+        self.assertNotIn("processing_error", admin.list_display)
 
     def test_job_admin_text_preview_truncates_long_values(self):
         long_text = "x" * (JOB_PREVIEW_LENGTH + 20)
@@ -337,7 +340,8 @@ class JobAdminTests(TestCase):
         admin = JobAdmin(Job, AdminSite())
 
         self.assertEqual(admin.raw_output_preview(self.job), "")
-        self.assertEqual(admin.error_preview(self.job), "")
+        self.assertEqual(admin.processing_error_preview(self.job), "")
+        self.assertEqual(admin.delivery_error_preview(self.job), "")
 
     def test_job_admin_preview_methods_use_common_truncation(self):
         admin = JobAdmin(Job, AdminSite())
@@ -357,7 +361,8 @@ class JobAdminTests(TestCase):
             reply_target="retry-job",
             raw_input="hello",
             processing_started_at=self.job.created_at,
-            error="processing down",
+            processing_error="processing down",
+            delivery_error="old delivery down",
         )
 
         admin.retry_jobs(request, Job.objects.filter(pk=job.pk))
@@ -366,7 +371,8 @@ class JobAdminTests(TestCase):
         self.assertIsNone(job.processing_started_at)
         self.assertIsNone(job.processing_finished_at)
         self.assertIsNone(job.raw_output)
-        self.assertIsNone(job.error)
+        self.assertIsNone(job.processing_error)
+        self.assertIsNone(job.delivery_error)
         self.assertIsNone(job.delivery_started_at)
         self.assertIsNone(job.delivery_finished_at)
         mock_async.assert_called_once_with(settings.Q2_PROCESSING_FUNC, job.pk)
@@ -384,7 +390,7 @@ class JobAdminTests(TestCase):
             processing_started_at=self.job.created_at,
             processing_finished_at=self.job.created_at,
             delivery_started_at=self.job.created_at,
-            error="delivery failed",
+            delivery_error="delivery failed",
         )
 
         admin.retry_delivery_jobs(request, Job.objects.filter(pk=job.pk))
@@ -392,7 +398,8 @@ class JobAdminTests(TestCase):
         job.refresh_from_db()
         self.assertIsNone(job.delivery_started_at)
         self.assertIsNone(job.delivery_finished_at)
-        self.assertIsNone(job.error)
+        self.assertIsNone(job.delivery_error)
+        self.assertIsNone(job.processing_error)
         mock_async.assert_called_once_with(
             "engine.telegram.tasks.telegram_deliver", job.pk
         )
