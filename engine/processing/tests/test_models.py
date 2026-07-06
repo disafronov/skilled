@@ -1,6 +1,6 @@
 """Tests for the abstract Worker base class."""
 
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 
 from engine.processing.models import Worker
 from engine.telegram.models import Bot, Job
@@ -17,8 +17,6 @@ class WorkerPollSelectRelatedTests(TestCase):
             reply_target="1",
             raw_input="hi",
         )
-
-        Worker._testing_reset_subclass()
 
         class Sub(Worker):
             poll_filters = {"bot__name": self.bot.name}
@@ -42,8 +40,6 @@ class WorkerPollSelectRelatedTests(TestCase):
             raw_input="hi",
         )
 
-        Worker._testing_reset_subclass()
-
         class Sub(Worker):
             poll_select_related = ("bot",)
 
@@ -59,23 +55,22 @@ class WorkerPollSelectRelatedTests(TestCase):
         )
 
 
-class WorkerInitSubclassTests(TestCase):
-    def test_cannot_subclass_worker_twice(self):
-        Worker._testing_reset_subclass()
-
+class WorkerInitSubclassTests(SimpleTestCase):
+    def test_allows_multiple_worker_subclasses(self):
         class _First(Worker):
             def process(
                 self, *, bot_id: int, raw_input: str
             ) -> tuple[str | None, str | None]:
-                return "ok", None
+                return "first", None
 
-        with self.assertRaises(TypeError):
+        class _Second(Worker):
+            def process(
+                self, *, bot_id: int, raw_input: str
+            ) -> tuple[str | None, str | None]:
+                return "second", None
 
-            class _Second(Worker):  # type: ignore[no-redef]
-                def process(
-                    self, *, bot_id: int, raw_input: str
-                ) -> tuple[str | None, str | None]:
-                    return "ok", None
+        self.assertEqual(_First().process(bot_id=1, raw_input=""), ("first", None))
+        self.assertEqual(_Second().process(bot_id=1, raw_input=""), ("second", None))
 
 
 class WorkerExtendedTests(TestCase):
@@ -86,8 +81,6 @@ class WorkerExtendedTests(TestCase):
         cls.bot = Bot.objects.create(name="ext-test-bot", telegram_api_token="tok")
 
     def test_run_returns_when_no_job_exists(self):
-        Worker._testing_reset_subclass()
-
         class _Sub(Worker):
             def process(self, *, bot_id, raw_input):
                 return "ok", None
@@ -95,8 +88,6 @@ class WorkerExtendedTests(TestCase):
         _Sub().run()
 
     def test_run_by_pk_processes_job(self):
-        Worker._testing_reset_subclass()
-
         class _Sub(Worker):
             def process(self, *, bot_id, raw_input):
                 return "result", None
@@ -107,8 +98,6 @@ class WorkerExtendedTests(TestCase):
         self.assertEqual(job.raw_output, "result")
 
     def test_run_by_pk_missing_job_returns(self):
-        Worker._testing_reset_subclass()
-
         class _Sub(Worker):
             def process(self, *, bot_id, raw_input):
                 return "ok", None
@@ -117,8 +106,6 @@ class WorkerExtendedTests(TestCase):
         self.assertFalse(Job.objects.exists())
 
     def test_run_by_pk_skips_already_processed_job(self):
-        Worker._testing_reset_subclass()
-
         class _Sub(Worker):
             def process(self, *, bot_id, raw_input):
                 return "overwritten", None
@@ -133,8 +120,6 @@ class WorkerExtendedTests(TestCase):
         self.assertEqual(job.raw_output, "existing")
 
     def test_save_result_with_error(self):
-        Worker._testing_reset_subclass()
-
         class _Sub(Worker):
             def process(self, *, bot_id, raw_input):
                 return None, "handled error"
@@ -146,8 +131,6 @@ class WorkerExtendedTests(TestCase):
         self.assertIsNotNone(job.processing_finished_at)
 
     def test_run_raises_and_saves_error_when_process_fails(self):
-        Worker._testing_reset_subclass()
-
         class _Sub(Worker):
             def process(self, *, bot_id, raw_input):
                 raise RuntimeError("boom")
@@ -160,8 +143,6 @@ class WorkerExtendedTests(TestCase):
         self.assertIsNotNone(job.processing_finished_at)
 
     def test_poll_without_select_related(self):
-        Worker._testing_reset_subclass()
-
         class _Sub(Worker):
             poll_filters = {"bot__name": self.bot.name}
 

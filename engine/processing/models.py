@@ -1,8 +1,7 @@
 """Abstract base class for processing pipeline workers.
 
-The single subclass implements business logic in :meth:`process`;
-everything else — Job selection, transaction management, error handling —
-lives here.
+Subclasses implement business logic in :meth:`process`; everything else
+— Job selection, transaction management, error handling — lives here.
 """
 
 from __future__ import annotations
@@ -32,34 +31,13 @@ class Worker(abc.ABC):
     * ``poll_select_related`` — relation paths to preload in poll mode.
     * ``pk_select_related`` — relation paths to preload in pk mode.
 
-    **Only one subclass is allowed.**  A second attempt raises ``TypeError``.
+    Multiple subclasses may exist; the active worker is selected by the
+    configured task function (``settings.Q2_PROCESSING_FUNC``).
     """
-
-    _subclass_registered: type | None = None
 
     poll_filters: dict = {}
     poll_select_related: tuple[str, ...] = ()
     pk_select_related: tuple[str, ...] = ()
-
-    def __init_subclass__(cls, **kwargs: object) -> None:
-        super().__init_subclass__(**kwargs)
-        if Worker._subclass_registered is not None:
-            registered = Worker._subclass_registered.__name__
-            raise TypeError(
-                f"Cannot subclass Worker more than once — "
-                f"``{cls.__name__}`` would be the second subclass "
-                f"(``{registered}`` is already registered)"
-            )
-        Worker._subclass_registered = cls
-
-    @classmethod
-    def _testing_reset_subclass(cls) -> None:
-        """Temporarily release the singleton for test subclasses.
-
-        Only intended for tests that need to create a temporary Worker
-        subclass without triggering the singleton guard.
-        """
-        cls._subclass_registered = None
 
     def run(self, job_pk: int | None = None) -> None:
         """Main entry point — select a Job, run process(), save result."""
