@@ -43,6 +43,7 @@ class JobSelectionPredicatesTests(TestCase):
             bot=bot,
             reply_target="4",
             raw_input="hi4",
+            processing_started_at=now,
             processing_finished_at=now,
             error="something went wrong",
         )
