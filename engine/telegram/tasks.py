@@ -148,18 +148,9 @@ def telegram_setup() -> None:
                 if not settings.BASE_URL:
                     continue
 
-                # Acquire lock to avoid conflicting with telegram_ingest
-                # on the same bot (e.g. 409 from concurrent getUpdates vs
-                # setWebhook in _manage_webhook_for_bot).
-                with transaction.atomic():
-                    locked = (
-                        Bot.objects.select_for_update(skip_locked=True)
-                        .filter(pk=bot.pk)
-                        .first()
-                    )
-                    if locked is None:
-                        continue
-
+                # setup and ingest may race on the same bot (getUpdates vs
+                # setWebhook); 409 from Telegram is tolerated — ingest retries
+                # next cycle with a warning.
                 _manage_webhook_for_bot(bot)
             except Exception as exc:
                 logger.error(
@@ -255,7 +246,6 @@ def telegram_ingest() -> None:
                             current.id,
                             ingested,
                             len(updates),
-                            exc_info=settings.DEBUG,
                         )
 
                     new_offset = max_id + 1
