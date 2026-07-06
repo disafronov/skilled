@@ -261,6 +261,11 @@ def telegram_deliver(job_pk: int | None = None) -> None:
                     "telegram_deliver: job %d already delivered, skipping", job_pk
                 )
                 return
+            if not Job.objects.filter(pk=job.pk).ready_for_delivery().exists():
+                logger.warning(
+                    "telegram_deliver: job %d is not ready for delivery", job_pk
+                )
+                return
         else:
             next_job = (
                 Job.objects.select_for_update(skip_locked=True)
