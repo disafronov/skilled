@@ -1,4 +1,4 @@
-"""AppConfig for engine.telegram — pipeline schedules (IDs 1–4)."""
+"""AppConfig for engine.telegram pipeline schedules."""
 
 from django.apps import AppConfig
 from django.conf import settings
@@ -12,25 +12,21 @@ from engine.common.schedules import (
 
 MANAGED_SCHEDULES = (
     {
-        "id": 1,
         "name": "telegram_ingest",
         "func": "engine.telegram.tasks.telegram_ingest",
         "minutes": "Q2_TELEGRAM_INGEST_MINUTES",
     },
     {
-        "id": 2,
         "name": "telegram_deliver",
         "func": "engine.telegram.tasks.telegram_deliver",
         "minutes": "Q2_TELEGRAM_DELIVER_MINUTES",
     },
     {
-        "id": 3,
         "name": "telegram_intake_flush",
         "func": "engine.telegram.tasks.telegram_flush_intake_buffers",
         "minutes": "Q2_TELEGRAM_INTAKE_FLUSH_MINUTES",
     },
     {
-        "id": 4,
         "name": "processing",
         "func": settings.Q2_PROCESSING_FUNC,
         "minutes": "Q2_PROCESSING_MINUTES",

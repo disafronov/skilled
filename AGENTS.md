@@ -52,8 +52,8 @@ Telegram → Job Queue (django-q2) → LLM Worker → Telegram delivery
 
 - `apps/ops/q2.py` — django-q2 scheduled task functions (cleanup_q2_successes)
 - `apps/ops/health.py` — `/health/liveness/`, `/health/readiness/` (Docker HEALTHCHECK)
-- `apps/ops/apps.py` — Q2 schedule management for cleanup task (ID 5)
-- `engine/telegram` — Bot, Job, IntakeBuffer models; pipeline tasks (telegram_ingest, processing, telegram_deliver, telegram_flush_intake_buffers); webhook view; admin; signals; Q2 schedule management via `apps.py` (IDs 1–4)
+- `apps/ops/apps.py` — Q2 schedule management for cleanup task
+- `engine/telegram` — Bot, Job, IntakeBuffer models; pipeline tasks (telegram_ingest, processing, telegram_deliver, telegram_flush_intake_buffers); webhook view; admin; signals; Q2 schedule management via `apps.py`
 - `engine/processing` — Abstract Worker base class (processing pipeline foundation)
 - `engine/telegram/client.py` — Telegram Bot API client
 - `apps/library` — Skill & Wrapper models (prompt content)
@@ -63,7 +63,7 @@ Telegram → Job Queue (django-q2) → LLM Worker → Telegram delivery
 ## Gotchas
 
 - **DJANGO_SECRET_KEY**: Must be set for any `manage.py` command. Makefile uses `unsafe-secret-key-for-tooling`.
-- **Q2 schedules** (IDs 1–4) are managed in `engine/telegram/apps.py`, ID 5 in `apps/ops/apps.py` — admin edits are overwritten on save via `pre_save` signal.
+- **Q2 schedules** are managed by stable name in `engine/telegram/apps.py` and `apps/ops/apps.py` — admin edits are overwritten on save via `pre_save` signal.
 - **Delivery retries**: scheduled `telegram_deliver` drains jobs that have not started delivery; it intentionally does not reset stale `delivery_started_at` jobs because an error after Telegram accepts a message would make an automatic resend duplicate the reply.
 - **`policy.md`** is gitignored, loaded at runtime via `POLICY_FILE` env var.
 - **Pre-commit**: runs `make lint` + `uv lock` on commit; `make test` + `make dead-code` + `make audit` on push.
