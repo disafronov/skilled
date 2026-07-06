@@ -265,6 +265,32 @@ class TelegramDeliveryTests(TestCase):
         logger.warning.assert_called_once()
 
     @patch("engine.telegram.tasks.logger")
+    @patch("engine.telegram.tasks.send_message")
+    @patch("engine.telegram.tasks.send_document")
+    def test_deliver_by_pk_skips_job_not_ready_for_delivery(
+        self,
+        send_document,
+        send_message,
+        logger,
+    ):
+        job = Job.objects.create(
+            bot=self.bot,
+            reply_target="123",
+            raw_input="hi",
+            processing_started_at=self.now,
+        )
+
+        telegram_deliver(job_pk=job.pk)
+
+        logger.warning.assert_called_once()
+        send_message.assert_not_called()
+        send_document.assert_not_called()
+        job.refresh_from_db()
+        self.assertIsNone(job.delivery_started_at)
+        self.assertIsNone(job.delivery_finished_at)
+        self.assertIsNone(job.delivery_error)
+
+    @patch("engine.telegram.tasks.logger")
     def test_deliver_by_pk_skips_already_delivered_job(self, logger):
         job = Job.objects.create(
             bot=self.bot,
