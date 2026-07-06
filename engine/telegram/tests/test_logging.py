@@ -4,10 +4,10 @@ import logging
 from io import StringIO
 
 from django.conf import settings
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, override_settings
 
 
-class ExcInfoBehaviourTests(TestCase):
+class ExcInfoBehaviourTests(SimpleTestCase):
     """``exc_info=settings.DEBUG`` — stacktraces visible only in debug mode."""
 
     def _output_for_debug(self, debug: bool) -> str:
@@ -22,7 +22,7 @@ class ExcInfoBehaviourTests(TestCase):
         except RuntimeError:
             with override_settings(DEBUG=debug):
                 logger.exception(
-                    "LLM worker: job %d failed: %s",
+                    "Processing worker: job %d failed: %s",
                     1,
                     "simulated failure",
                     exc_info=settings.DEBUG,

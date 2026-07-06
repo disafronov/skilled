@@ -302,7 +302,7 @@ def telegram_deliver(job_pk: int | None = None) -> None:
                 raw_output,
                 document_format_filename(job.pk, document_format),
                 document_format_content_type(document_format),
-                caption="LLM response is attached as a text file.",
+                caption="Response is attached as a text file.",
                 reply_to_message_id=job.reply_to_message_id,
             )
         job.delivery_finished_at = timezone.now()
