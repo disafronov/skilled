@@ -20,15 +20,15 @@ class JobQuerySet(models.QuerySet["Job"]):
         return self.filter(
             processing_started_at__lt=cutoff,
             processing_finished_at__isnull=True,
-            error__isnull=True,
+            processing_error__isnull=True,
         )
 
     def ready_for_processing(self) -> "JobQuerySet":
-        """Jobs waiting for processing (never started, no error)."""
+        """Jobs waiting for processing (never started, no processing error)."""
         return self.filter(
             processing_started_at__isnull=True,
             processing_finished_at__isnull=True,
-            error__isnull=True,
+            processing_error__isnull=True,
         )
 
     def ready_for_delivery(self) -> "JobQuerySet":
@@ -37,7 +37,7 @@ class JobQuerySet(models.QuerySet["Job"]):
             processing_finished_at__isnull=False,
             delivery_started_at__isnull=True,
             delivery_finished_at__isnull=True,
-        ).exclude(raw_output__isnull=True, error__isnull=True)
+        ).exclude(raw_output__isnull=True, processing_error__isnull=True)
 
 
 class Bot(models.Model):
@@ -99,7 +99,8 @@ class Job(models.Model):
     reply_to_message_id = models.PositiveBigIntegerField(null=True, blank=True)
     raw_input = models.TextField()
     raw_output = models.TextField(null=True, blank=True)
-    error = models.TextField(null=True, blank=True)
+    processing_error = models.TextField(null=True, blank=True)
+    delivery_error = models.TextField(null=True, blank=True)
 
     processing_started_at = models.DateTimeField(null=True, blank=True)
     processing_finished_at = models.DateTimeField(null=True, blank=True)
@@ -124,7 +125,7 @@ class Job(models.Model):
                 condition=models.Q(
                     processing_started_at__isnull=True,
                     processing_finished_at__isnull=True,
-                    error__isnull=True,
+                    processing_error__isnull=True,
                 ),
             ),
             models.Index(
@@ -133,7 +134,7 @@ class Job(models.Model):
                 condition=models.Q(
                     processing_started_at__isnull=False,
                     processing_finished_at__isnull=True,
-                    error__isnull=True,
+                    processing_error__isnull=True,
                 ),
             ),
             models.Index(
@@ -144,7 +145,10 @@ class Job(models.Model):
                     delivery_started_at__isnull=True,
                     delivery_finished_at__isnull=True,
                 )
-                & (models.Q(raw_output__isnull=False) | models.Q(error__isnull=False)),
+                & (
+                    models.Q(raw_output__isnull=False)
+                    | models.Q(processing_error__isnull=False)
+                ),
             ),
         ]
         constraints = [
@@ -159,7 +163,7 @@ class Job(models.Model):
                 condition=(
                     models.Q(processing_finished_at__isnull=True)
                     | models.Q(raw_output__isnull=False)
-                    | models.Q(error__isnull=False)
+                    | models.Q(processing_error__isnull=False)
                 ),
                 name="tg_job_processing_finished_requires_result_or_error",
             ),
@@ -177,7 +181,7 @@ class Job(models.Model):
                         models.Q(processing_finished_at__isnull=False)
                         & (
                             models.Q(raw_output__isnull=False)
-                            | models.Q(error__isnull=False)
+                            | models.Q(processing_error__isnull=False)
                         )
                     )
                 ),

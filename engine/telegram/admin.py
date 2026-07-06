@@ -111,7 +111,8 @@ class JobAdmin(admin.ModelAdmin):
         "reply_to_message_id",
         "raw_input_preview",
         "raw_output_preview",
-        "error_preview",
+        "processing_error_preview",
+        "delivery_error_preview",
         "processing_started_at",
         "processing_finished_at",
         "delivery_started_at",
@@ -119,7 +120,7 @@ class JobAdmin(admin.ModelAdmin):
         "updated_at",
     )
     list_select_related = ["bot"]
-    search_fields = ["raw_input"]
+    search_fields = ["raw_input", "processing_error", "delivery_error"]
     list_filter = (
         "created_at",
         "processing_started_at",
@@ -138,7 +139,8 @@ class JobAdmin(admin.ModelAdmin):
                     "reply_to_message_id",
                     "raw_input",
                     "raw_output",
-                    "error",
+                    "processing_error",
+                    "delivery_error",
                 ),
             },
         ),
@@ -162,7 +164,8 @@ class JobAdmin(admin.ModelAdmin):
         "reply_to_message_id",
         "raw_input",
         "raw_output",
-        "error",
+        "processing_error",
+        "delivery_error",
         "processing_started_at",
         "processing_finished_at",
         "delivery_started_at",
@@ -179,9 +182,13 @@ class JobAdmin(admin.ModelAdmin):
     def raw_output_preview(self, obj: Job) -> str:
         return preview_text(obj.raw_output)
 
-    @admin.display(description="Error", ordering="error")
-    def error_preview(self, obj: Job) -> str:
-        return preview_text(obj.error)
+    @admin.display(description="Processing error", ordering="processing_error")
+    def processing_error_preview(self, obj: Job) -> str:
+        return preview_text(obj.processing_error)
+
+    @admin.display(description="Delivery error", ordering="delivery_error")
+    def delivery_error_preview(self, obj: Job) -> str:
+        return preview_text(obj.delivery_error)
 
     @admin.action(description="Retry selected jobs")
     def retry_jobs(
@@ -194,7 +201,8 @@ class JobAdmin(admin.ModelAdmin):
             processing_started_at=None,
             processing_finished_at=None,
             raw_output=None,
-            error=None,
+            processing_error=None,
+            delivery_error=None,
             delivery_started_at=None,
             delivery_finished_at=None,
             updated_at=timezone.now(),
@@ -217,7 +225,7 @@ class JobAdmin(admin.ModelAdmin):
         count = Job.objects.filter(pk__in=pks).update(
             delivery_started_at=None,
             delivery_finished_at=None,
-            error=None,
+            delivery_error=None,
             updated_at=timezone.now(),
         )
         for pk in pks:

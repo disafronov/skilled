@@ -50,7 +50,7 @@ class TelegramDeliveryTests(TestCase):
         )
         job.refresh_from_db()
         self.assertIsNotNone(job.delivery_finished_at)
-        self.assertIsNone(job.error)
+        self.assertIsNone(job.processing_error)
 
     @patch("engine.telegram.tasks.send_document")
     @patch("engine.telegram.tasks.send_message")
@@ -83,7 +83,7 @@ class TelegramDeliveryTests(TestCase):
         )
         job.refresh_from_db()
         self.assertIsNotNone(job.delivery_finished_at)
-        self.assertIsNone(job.error)
+        self.assertIsNone(job.processing_error)
 
     @patch("engine.telegram.tasks.send_document")
     @patch("engine.telegram.tasks.send_message")
@@ -112,7 +112,7 @@ class TelegramDeliveryTests(TestCase):
         )
         job.refresh_from_db()
         self.assertIsNotNone(job.delivery_finished_at)
-        self.assertIsNone(job.error)
+        self.assertIsNone(job.processing_error)
 
     @patch("engine.telegram.tasks.send_message")
     @patch("engine.telegram.tasks.get_updates")
@@ -176,7 +176,7 @@ class TelegramDeliveryTests(TestCase):
         )
         job.refresh_from_db()
         self.assertIsNotNone(job.delivery_finished_at)
-        self.assertIsNone(job.error)
+        self.assertIsNone(job.processing_error)
 
     @patch("engine.telegram.tasks.send_document")
     @patch("engine.telegram.tasks.send_message")
@@ -294,7 +294,7 @@ class TelegramDeliveryTests(TestCase):
             reply_target="123",
             raw_input="hi",
             raw_output="output",
-            error="Something went wrong",
+            processing_error="Something went wrong",
             processing_started_at=self.now,
             processing_finished_at=self.now,
         )
@@ -327,4 +327,5 @@ class TelegramDeliveryTests(TestCase):
             telegram_deliver()
 
         job.refresh_from_db()
-        self.assertIn("api down", job.error)
+        self.assertIsNone(job.processing_error)
+        self.assertIn("api down", job.delivery_error)

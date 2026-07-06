@@ -277,14 +277,14 @@ def telegram_deliver(job_pk: int | None = None) -> None:
         job.save(update_fields=["delivery_started_at", "updated_at"])
 
     try:
-        if job.error:
+        if job.processing_error:
             logger.info(
                 "Delivery: job %d — sending error to chat %s", job.pk, job.reply_target
             )
             send_message(
                 job.bot.telegram_api_token,
                 job.reply_target,
-                job.error,
+                job.processing_error,
                 reply_to_message_id=job.reply_to_message_id,
             )
         else:
@@ -311,11 +311,12 @@ def telegram_deliver(job_pk: int | None = None) -> None:
         logger.error(
             "Delivery: job %d failed: %s", job.pk, exc, exc_info=settings.DEBUG
         )
-        job.error = sanitize_error(str(exc))
-        job.save(update_fields=["error", "updated_at"])
+        job.delivery_error = sanitize_error(str(exc))
+        job.save(update_fields=["delivery_error", "updated_at"])
         raise
 
-    job.save(update_fields=["delivery_finished_at", "error", "updated_at"])
+    job.delivery_error = None
+    job.save(update_fields=["delivery_finished_at", "delivery_error", "updated_at"])
 
 
 def telegram_flush_intake_buffers() -> None:
