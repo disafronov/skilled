@@ -111,9 +111,15 @@ class Worker(abc.ABC):
     def _save_result(self, job: Job, raw_output: str | None, error: str | None) -> None:
         """Persist the processing outcome on *job*."""
         if error is not None:
-            job.error = sanitize_error(error)
+            job.processing_error = sanitize_error(error)
             job.processing_finished_at = timezone.now()
-            job.save(update_fields=["error", "processing_finished_at", "updated_at"])
+            job.save(
+                update_fields=[
+                    "processing_error",
+                    "processing_finished_at",
+                    "updated_at",
+                ]
+            )
             return
 
         if (
@@ -131,7 +137,7 @@ class Worker(abc.ABC):
         job.save(
             update_fields=[
                 "raw_output",
-                "error",
+                "processing_error",
                 "processing_finished_at",
                 "updated_at",
             ]

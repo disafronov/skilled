@@ -55,7 +55,7 @@ class WorkerTaskTests(TestCase):
         worker()
         job.refresh_from_db()
         self.assertEqual(job.raw_output, "llm output")
-        self.assertIsNone(job.error)
+        self.assertIsNone(job.processing_error)
         self.assertIsNotNone(job.processing_started_at)
         self.assertIsNotNone(job.processing_finished_at)
 
@@ -121,7 +121,7 @@ class WorkerTaskTests(TestCase):
         with self.assertRaisesRegex(RuntimeError, "llm down"):
             worker()
         job.refresh_from_db()
-        self.assertEqual(job.error, "llm down")
+        self.assertEqual(job.processing_error, "llm down")
         self.assertIsNone(job.raw_output)
         self.assertIsNotNone(job.processing_finished_at)
 
@@ -138,7 +138,7 @@ class WorkerTaskTests(TestCase):
         worker()
         job.refresh_from_db()
         self.assertEqual(job.raw_output, "requeued output")
-        self.assertIsNone(job.error)
+        self.assertIsNone(job.processing_error)
         self.assertIsNotNone(job.processing_finished_at)
         self.assertGreater(job.processing_started_at, stale_started_at)
         call_llm_mock.assert_called_once()
@@ -193,7 +193,7 @@ class WorkerTaskTests(TestCase):
         worker(job_pk=job.pk)
         job.refresh_from_db()
         self.assertIsNotNone(job.processing_finished_at)
-        self.assertIn("Worker disabled", job.error)
+        self.assertIn("Worker disabled", job.processing_error)
 
     def test_worker_fails_when_worker_missing_by_pk(self):
         bot2 = Bot.objects.create(
@@ -208,7 +208,7 @@ class WorkerTaskTests(TestCase):
         worker(job_pk=job.pk)
         job.refresh_from_db()
         self.assertIsNotNone(job.processing_finished_at)
-        self.assertIn("No worker configured", job.error)
+        self.assertIn("No worker configured", job.processing_error)
 
     @patch("apps.inference.worker.call_llm", return_value="llm output")
     def test_worker_skips_already_finished_job_by_pk(self, call_llm_mock):
