@@ -14,7 +14,8 @@ Telegram ──┬── webhook ──> IntakeBuffer ──> Job ──> proces
 **Two ingestion paths:**
 
 - **Webhook** (primary) — Telegram pushes updates to `/webhook/`. Inbound auth uses `X-Telegram-Bot-Api-Secret-Token` header matched against the bot's `webhook_secret`. Zero polling latency.
-- **Polling** (fallback) — Q2 schedule `engine.telegram.ingest` runs `telegram_ingest` to periodically fetch updates via `getUpdates`. Webhook auto-registers, self-heals on errors, and falls back to polling with a configurable cooldown.
+- **Setup** — Q2 schedule `engine.telegram.setup` runs `telegram_setup` to manage webhook registration, health checks, cleanup, and fallback state.
+- **Polling** (fallback) — Q2 schedule `engine.telegram.ingest` runs `telegram_ingest` to periodically fetch updates via `getUpdates` when webhook is not active.
 
 Both paths accumulate messages into an **IntakeBuffer**, one per bot/chat. Messages are grouped by Telegram `message.date` timestamp — consecutive messages within the debounce window merge into one buffer. A message beyond the window triggers an immediate flush into a `Job`. A scheduled safety flush (`engine.telegram.intake_flush`) catches any leftover open buffer. A Django `post_save` signal schedules downstream tasks via `transaction.on_commit`:
 
@@ -69,7 +70,8 @@ Key environment variables (see `env.example` for full list):
 | `WEBHOOK_COOLDOWN_SECONDS` | `300` | Seconds to wait before retrying webhook after fallback |
 | `WEBHOOK_FALLBACK_PENDING_THRESHOLD` | `5` | Max pending updates before falling back to polling |
 | `POLICY_FILE` | `policy.md` | Global system prompt appended to every LLM call |
-| `Q2_TELEGRAM_INGEST_MINUTES` | `1` | Polling interval |
+| `Q2_TELEGRAM_SETUP_MINUTES` | `1` | Webhook setup / fallback management interval |
+| `Q2_TELEGRAM_INGEST_MINUTES` | `1` | Polling interval when webhook is not active |
 | `Q2_PROCESSING_MINUTES` | `1` | LLM processing schedule interval |
 | `Q2_TELEGRAM_DELIVER_MINUTES` | `1` | Delivery worker schedule interval |
 | `TELEGRAM_ACK_REACTION` | `🤔` | Emoji reaction for queue acknowledgement (empty = disabled) |
@@ -107,6 +109,7 @@ Implemented in `apps/ops/health.py`. Used by Docker `HEALTHCHECK`.
 
 | Schedule | Interval | Description |
 | -------- | -------- | ----------- |
+| `engine.telegram.setup` | 1 min | Webhook setup, health check, and fallback management |
 | `engine.telegram.ingest` | 1 min | Polling fallback |
 | `engine.telegram.deliver` | 1 min | Drain completed jobs that have not started delivery |
 | `engine.telegram.intake_flush` | 1 min | Safety flush for open intake buffers |

@@ -9,6 +9,7 @@ from engine.telegram.models import Bot, IntakeBuffer, Job
 from engine.telegram.tasks import (
     telegram_ack,
     telegram_ingest,
+    telegram_setup,
 )
 
 
@@ -193,40 +194,21 @@ class PipelineTaskBranchTests(TestCase):
 
         logger.critical.assert_called_once()
 
-    @patch("engine.telegram.tasks.delete_webhook")
-    def test_ingest_cleans_up_webhook_for_disabled_bot(self, delete_webhook):
-        self.bot.enabled = False
+    @override_settings(BASE_URL="https://example.com")
+    @patch("engine.telegram.tasks.get_updates", return_value=[])
+    def test_ingest_skips_bot_with_active_webhook(self, get_updates):
         self.bot.webhook_enabled_at = self.now
-        self.bot.save()
+        self.bot.save(update_fields=["webhook_enabled_at"])
 
         telegram_ingest()
 
-        delete_webhook.assert_called_once_with("telegram-token")
+        get_updates.assert_not_called()
         self.bot.refresh_from_db()
-        self.assertIsNone(self.bot.webhook_enabled_at)
-
-    @patch("engine.telegram.tasks.logger")
-    @patch(
-        "engine.telegram.tasks.delete_webhook",
-        side_effect=RuntimeError("telegram down"),
-    )
-    def test_ingest_logs_warning_when_disabled_bot_cleanup_fails(
-        self, delete_webhook, logger
-    ):
-        self.bot.enabled = False
-        self.bot.webhook_enabled_at = self.now
-        self.bot.save()
-
-        telegram_ingest()
-
-        delete_webhook.assert_called_once()
-        logger.warning.assert_called_once()
-        self.bot.refresh_from_db()
-        self.assertIsNotNone(self.bot.webhook_enabled_at)
+        self.assertEqual(self.bot.telegram_update_offset, 0)
 
 
 class WebhookManagementTests(TestCase):
-    """Tests for _manage_webhook_for_bot called inside telegram_ingest."""
+    """Tests for _manage_webhook_for_bot called inside telegram_setup."""
 
     @classmethod
     def setUpTestData(cls):
@@ -249,7 +231,7 @@ class WebhookManagementTests(TestCase):
         mock_info,
         mock_updates,
     ):
-        telegram_ingest()
+        telegram_setup()
 
         self.bot.refresh_from_db()
         mock_set.assert_called_once_with(
@@ -276,7 +258,7 @@ class WebhookManagementTests(TestCase):
             "url": "https://example.com/webhook/",
             "pending_update_count": 0,
         }
-        telegram_ingest()
+        telegram_setup()
 
         mock_set.assert_not_called()
         self.bot.refresh_from_db()
@@ -298,7 +280,7 @@ class WebhookManagementTests(TestCase):
             "url": "https://example.com/webhook/",
             "pending_update_count": 10,
         }
-        telegram_ingest()
+        telegram_setup()
 
         mock_delete.assert_called_once_with("telegram-token")
         self.bot.refresh_from_db()
@@ -320,7 +302,7 @@ class WebhookManagementTests(TestCase):
             "pending_update_count": 0,
             "last_error_message": "Wrong URL",
         }
-        telegram_ingest()
+        telegram_setup()
 
         mock_set.assert_called_once()
         self.bot.refresh_from_db()
@@ -343,7 +325,7 @@ class WebhookManagementTests(TestCase):
             "url": "",
             "pending_update_count": 0,
         }
-        telegram_ingest()
+        telegram_setup()
 
         mock_delete.assert_called_once_with("telegram-token")
         self.bot.refresh_from_db()
@@ -360,7 +342,7 @@ class WebhookManagementTests(TestCase):
         self.bot.webhook_disabled_at = self.now
         self.bot.save(update_fields=["webhook_disabled_at"])
 
-        telegram_ingest()
+        telegram_setup()
 
         # Cooldown (300s) is active — no webhook API calls
         mock_info.assert_not_called()
@@ -385,7 +367,7 @@ class WebhookManagementTests(TestCase):
         }
         mock_set.return_value = {}
 
-        telegram_ingest()
+        telegram_setup()
 
         mock_info.assert_called_once()
         mock_set.assert_called_once()
@@ -410,7 +392,7 @@ class WebhookManagementTests(TestCase):
             "url": "https://example.com/webhook/",
             "pending_update_count": 0,
         }
-        telegram_ingest()
+        telegram_setup()
 
         mock_set.assert_not_called()
         self.bot.refresh_from_db()
@@ -427,7 +409,7 @@ class WebhookManagementTests(TestCase):
         mock_info,
         mock_updates,
     ):
-        telegram_ingest()
+        telegram_setup()
 
         self.bot.refresh_from_db()
         self.assertIsNone(self.bot.webhook_enabled_at)
@@ -456,10 +438,78 @@ class WebhookManagementTests(TestCase):
         mock_info,
         mock_updates,
     ):
-        telegram_ingest()
+        telegram_setup()
 
         self.bot.refresh_from_db()
         self.assertIsNotNone(self.bot.webhook_disabled_at)
+
+    @patch("engine.telegram.tasks.delete_webhook")
+    def test_setup_cleans_up_webhook_for_disabled_bot(self, delete_webhook):
+        self.bot.enabled = False
+        self.bot.webhook_enabled_at = self.now
+        self.bot.save()
+
+        telegram_setup()
+
+        delete_webhook.assert_called_once_with("telegram-token")
+        self.bot.refresh_from_db()
+        self.assertIsNone(self.bot.webhook_enabled_at)
+
+    @patch("engine.telegram.tasks.logger")
+    @patch(
+        "engine.telegram.tasks.delete_webhook",
+        side_effect=RuntimeError("telegram down"),
+    )
+    def test_setup_logs_warning_when_disabled_bot_cleanup_fails(
+        self, delete_webhook, logger
+    ):
+        self.bot.enabled = False
+        self.bot.webhook_enabled_at = self.now
+        self.bot.save()
+
+        telegram_setup()
+
+        delete_webhook.assert_called_once()
+        logger.warning.assert_called_once()
+        self.bot.refresh_from_db()
+        self.assertIsNotNone(self.bot.webhook_enabled_at)
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch("engine.telegram.tasks.logger")
+    @patch(
+        "engine.telegram.tasks._manage_webhook_for_bot",
+        side_effect=ValueError("boom"),
+    )
+    def test_setup_logs_error_when_bot_management_fails(
+        self,
+        manage_webhook,
+        logger,
+    ):
+        telegram_setup()
+
+        manage_webhook.assert_called_once()
+        logger.error.assert_called_once()
+
+    @patch("engine.telegram.tasks.logger")
+    @patch(
+        "engine.telegram.tasks.Bot.objects.filter", side_effect=RuntimeError("db down")
+    )
+    def test_setup_logs_global_failure(self, filter_mock, logger):
+        telegram_setup()
+
+        logger.critical.assert_called_once()
+
+    @patch("engine.telegram.tasks.get_webhook_info")
+    @patch("engine.telegram.tasks.set_webhook")
+    def test_setup_skips_enabled_bots_without_base_url(
+        self,
+        mock_set,
+        mock_info,
+    ):
+        telegram_setup()
+
+        mock_info.assert_not_called()
+        mock_set.assert_not_called()
 
 
 class TelegramAckTests(TestCase):
