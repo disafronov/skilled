@@ -92,7 +92,7 @@ class Bot(models.Model):
 
 
 class Job(models.Model):
-    """A single pipeline execution artifact — from Telegram message to LLM response."""
+    """A single pipeline execution artifact — from Telegram message to response."""
 
     bot = models.ForeignKey(Bot, on_delete=models.PROTECT)
     reply_target = models.TextField()

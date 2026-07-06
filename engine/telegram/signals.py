@@ -42,7 +42,7 @@ def job_on_completion(
     ):
         job_pk = instance.pk
         logger.debug(
-            "Signal: job %d llm completed — scheduling telegram_deliver",
+            "Signal: job %d processing completed — scheduling telegram_deliver",
             job_pk,
         )
         transaction.on_commit(

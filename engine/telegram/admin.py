@@ -203,7 +203,7 @@ class JobAdmin(admin.ModelAdmin):
             async_task(settings.Q2_PROCESSING_FUNC, pk)
         self.message_user(
             request,
-            f"Retrying {count} job(s) for LLM processing.",
+            f"Retrying {count} job(s) for processing.",
             level=messages.SUCCESS,
         )
 

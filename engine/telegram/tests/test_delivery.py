@@ -44,7 +44,7 @@ class TelegramDeliveryTests(TestCase):
             "short response",
             f"response-{job.pk}.txt",
             "text/plain",
-            caption="LLM response is attached as a text file.",
+            caption="Response is attached as a text file.",
             reply_to_message_id=456,
         )
         job.refresh_from_db()
@@ -76,7 +76,7 @@ class TelegramDeliveryTests(TestCase):
             "*bold*",
             f"response-{job.pk}.md",
             "text/markdown",
-            caption="LLM response is attached as a text file.",
+            caption="Response is attached as a text file.",
             reply_to_message_id=456,
         )
         job.refresh_from_db()
@@ -104,7 +104,7 @@ class TelegramDeliveryTests(TestCase):
             "<b>bold</b>",
             f"response-{job.pk}.html",
             "text/html",
-            caption="LLM response is attached as a text file.",
+            caption="Response is attached as a text file.",
             reply_to_message_id=456,
         )
         job.refresh_from_db()
@@ -167,7 +167,7 @@ class TelegramDeliveryTests(TestCase):
             output,
             f"response-{job.pk}.txt",
             "text/plain",
-            caption="LLM response is attached as a text file.",
+            caption="Response is attached as a text file.",
             reply_to_message_id=456,
         )
         job.refresh_from_db()
@@ -200,7 +200,7 @@ class TelegramDeliveryTests(TestCase):
             output,
             f"response-{job.pk}.md",
             "text/markdown",
-            caption="LLM response is attached as a text file.",
+            caption="Response is attached as a text file.",
             reply_to_message_id=456,
         )
 
@@ -230,7 +230,7 @@ class TelegramDeliveryTests(TestCase):
             output,
             f"response-{job.pk}.html",
             "text/html",
-            caption="LLM response is attached as a text file.",
+            caption="Response is attached as a text file.",
             reply_to_message_id=456,
         )
 
