@@ -147,6 +147,19 @@ def telegram_setup() -> None:
             try:
                 if not settings.BASE_URL:
                     continue
+
+                # Acquire lock to avoid conflicting with telegram_ingest
+                # on the same bot (e.g. 409 from concurrent getUpdates vs
+                # setWebhook in _manage_webhook_for_bot).
+                with transaction.atomic():
+                    locked = (
+                        Bot.objects.select_for_update(skip_locked=True)
+                        .filter(pk=bot.pk)
+                        .first()
+                    )
+                    if locked is None:
+                        continue
+
                 _manage_webhook_for_bot(bot)
             except Exception as exc:
                 logger.error(
@@ -249,6 +262,17 @@ def telegram_ingest() -> None:
                     current.telegram_update_offset = new_offset
                     current.save(update_fields=["telegram_update_offset", "updated_at"])
 
+            except RuntimeError as e:
+                if "409" in str(e):
+                    logger.warning(
+                        "Bot %s: get_updates conflict (409) — likely from "
+                        "concurrent telegram_setup; retrying next cycle",
+                        bot.id,
+                    )
+                else:
+                    logger.error(
+                        "Bot %s ingest failed: %s", bot.id, e, exc_info=settings.DEBUG
+                    )
             except Exception as e:
                 logger.error(
                     "Bot %s ingest failed: %s", bot.id, e, exc_info=settings.DEBUG

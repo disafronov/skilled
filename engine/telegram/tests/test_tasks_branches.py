@@ -187,6 +187,19 @@ class PipelineTaskBranchTests(TestCase):
 
     @patch("engine.telegram.tasks.logger")
     @patch(
+        "engine.telegram.tasks.get_updates",
+        side_effect=RuntimeError(
+            "Telegram API error (409): Conflict: terminated by setWebhook request"
+        ),
+    )
+    def test_ingest_logs_warning_on_409_conflict(self, get_updates, logger):
+        telegram_ingest()
+
+        logger.warning.assert_called_once()
+        logger.error.assert_not_called()
+
+    @patch("engine.telegram.tasks.logger")
+    @patch(
         "engine.telegram.tasks.Bot.objects.filter", side_effect=RuntimeError("db down")
     )
     def test_ingest_logs_global_failure(self, filter_mock, logger):
@@ -510,6 +523,17 @@ class WebhookManagementTests(TestCase):
 
         mock_info.assert_not_called()
         mock_set.assert_not_called()
+
+    @override_settings(BASE_URL="https://example.com")
+    @patch(
+        "engine.telegram.tasks.Bot.objects.select_for_update",
+        return_value=Bot.objects.none(),
+    )
+    def test_setup_skips_bot_locked_by_ingest(self, mock_sfu):
+        telegram_setup()
+
+        self.bot.refresh_from_db()
+        self.assertIsNone(self.bot.webhook_enabled_at)
 
 
 class TelegramAckTests(TestCase):
