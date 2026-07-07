@@ -22,7 +22,7 @@ from engine.telegram.client import (
     set_message_reaction,
     set_webhook,
 )
-from engine.telegram.intake import accept_telegram_message
+from engine.telegram.intake import _flush_intake, accept_telegram_message
 from engine.telegram.models import Bot, IntakeBuffer, Job
 
 logger = logging.getLogger(__name__)
@@ -353,6 +353,32 @@ def telegram_deliver(job_pk: int | None = None) -> None:
 
     job.delivery_error = None
     job.save(update_fields=["delivery_finished_at", "delivery_error", "updated_at"])
+
+
+def _flush_due_buffer(buffer_pk: int) -> None:
+    """Flush an intake buffer if its debounce window has elapsed.
+
+    Called from a Q2 ``Schedule.ONCE`` task scheduled by
+    ``accept_telegram_message`` after every create/update.  If the buffer
+    has already been flushed or is still within the debounce window the call
+    is a no-op — another schedule or the safety backstop will pick it up.
+    """
+    debounce = getattr(settings, "TELEGRAM_INTAKE_DEBOUNCE_SECONDS", 10)
+    cutoff = timezone.now() - timedelta(seconds=debounce)
+
+    with transaction.atomic():
+        buffer = (
+            IntakeBuffer.objects.filter(pk=buffer_pk, flushed_at__isnull=True)
+            .select_for_update(skip_locked=True)
+            .first()
+        )
+        if buffer is None:
+            return
+
+        if buffer.last_received_at >= cutoff:
+            return
+
+        _flush_intake(buffer)
 
 
 def telegram_flush_intake_buffers() -> None:
