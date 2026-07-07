@@ -7,6 +7,19 @@ from typing import Any
 
 import httpx
 
+
+class TelegramAPIError(RuntimeError):
+    """Telegram API call failed with an HTTP error.
+
+    Carries ``status_code`` when the error originated from an HTTP response
+    (not a transport-level failure).
+    """
+
+    def __init__(self, message: str, status_code: int | None = None) -> None:
+        self.status_code = status_code
+        super().__init__(message)
+
+
 logger = logging.getLogger(__name__)
 
 _BOT_API_BASE = "https://api.telegram.org/bot"
@@ -58,10 +71,12 @@ def _raise_for_status(response: httpx.Response) -> None:
             description = body.get("description", "")
             if len(description) > 120:
                 description = description[:117] + "..."
-            msg = f"Telegram API error ({exc.response.status_code}): {description}"
         except Exception:
-            msg = f"Telegram API error ({exc.response.status_code})"
-        raise RuntimeError(msg) from None
+            description = ""
+        raise TelegramAPIError(
+            description,
+            status_code=exc.response.status_code,
+        ) from None
 
     try:
         body = response.json()
@@ -69,8 +84,8 @@ def _raise_for_status(response: httpx.Response) -> None:
             description = body.get("description", "")
             if len(description) > 120:
                 description = description[:117] + "..."
-            raise RuntimeError(f"Telegram API error: {description}")
-    except RuntimeError:
+            raise TelegramAPIError(description)
+    except TelegramAPIError:
         raise
     except Exception:
         logger.warning("Telegram API returned non-JSON response on HTTP 200")

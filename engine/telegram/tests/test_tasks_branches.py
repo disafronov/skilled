@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from engine.telegram.models import Bot, IntakeBuffer, Job
 from engine.telegram.tasks import (
+    TelegramAPIError,
     telegram_ack,
     telegram_ingest,
     telegram_setup,
@@ -178,7 +179,8 @@ class PipelineTaskBranchTests(TestCase):
 
     @patch("engine.telegram.tasks.logger")
     @patch(
-        "engine.telegram.tasks.get_updates", side_effect=RuntimeError("telegram down")
+        "engine.telegram.tasks.get_updates",
+        side_effect=TelegramAPIError("telegram down", status_code=500),
     )
     def test_ingest_logs_bot_failure(self, get_updates, logger):
         telegram_ingest()
@@ -188,8 +190,8 @@ class PipelineTaskBranchTests(TestCase):
     @patch("engine.telegram.tasks.logger")
     @patch(
         "engine.telegram.tasks.get_updates",
-        side_effect=RuntimeError(
-            "Telegram API error (409): Conflict: terminated by setWebhook request"
+        side_effect=TelegramAPIError(
+            "Conflict: terminated by setWebhook request", status_code=409
         ),
     )
     def test_ingest_logs_warning_on_409_conflict(self, get_updates, logger):
