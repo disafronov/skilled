@@ -1,10 +1,12 @@
 """Intake buffer layer — accumulates Telegram messages before Job creation."""
 
 import logging
+from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from django_q.tasks import schedule
 
 from engine.telegram.models import Bot, IntakeBuffer, Job
 
@@ -67,6 +69,18 @@ def accept_telegram_message(
                 last_message_ts=message_date,
                 last_received_at=timezone.now(),
             )
+
+    from django_q.models import Schedule as QSchedule
+
+    # q2's schedule() has incomplete stubs — mypy cannot infer the lambda arg type
+    transaction.on_commit(
+        lambda pk=buffer.pk: schedule(  # type: ignore[misc]
+            "engine.telegram.tasks._flush_due_buffer",
+            pk,
+            schedule_type=QSchedule.ONCE,
+            next_run=timezone.now() + timedelta(seconds=debounce),
+        )
+    )
 
     return buffer
 

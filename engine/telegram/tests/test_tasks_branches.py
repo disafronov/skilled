@@ -695,3 +695,56 @@ class IntakeFlushTests(TestCase):
             telegram_flush_intake_buffers()
 
         self.assertFalse(Job.objects.exists())
+
+    def test_flush_due_buffer_flushes_ripe_buffer(self):
+        old = timezone.now() - timedelta(seconds=60)
+        buffer = IntakeBuffer.objects.create(
+            bot=self.bot,
+            chat_id="123",
+            reply_to_message_id=7,
+            text="ripe",
+            last_message_ts=1700000000,
+            last_received_at=old,
+        )
+
+        from engine.telegram.tasks import _flush_due_buffer
+
+        _flush_due_buffer(buffer.pk)
+
+        buffer.refresh_from_db()
+        self.assertIsNotNone(buffer.flushed_at)
+        job = Job.objects.get()
+        self.assertEqual(job.raw_input, "ripe")
+
+    def test_flush_due_buffer_skips_fresh_buffer(self):
+        buffer = IntakeBuffer.objects.create(
+            bot=self.bot,
+            chat_id="123",
+            text="fresh",
+            last_message_ts=1700000000,
+            last_received_at=timezone.now(),
+        )
+
+        from engine.telegram.tasks import _flush_due_buffer
+
+        _flush_due_buffer(buffer.pk)
+
+        self.assertFalse(Job.objects.exists())
+        buffer.refresh_from_db()
+        self.assertIsNone(buffer.flushed_at)
+
+    def test_flush_due_buffer_skips_already_flushed_buffer(self):
+        buffer = IntakeBuffer.objects.create(
+            bot=self.bot,
+            chat_id="123",
+            text="done",
+            last_message_ts=1700000000,
+            last_received_at=timezone.now() - timedelta(seconds=60),
+            flushed_at=timezone.now(),
+        )
+
+        from engine.telegram.tasks import _flush_due_buffer
+
+        _flush_due_buffer(buffer.pk)
+
+        self.assertFalse(Job.objects.exists())
