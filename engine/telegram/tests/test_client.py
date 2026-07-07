@@ -3,6 +3,8 @@ from unittest.mock import patch
 import httpx
 from django.test import TestCase
 
+from engine.telegram.client import TelegramAPIError
+
 
 class TelegramHttpClientTests(TestCase):
     def _request(self, method: str) -> httpx.Request:
@@ -102,8 +104,8 @@ class TelegramHttpClientTests(TestCase):
         )
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            r"Telegram API error: Bad Request: can't parse entities",
+            TelegramAPIError,
+            r"Bad Request: can't parse entities",
         ):
             send_message("token", "chat", "text")
 
@@ -119,8 +121,8 @@ class TelegramHttpClientTests(TestCase):
         )
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            r"Telegram API error: x{117}\.\.\.",
+            TelegramAPIError,
+            r"x{117}\.\.\.",
         ):
             send_message("token", "chat", "text")
 
@@ -135,8 +137,8 @@ class TelegramHttpClientTests(TestCase):
         )
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            r"Telegram API error: Unauthorized: invalid token",
+            TelegramAPIError,
+            r"Unauthorized: invalid token",
         ):
             get_updates("bad-token")
 
@@ -177,8 +179,8 @@ class TelegramHttpClientTests(TestCase):
         )
 
         with self.assertRaisesRegex(
-            RuntimeError,
-            r"Telegram API error \(400\): Bad Request: message is too long",
+            TelegramAPIError,
+            r"Bad Request: message is too long",
         ):
             _raise_for_status(response)
 
@@ -192,8 +194,10 @@ class TelegramHttpClientTests(TestCase):
             text="<html>bad gateway</html>",
         )
 
-        with self.assertRaisesRegex(RuntimeError, r"Telegram API error \(502\)"):
+        with self.assertRaises(TelegramAPIError) as cm:
             _raise_for_status(response)
+
+        self.assertEqual(cm.exception.status_code, 502)
 
     def test_non_json_response_on_http_200_logs_warning(self):
         from engine.telegram.client import _raise_for_status
@@ -229,9 +233,7 @@ class TelegramHttpClientTests(TestCase):
             text=f'{{"ok":false,"description":"{long_desc}"}}',
         )
 
-        with self.assertRaisesRegex(
-            RuntimeError, r"Telegram API error \(400\): x{117}\.\.\."
-        ):
+        with self.assertRaisesRegex(TelegramAPIError, r"x{117}\.\.\."):
             _raise_for_status(response)
 
     def test_detects_document_formats(self):

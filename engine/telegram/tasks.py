@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from engine.common.sanitize import sanitize_error
 from engine.telegram.client import (
+    TelegramAPIError,
     delete_webhook,
     detect_document_format,
     document_format_content_type,
@@ -252,8 +253,8 @@ def telegram_ingest() -> None:
                     current.telegram_update_offset = new_offset
                     current.save(update_fields=["telegram_update_offset", "updated_at"])
 
-            except RuntimeError as e:
-                if "409" in str(e):
+            except TelegramAPIError as e:
+                if e.status_code == 409:
                     logger.warning(
                         "Bot %s: get_updates conflict (409) — likely from "
                         "concurrent telegram_setup; retrying next cycle",
