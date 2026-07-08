@@ -15,7 +15,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from engine.common.sanitize import sanitize_error
-from engine.telegram.models import Job
+
+from .models import Job
 
 logger = logging.getLogger(__name__)
 

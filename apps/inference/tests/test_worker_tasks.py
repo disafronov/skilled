@@ -144,14 +144,14 @@ class WorkerTaskTests(TestCase):
         call_llm_mock.assert_called_once()
 
     @patch(
-        "engine.processing.models.transaction.atomic",
+        "engine.telegram.worker.transaction.atomic",
         side_effect=RuntimeError("db down"),
     )
     def test_worker_raises_outer_failure(self, atomic_mock):
         with self.assertRaisesRegex(RuntimeError, "db down"):
             worker()
 
-    @patch("engine.processing.models.logger")
+    @patch("engine.telegram.worker.logger")
     def test_worker_returns_when_job_pk_not_found(self, logger):
         worker(job_pk=9999)
         logger.warning.assert_called_once()
