@@ -4,9 +4,9 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
-from engine.telegram.client import TELEGRAM_MESSAGE_CHAR_LIMIT
-from engine.telegram.models import Bot, Job
-from engine.telegram.tasks import (
+from ..client import TELEGRAM_MESSAGE_CHAR_LIMIT
+from ..models import Bot, Job
+from ..tasks import (
     telegram_deliver,
     telegram_ingest,
 )

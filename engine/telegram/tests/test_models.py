@@ -1,7 +1,7 @@
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from engine.telegram.models import Bot, Job, generate_webhook_secret
+from ..models import Bot, Job, generate_webhook_secret
 
 
 class BotModelTests(TestCase):

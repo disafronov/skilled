@@ -3,7 +3,7 @@
 from django.test import TestCase, override_settings
 from django_q.models import Schedule
 
-from engine.common.schedules import (
+from ..schedules import (
     make_recreate_handler,
     make_restore_handler,
     make_sync_handler,
