@@ -30,7 +30,6 @@ class BotAdminForm(AdminModelForm):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.fields["telegram_api_token"].label = "Telegram API credential"
 
 
 @admin.register(Bot)
@@ -62,6 +61,7 @@ class BotAdmin(admin.ModelAdmin):
     readonly_fields = (
         "webhook_enabled_at",
         "webhook_disabled_at",
+        "telegram_update_offset",
         "updated_at",
         "created_at",
     )
@@ -173,19 +173,19 @@ class JobAdmin(admin.ModelAdmin):
         "created_at",
     )
 
-    @admin.display(description="Raw input", ordering="raw_input")
+    @admin.display(ordering="raw_input")
     def raw_input_preview(self, obj: Job) -> str:
         return preview_text(obj.raw_input)
 
-    @admin.display(description="Raw output", ordering="raw_output")
+    @admin.display(ordering="raw_output")
     def raw_output_preview(self, obj: Job) -> str:
         return preview_text(obj.raw_output)
 
-    @admin.display(description="Processing error", ordering="processing_error")
+    @admin.display(ordering="processing_error")
     def processing_error_preview(self, obj: Job) -> str:
         return preview_text(obj.processing_error)
 
-    @admin.display(description="Delivery error", ordering="delivery_error")
+    @admin.display(ordering="delivery_error")
     def delivery_error_preview(self, obj: Job) -> str:
         return preview_text(obj.delivery_error)
 
