@@ -5,7 +5,7 @@ import json
 from django.test import TestCase
 from django.urls import reverse
 
-from engine.telegram.models import Bot, IntakeBuffer, Job
+from ..models import Bot, IntakeBuffer, Job
 
 
 class WebhookViewTests(TestCase):

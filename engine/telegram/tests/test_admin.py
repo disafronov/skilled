@@ -5,13 +5,13 @@ from django.conf import settings
 from django.contrib.admin.sites import AdminSite
 from django.test import SimpleTestCase, TestCase
 
-from engine.telegram.admin import (
+from ..admin import (
     JOB_PREVIEW_LENGTH,
     BotAdmin,
     JobAdmin,
     preview_text,
 )
-from engine.telegram.models import Bot, Job
+from ..models import Bot, Job
 
 
 class BotAdminTests(SimpleTestCase):

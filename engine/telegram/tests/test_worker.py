@@ -2,8 +2,8 @@
 
 from django.test import SimpleTestCase, TestCase
 
-from engine.telegram.models import Bot, Job
-from engine.telegram.worker import Worker
+from ..models import Bot, Job
+from ..worker import Worker
 
 
 class WorkerPollSelectRelatedTests(TestCase):
