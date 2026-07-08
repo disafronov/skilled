@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from engine.telegram.models import Bot, IntakeBuffer, Job
-from engine.telegram.tasks import (
+from ..models import Bot, IntakeBuffer, Job
+from ..tasks import (
     TelegramAPIError,
     telegram_ack,
     telegram_ingest,

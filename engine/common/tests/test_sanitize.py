@@ -2,7 +2,7 @@
 
 from django.test import SimpleTestCase
 
-from engine.common.sanitize import sanitize_error
+from ..sanitize import sanitize_error
 
 
 class SanitizeErrorTests(SimpleTestCase):

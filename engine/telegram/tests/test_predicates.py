@@ -3,7 +3,7 @@ from datetime import timezone as dt_timezone
 
 from django.test import TestCase
 
-from engine.telegram.models import Bot, Job
+from ..models import Bot, Job
 
 
 class JobSelectionPredicatesTests(TestCase):

@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 from cryptography.hazmat.primitives.ciphers.aead import AESSIV
 
-from engine.common.fields import EncryptedCharField, _cipher
+from ..fields import EncryptedCharField, _cipher
 
 
 @pytest.fixture(autouse=True)

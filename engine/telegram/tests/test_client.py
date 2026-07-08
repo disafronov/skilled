@@ -3,7 +3,7 @@ from unittest.mock import patch
 import httpx
 from django.test import TestCase
 
-from engine.telegram.client import TelegramAPIError
+from ..client import TelegramAPIError
 
 
 class TelegramHttpClientTests(TestCase):

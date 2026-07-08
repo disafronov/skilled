@@ -3,7 +3,7 @@ from unittest.mock import patch
 from django.conf import settings
 from django.test import TestCase
 
-from engine.telegram.models import Bot, Job
+from ..models import Bot, Job
 
 
 class SignalOrchestrationTests(TestCase):
