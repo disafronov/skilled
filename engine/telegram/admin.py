@@ -9,8 +9,7 @@ from django.utils.text import Truncator
 from django.utils.translation import ngettext
 from django_q.tasks import async_task
 
-from ..common.admin_forms import AdminModelForm
-from ..common.admin_mixins import CHANGES_FIELDSET
+from ..common.admin import CHANGES_FIELDSET, AdminModelForm
 from .models import Bot, Job
 
 JOB_PREVIEW_LENGTH = 80
