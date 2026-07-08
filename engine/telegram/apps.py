@@ -4,7 +4,7 @@ from django.apps import AppConfig
 from django.conf import settings
 from django.db.models.signals import post_delete, post_migrate, pre_save
 
-from engine.common.schedules import (
+from ..common.schedules import (
     make_recreate_handler,
     make_restore_handler,
     make_sync_handler,

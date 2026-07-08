@@ -4,7 +4,7 @@ from datetime import datetime
 from django.db import models
 from django.db.models import Q
 
-from engine.common.fields import EncryptedCharField
+from ..common.fields import EncryptedCharField
 
 
 def generate_webhook_secret() -> str:

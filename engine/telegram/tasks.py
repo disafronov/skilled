@@ -8,8 +8,8 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from engine.common.sanitize import sanitize_error
-from engine.telegram.client import (
+from ..common.sanitize import sanitize_error
+from .client import (
     TelegramAPIError,
     delete_webhook,
     detect_document_format,
@@ -22,8 +22,8 @@ from engine.telegram.client import (
     set_message_reaction,
     set_webhook,
 )
-from engine.telegram.intake import _flush_intake, accept_telegram_message
-from engine.telegram.models import Bot, IntakeBuffer, Job
+from .intake import _flush_intake, accept_telegram_message
+from .models import Bot, IntakeBuffer, Job
 
 logger = logging.getLogger(__name__)
 
