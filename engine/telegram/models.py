@@ -49,26 +49,12 @@ class Bot(models.Model):
     webhook_secret = EncryptedCharField(
         max_length=64,
         default=generate_webhook_secret,
-        help_text="Secret token sent as X-Telegram-Bot-Api-Secret-Token header",
     )
 
-    enabled = models.BooleanField(
-        default=True, help_text="Is this bot active for message processing?"
-    )
-    telegram_update_offset = models.IntegerField(
-        default=0,
-        help_text="Last processed Telegram update_id",
-    )
-    webhook_enabled_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When the webhook was last successfully registered",
-    )
-    webhook_disabled_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="When the webhook was last disabled (fallback to polling)",
-    )
+    enabled = models.BooleanField(default=True)
+    telegram_update_offset = models.IntegerField(default=0)
+    webhook_enabled_at = models.DateTimeField(null=True, blank=True)
+    webhook_disabled_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
