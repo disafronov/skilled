@@ -10,7 +10,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django_q.tasks import async_task
 
-from engine.telegram.models import Job
+from .models import Job
 
 logger = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 from django_q.tasks import schedule
 
-from engine.telegram.models import Bot, IntakeBuffer, Job
+from .models import Bot, IntakeBuffer, Job
 
 logger = logging.getLogger(__name__)
 

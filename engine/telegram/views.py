@@ -7,8 +7,8 @@ from django.http import HttpRequest, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from engine.telegram.intake import accept_telegram_message
-from engine.telegram.models import Bot
+from .intake import accept_telegram_message
+from .models import Bot
 
 logger = logging.getLogger(__name__)
 

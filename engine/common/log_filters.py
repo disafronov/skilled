@@ -2,7 +2,7 @@
 
 import logging
 
-from engine.common.sanitize import _BOT_TOKEN_RE
+from .sanitize import _BOT_TOKEN_RE
 
 
 class BotTokenFilter(logging.Filter):
