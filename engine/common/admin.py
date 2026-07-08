@@ -1,3 +1,5 @@
+"""Shared admin form and fieldset helpers for Django admin."""
+
 from typing import Any
 
 from django import forms
@@ -51,3 +53,11 @@ class AdminModelForm(forms.ModelForm):
                 continue
             style = field.widget.attrs.get("style", "")
             field.widget.attrs["style"] = f"{style} {self.standard_width_style}".strip()
+
+
+CHANGES_FIELDSET = (
+    "Changes",
+    {
+        "fields": ("updated_at", "created_at"),
+    },
+)
