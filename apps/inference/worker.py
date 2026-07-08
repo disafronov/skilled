@@ -4,7 +4,7 @@ import logging
 
 from apps.inference.client import call_llm
 from apps.inference.models import Worker as WorkerModel
-from engine.processing import Worker as BaseWorker
+from engine.telegram.worker import Worker as BaseWorker
 
 logger = logging.getLogger(__name__)
 
