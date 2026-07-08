@@ -46,7 +46,13 @@ class BotAdminTests(SimpleTestCase):
         )
         self.assertEqual(
             admin.readonly_fields,
-            ("webhook_enabled_at", "webhook_disabled_at", "updated_at", "created_at"),
+            (
+                "webhook_enabled_at",
+                "webhook_disabled_at",
+                "telegram_update_offset",
+                "updated_at",
+                "created_at",
+            ),
         )
         self.assertEqual(
             admin.list_display,
@@ -60,7 +66,7 @@ class BotAdminTests(SimpleTestCase):
             ),
         )
 
-    def test_bot_form_orders_name_first_and_uses_acronym_label(self):
+    def test_bot_form_orders_name_first(self):
         admin = BotAdmin(Bot, AdminSite())
         form_class = admin.get_form(MagicMock())
         form = form_class()
@@ -71,12 +77,11 @@ class BotAdminTests(SimpleTestCase):
                 "name",
                 "telegram_api_token",
                 "enabled",
-                "telegram_update_offset",
             ],
         )
         self.assertEqual(
             form.fields["telegram_api_token"].label,
-            "Telegram API credential",
+            "Telegram api token",
         )
         self.assertEqual(
             form.fields["name"].widget.attrs["style"],
