@@ -30,6 +30,14 @@ ENV PATH="/home/ubuntu/.local/.venv/bin:$PATH"
 
 FROM base AS builder
 
+# Git is required for dependencies installed directly from Git repositories.
+USER root
+RUN apt-get update && \
+    apt-get install -y git && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+USER ubuntu:ubuntu
+
 # Install dependencies first (without installing the project itself).
 RUN --mount=from=uv,source=/uv,target=/bin/uv \
     --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
