@@ -2,8 +2,7 @@
 
 from django.apps import AppConfig
 from django.db.models.signals import post_delete, post_migrate, pre_save
-
-from engine.common.schedules import (
+from django_telegram_q2.common.schedules import (
     make_recreate_handler,
     make_restore_handler,
     make_sync_handler,

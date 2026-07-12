@@ -5,10 +5,10 @@ from datetime import timezone as dt_timezone
 from unittest.mock import patch
 
 from django.test import TestCase
+from django_telegram_q2.telegram.models import Bot, Job
 
 from apps.inference.models import Worker as WorkerModel
 from apps.inference.tasks import worker
-from engine.telegram.models import Bot, Job
 
 
 class WorkerTaskTests(TestCase):
@@ -144,14 +144,14 @@ class WorkerTaskTests(TestCase):
         call_llm_mock.assert_called_once()
 
     @patch(
-        "engine.telegram.worker.transaction.atomic",
+        "django_telegram_q2.telegram.worker.transaction.atomic",
         side_effect=RuntimeError("db down"),
     )
     def test_worker_raises_outer_failure(self, atomic_mock):
         with self.assertRaisesRegex(RuntimeError, "db down"):
             worker()
 
-    @patch("engine.telegram.worker.logger")
+    @patch("django_telegram_q2.telegram.worker.logger")
     def test_worker_returns_when_job_pk_not_found(self, logger):
         worker(job_pk=9999)
         logger.warning.assert_called_once()

@@ -2,13 +2,13 @@
 
 from django.test import TestCase
 from django_q.models import Schedule
-
-from apps.ops.apps import MANAGED_SCHEDULES
-from engine.common.schedules import (
+from django_telegram_q2.common.schedules import (
     make_recreate_handler,
     make_restore_handler,
     make_sync_handler,
 )
+
+from apps.ops.apps import MANAGED_SCHEDULES
 
 _SYNC = make_sync_handler(MANAGED_SCHEDULES)
 _RESTORE = make_restore_handler(MANAGED_SCHEDULES)

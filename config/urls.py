@@ -4,9 +4,9 @@ from pathlib import Path
 from django.contrib import admin
 from django.urls import path, reverse_lazy
 from django.views.generic import RedirectView
+from django_telegram_q2.telegram import views as bots_views
 
 from apps.ops.health import liveness, readiness
-from engine.telegram import views as bots_views
 
 _pyproject = tomllib.loads(
     (Path(__file__).resolve().parent.parent / "pyproject.toml").read_text("utf-8")

@@ -464,6 +464,17 @@ wheels = [
 ]
 
 [[package]]
+name = "django-telegram-q2"
+version = "1.0.0"
+source = { git = "https://github.com/disafronov/django-telegram-q2.git#27f87770536119fe5d1ab6861f26a01c1303793a" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "django" },
+    { name = "django-q2" },
+    { name = "httpx" },
+]
+
+[[package]]
 name = "execnet"
 version = "2.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1262,6 +1273,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "django" },
     { name = "django-q2" },
+    { name = "django-telegram-q2" },
     { name = "gunicorn" },
     { name = "httpx" },
     { name = "openai" },
@@ -1291,6 +1303,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=44.0.0,<49.0.0" },
     { name = "django", specifier = ">=5.2.16,<6.0" },
     { name = "django-q2", specifier = ">=1.0.0,<2.0.0" },
+    { name = "django-telegram-q2", git = "https://github.com/disafronov/django-telegram-q2.git" },
     { name = "gunicorn", specifier = ">=26.0.0,<27.0.0" },
     { name = "httpx", specifier = ">=0.28.0,<1.0.0" },
     { name = "openai", specifier = ">=1.80.0,<2.0.0" },
