@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "apps.library",
     "apps.inference",
-    "engine.telegram",
+    "django_telegram_q2.telegram",
     "apps.ops",
     "django_q",
 ]
@@ -151,7 +151,7 @@ LOGGING = {
     "disable_existing_loggers": False,
     "filters": {
         "mask_bot_token": {
-            "()": "engine.common.sanitize.BotTokenFilter",
+            "()": "django_telegram_q2.common.sanitize.BotTokenFilter",
         },
     },
     "formatters": {

@@ -1,7 +1,7 @@
 from django.contrib import admin
+from django_telegram_q2.common.admin import CHANGES_FIELDSET, AdminModelForm
 
 from apps.library.models import Skill, Wrapper
-from engine.common.admin import CHANGES_FIELDSET, AdminModelForm
 
 
 class SkillAdminForm(AdminModelForm):

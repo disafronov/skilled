@@ -1,10 +1,10 @@
 """Worker model tests — moved from apps/llm/tests/test_models.py."""
 
 from django.test import TestCase
+from django_telegram_q2.telegram.models import Bot
 
 from apps.inference.models import Profile, Provider, Worker
 from apps.library.models import Skill, Wrapper
-from engine.telegram.models import Bot
 
 
 class WorkerModelTests(TestCase):

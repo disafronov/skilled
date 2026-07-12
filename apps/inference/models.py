@@ -1,6 +1,5 @@
 from django.db import models
-
-from engine.common.fields import EncryptedCharField
+from django_telegram_q2.common.fields import EncryptedCharField
 
 
 class ApiType(models.TextChoices):
