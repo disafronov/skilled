@@ -2,9 +2,10 @@
 
 import logging
 
+from django_telegram_q2.telegram.worker import Worker as BaseWorker
+
 from apps.inference.client import call_llm
 from apps.inference.models import Worker as WorkerModel
-from engine.telegram.worker import Worker as BaseWorker
 
 logger = logging.getLogger(__name__)
 

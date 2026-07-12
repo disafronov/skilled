@@ -14,10 +14,10 @@ Telegram ──┬── webhook ──> IntakeBuffer ──> Job ──> proces
 **Two ingestion paths:**
 
 - **Webhook** (primary) — Telegram pushes updates to `/webhook/`. Inbound auth uses `X-Telegram-Bot-Api-Secret-Token` header matched against the bot's `webhook_secret`. Zero polling latency.
-- **Setup** — Q2 schedule `engine.telegram.setup` runs `telegram_setup` to manage webhook registration, health checks, cleanup, and fallback state.
-- **Polling** (fallback) — Q2 schedule `engine.telegram.ingest` runs `telegram_ingest` to periodically fetch updates via `getUpdates` when webhook is not active.
+- **Setup** — Q2 schedule `django_telegram_q2.telegram.setup` runs `telegram_setup` to manage webhook registration, health checks, cleanup, and fallback state.
+- **Polling** (fallback) — Q2 schedule `django_telegram_q2.telegram.ingest` runs `telegram_ingest` to periodically fetch updates via `getUpdates` when webhook is not active.
 
-Both paths accumulate messages into an **IntakeBuffer**, one per bot/chat. Messages are grouped by Telegram `message.date` timestamp — consecutive messages within the debounce window merge into one buffer. A message beyond the window triggers an immediate flush into a `Job`. A scheduled safety flush (`engine.telegram.intake_flush`) catches any leftover open buffer. A Django `post_save` signal schedules downstream tasks via `transaction.on_commit`:
+Both paths accumulate messages into an **IntakeBuffer**, one per bot/chat. Messages are grouped by Telegram `message.date` timestamp — consecutive messages within the debounce window merge into one buffer. A message beyond the window triggers an immediate flush into a `Job`. A scheduled safety flush (`django_telegram_q2.telegram.intake_flush`) catches any leftover open buffer. A Django `post_save` signal schedules downstream tasks via `transaction.on_commit`:
 
 | Signal trigger | Enqueued task |
 | -------------- | -------------- |
@@ -40,7 +40,7 @@ IntakeBuffer  — mutable pre-job accumulator (one open buffer per bot/chat)
 Job           — finalized execution artifact (immutable after creation)
 ```
 
-All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider, Profile & Worker), `engine/telegram` (Bot, Job, IntakeBuffer + pipeline), `engine/processing` (Worker abstract lifecycle), and `apps/ops` (health checks + Q2 cleanup).
+All tasks flow through `apps/library` (Skill & Wrapper), `apps/inference` (Provider, Profile & Worker), the external `django-telegram-q2` package (Bot, Job, IntakeBuffer + pipeline), and `apps/ops` (health checks + Q2 cleanup).
 
 ## Pipeline
 
@@ -109,19 +109,19 @@ Implemented in `apps/ops/health.py`. Used by Docker `HEALTHCHECK`.
 
 | Schedule | Interval | Description |
 | -------- | -------- | ----------- |
-| `engine.telegram.setup` | 1 min | Webhook setup, health check, and fallback management |
-| `engine.telegram.ingest` | 1 min | Polling fallback |
-| `engine.telegram.deliver` | 1 min | Drain completed jobs that have not started delivery |
-| `engine.telegram.intake_flush` | 1 min | Safety flush for open intake buffers |
-| `engine.processing` | 1 min | Stale processing job re-queue |
+| `django_telegram_q2.telegram.setup` | 1 min | Webhook setup, health check, and fallback management |
+| `django_telegram_q2.telegram.ingest` | 1 min | Polling fallback |
+| `django_telegram_q2.telegram.deliver` | 1 min | Drain completed jobs that have not started delivery |
+| `django_telegram_q2.telegram.intake_flush` | 1 min | Safety flush for open intake buffers |
+| `django_telegram_q2.processing` | 1 min | Stale processing job re-queue |
 | `q2_success_cleanup` | 60 min | Cleanup successful Q2 tasks |
 
-Telegram pipeline schedules are managed by `engine/telegram/apps.py`; the Q2 cleanup schedule is managed by `apps/ops/apps.py`. Managed schedules are identified by stable names, not fixed primary keys. Admin edits are overwritten on save via `pre_save` signal.
+Telegram pipeline schedules are managed by `django-telegram-q2`; the Q2 cleanup schedule is managed by `apps/ops/apps.py`. Managed schedules are identified by stable names, not fixed primary keys. Admin edits are overwritten on save via `pre_save` signal.
 
 ## Project structure
 
 ```text
-engine/            — reusable Django apps (transport, processing, common)
+django-telegram-q2 — reusable Telegram pipeline installed directly from Git
   telegram/        — Telegram transport (Bot, Job, IntakeBuffer, pipeline)
   processing/      — abstract Worker lifecycle, job selection, stale reset
   common/          — shared utilities (encryption, logging)
@@ -134,7 +134,7 @@ apps/              — skilled-specific consumer code
 config/            — Django settings, URLs, WSGI
 ```
 
-`engine` is designed to be extracted as a reusable Django Telegram job pipeline.
+The reusable Django Telegram job pipeline is provided by `django-telegram-q2`.
 `skilled` is a working reference implementation that consumes it.
 
 ## Management commands

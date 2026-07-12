@@ -2,7 +2,7 @@
 
 from django.db import migrations
 
-import engine.common.fields
+import django_telegram_q2.common.fields
 
 
 class Migration(migrations.Migration):
@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="provider",
             name="auth_token",
-            field=engine.common.fields.EncryptedCharField(max_length=8192),
+            field=django_telegram_q2.common.fields.EncryptedCharField(max_length=8192),
         ),
     ]
