@@ -14,6 +14,7 @@ LEGACY_SCHEDULE_NAMES = (
 def remove_legacy_engine_schedules(apps, schema_editor):
     """Delete obsolete schedules; the external app recreates its own after migrate."""
     Schedule = apps.get_model("django_q", "Schedule")
+    # HOW: post_migrate recreates package-owned schedules from current settings.
     Schedule.objects.filter(name__in=LEGACY_SCHEDULE_NAMES).delete()
 
 

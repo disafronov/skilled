@@ -1,6 +1,11 @@
 # skilled
 
-Skill-driven AI bot runtime — connects Telegram to any OpenAI-compatible LLM via an asynchronous job queue.
+Skill-driven AI bot runtime that connects Telegram to an OpenAI-compatible LLM through django-q2.
+
+Telegram transport and job orchestration are provided by the external
+[`django-telegram-q2`](https://github.com/disafronov/django-telegram-q2)
+package. This repository supplies the LLM implementation, prompt library, and
+production runtime around it.
 
 ## Architecture
 
@@ -74,20 +79,22 @@ Key environment variables (see `env.example` for full list):
 | `Q2_TELEGRAM_INGEST_MINUTES` | `1` | Polling interval when webhook is not active |
 | `Q2_PROCESSING_MINUTES` | `1` | LLM processing schedule interval |
 | `Q2_TELEGRAM_DELIVER_MINUTES` | `1` | Delivery worker schedule interval |
+| `Q2_TELEGRAM_INTAKE_FLUSH_MINUTES` | `1` | Stale intake-buffer flush interval |
+| `Q2_SUCCESS_CLEANUP_MINUTES` | `60` | Successful Q2 task cleanup interval |
 | `TELEGRAM_ACK_REACTION` | `🤔` | Emoji reaction for queue acknowledgement (empty = disabled) |
 | `Q2_PROCESSING_STALE_JOB_SECONDS` | `3600` | Timeout for re-queueing stalled processing jobs |
 
-## Running
+## Local development
 
 ```bash
 # Start PostgreSQL
 docker compose up -d postgres
 
-# Install dependencies
-uv sync
+# Install dependencies and pre-commit hooks
+make install
 
 # Apply migrations
-uv run python manage.py migrate
+make migrate
 
 # Run all checks (lint, test, dead-code)
 make all
@@ -95,6 +102,32 @@ make all
 # Start dev server + task queue
 make run
 ```
+
+The `django-telegram-q2` dependency is installed directly from Git. The exact
+commit is pinned in `uv.lock`; Git must therefore be available when dependencies
+are installed. The Docker builder stage includes Git, while the runtime image
+does not.
+
+## Docker
+
+```bash
+# Build the production image
+make docker-build
+
+# Run migrations, ensure the configured superuser exists, and start the image
+make docker-run
+```
+
+`compose.yml` only supplies local infrastructure such as PostgreSQL. It is not a
+production deployment definition.
+
+## Upgrading from the embedded engine
+
+Earlier versions kept the Telegram pipeline under `engine/`. Migration
+`apps.ops.0001_remove_legacy_engine_schedules` deletes its obsolete managed Q2
+schedules during `make migrate`. The external package then creates the current
+`django_telegram_q2.*` schedules through Django's `post_migrate` signal. Custom
+Q2 schedules are not removed.
 
 ## Health checks
 
@@ -121,15 +154,14 @@ Telegram pipeline schedules are managed by `django-telegram-q2`; the Q2 cleanup 
 ## Project structure
 
 ```text
-django-telegram-q2 — reusable Telegram pipeline installed directly from Git
-  telegram/        — Telegram transport (Bot, Job, IntakeBuffer, pipeline)
-  processing/      — abstract Worker lifecycle, job selection, stale reset
-  common/          — shared utilities (encryption, logging)
+django-telegram-q2 (external Git dependency)
+  telegram/        — transport, models, pipeline, schedules, and Worker base
+  common/          — encryption, admin, logging, and schedule utilities
 
 apps/              — skilled-specific consumer code
   inference/       — concrete LLM implementation (Provider, Profile, Worker)
   library/         — Skill & Wrapper models (prompt content)
-  ops/             — health checks, Q2 cleanup
+  ops/             — health checks, Q2 cleanup, and upgrade migrations
 
 config/            — Django settings, URLs, WSGI
 ```
@@ -143,3 +175,7 @@ The reusable Django Telegram job pipeline is provided by `django-telegram-q2`.
 | ------- | ----------- |
 | `dev` | qcluster + runserver (development) |
 | `start` | qcluster + gunicorn (production) |
+
+Prefer the corresponding Makefile targets (`make run`, `make q2`, `make
+migrate`, and `make docker-build`) for development and verification because
+they provide the expected tooling environment.
