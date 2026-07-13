@@ -61,7 +61,7 @@ Telegram → Job Queue (django-q2) → LLM Worker → Telegram delivery
 - **DJANGO_SECRET_KEY**: Must be set for any `manage.py` command. Makefile uses `unsafe-secret-key-for-tooling`.
 - **Q2 schedules** are managed by stable name in `django-telegram-q2` and `apps/ops/apps.py` — admin edits are overwritten on save via `pre_save` signal.
 - **Engine upgrade**: `apps/ops/migrations/0001_remove_legacy_engine_schedules.py` deletes obsolete `engine.*` schedules; `post_migrate` recreates the package-owned schedules.
-- **Git dependency**: `django-telegram-q2` is resolved from Git and pinned by `uv.lock`; Docker installs Git in the builder stage only.
+- **Package index**: `django-telegram-q2` is resolved from the explicit TestPyPI index in `pyproject.toml`; its transitive dependencies use PyPI, and `uv.lock` pins the resolved release.
 - **Delivery retries**: scheduled `telegram_deliver` resets unfinished attempts older than `Q2_DELIVERY_STALE_JOB_SECONDS`; ambiguous retries provide at-least-once delivery and may duplicate a reply.
 - **`policy.md`** is gitignored, loaded at runtime via `POLICY_FILE` env var.
 - **Pre-commit**: runs `make lint` + `uv lock` on commit; `make test` + `make dead-code` + `make audit` on push.
