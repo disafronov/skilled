@@ -154,7 +154,7 @@ class WorkerTaskTests(TestCase):
     @patch("django_telegram_q2.telegram.worker.logger")
     def test_worker_returns_when_job_pk_not_found(self, logger):
         worker(job_pk=9999)
-        logger.warning.assert_called_once()
+        logger.debug.assert_called_once()
 
     @patch("apps.inference.worker.call_llm", return_value="llm output")
     def test_worker_processes_specific_job_by_pk(self, call_llm_mock):
