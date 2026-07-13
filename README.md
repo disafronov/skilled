@@ -66,9 +66,9 @@ make all
 make run
 ```
 
-The `django-telegram-q2` dependency is installed directly from Git and pinned
-to an exact commit by `uv.lock`. Git must be available during dependency
-installation.
+Pre-release builds of `django-telegram-q2` are resolved from the explicit
+TestPyPI index configured in `pyproject.toml`; all transitive dependencies stay
+on PyPI. The resolved release is pinned by `uv.lock`.
 
 ## Docker
 
@@ -78,7 +78,8 @@ make docker-run
 ```
 
 The production image runs migrations separately, then starts qcluster and
-Gunicorn through `manage.py start`. Git is present only in the builder stage.
+Gunicorn through `manage.py start`. Git remains available in the builder stage
+for dependencies installed directly from Git repositories.
 `compose.yml` supplies local infrastructure and is not a production deployment
 definition.
 
