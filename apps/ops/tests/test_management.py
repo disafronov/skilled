@@ -4,7 +4,7 @@ import sys
 from subprocess import TimeoutExpired
 from unittest.mock import MagicMock, patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 
 class ManagementCommandTests(TestCase):
@@ -82,6 +82,17 @@ class SupervisorTests(TestCase):
         first.wait.assert_called_once()
         second.wait.assert_called_once()
         second.kill.assert_called_once_with()
+
+    @patch("apps.ops.management.supervisor.time.monotonic", return_value=1000.0)
+    @override_settings(GRACEFUL_TIMEOUT=7)
+    def test_stop_honors_graceful_timeout_env_override(self, monotonic):
+        from apps.ops.management import supervisor
+
+        proc = MagicMock()
+
+        supervisor._stop([proc])
+
+        proc.wait.assert_called_once_with(timeout=7.0)
 
     @patch("apps.ops.management.supervisor.time.sleep", side_effect=AssertionError)
     @patch("apps.ops.management.supervisor._stop")

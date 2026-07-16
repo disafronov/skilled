@@ -1,15 +1,11 @@
 """Process supervisor: run children, forward signals, graceful stop."""
 
-import os
 import signal
 import subprocess  # nosec B404 — fixed args, no shell, no user input
 import sys
 import time
 
 from django.conf import settings
-
-# Seconds all children share before SIGKILL; override via GRACEFUL_TIMEOUT env var.
-_GRACEFUL_TIMEOUT = int(os.environ.get("GRACEFUL_TIMEOUT", "25"))
 
 
 def _spawn(*args: str) -> subprocess.Popen[bytes]:
@@ -20,10 +16,14 @@ def _spawn(*args: str) -> subprocess.Popen[bytes]:
 
 
 def _stop(procs: list[subprocess.Popen[bytes]]) -> None:
-    """SIGTERM all; shared _GRACEFUL_TIMEOUT window, then SIGKILL survivors."""
+    """SIGTERM all; shared grace window, then SIGKILL survivors.
+
+    The grace window (seconds before SIGKILL) is taken from the
+    ``GRACEFUL_TIMEOUT`` Django setting.
+    """
     for p in procs:
         p.terminate()
-    deadline = time.monotonic() + _GRACEFUL_TIMEOUT
+    deadline = time.monotonic() + settings.GRACEFUL_TIMEOUT
     for p in procs:
         remaining = max(0.0, deadline - time.monotonic())
         try:
