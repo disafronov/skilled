@@ -1,10 +1,8 @@
 """Tests for apps.ops.q2 module."""
 
-import os
 from datetime import timedelta
-from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from django_q.models import Task
 
@@ -14,6 +12,7 @@ from apps.ops.q2 import cleanup_q2_successes
 class Q2SuccessCleanupTests(TestCase):
     """Test django-q2 successful task retention cleanup."""
 
+    @override_settings(Q2_SUCCESS_RETENTION_SECONDS=60)
     def test_cleanup_deletes_only_expired_success_tasks(self):
         now = timezone.now()
         old = now - timedelta(seconds=120)
@@ -44,8 +43,7 @@ class Q2SuccessCleanupTests(TestCase):
             success=False,
         )
 
-        with patch.dict(os.environ, {"Q2_SUCCESS_TASK_RETENTION_SECONDS": "60"}):
-            cleanup_q2_successes()
+        cleanup_q2_successes()
 
         self.assertFalse(Task.objects.filter(id=old_success.id).exists())
         self.assertTrue(Task.objects.filter(id=fresh_success.id).exists())
