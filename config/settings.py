@@ -14,7 +14,9 @@ def env_bool(name: str, default: bool) -> bool:
 
 _insecure_key = "insecure-dev-key-change-in-production"
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", _insecure_key)
-DEBUG = env_bool("DJANGO_DEBUG", True)
+# Safe default: debug is OFF unless explicitly enabled. Prevents stack-trace
+# disclosure if DJANGO_DEBUG is left unset in production.
+DEBUG = env_bool("DJANGO_DEBUG", False)
 
 if not DEBUG and SECRET_KEY == _insecure_key:
     raise RuntimeError(
@@ -88,7 +90,18 @@ DATABASES = {
     }
 }
 
-AUTH_PASSWORD_VALIDATORS: list[dict[str, str]] = []
+# Standard Django password validators — enforce basic password strength for
+# admin/superuser accounts. The dev superuser password in env.example must
+# satisfy these (see env.example DJANGO_SUPERUSER_PASSWORD).
+_AUTH_VALIDATORS = (
+    "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    "django.contrib.auth.password_validation.MinimumLengthValidator",
+    "django.contrib.auth.password_validation.CommonPasswordValidator",
+    "django.contrib.auth.password_validation.NumericPasswordValidator",
+)
+AUTH_PASSWORD_VALIDATORS: list[dict[str, str]] = [
+    {"NAME": validator} for validator in _AUTH_VALIDATORS
+]
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"

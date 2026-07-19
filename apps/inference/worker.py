@@ -18,6 +18,19 @@ class LlmWorker(BaseWorker):
     pk_select_related: tuple[str, ...] = ()
 
     def process(self, *, bot_id: int, raw_input: str) -> tuple[str | None, str | None]:
+        """Run the LLM pipeline for a job and return ``(result, error)``.
+
+        The ``call_llm`` call is intentionally not wrapped in a try/except.
+        The base ``Worker.run`` catches ``Exception``, records it as
+        ``processing_error`` and re-raises, which hands the failure to
+        django-q2's retry mechanism (``Q_CLUSTER["retry"]``). That retry,
+        combined with the at-least-once delivery semantics of the telegram
+        deliver task, guarantees the reply is eventually delivered.
+
+        Returning ``(None, error)`` here instead of letting the exception
+        propagate would bypass the retry path and silently drop processing
+        failures, so this behavior must NOT be changed.
+        """
         try:
             wm = WorkerModel.objects.select_related(
                 "profile__provider", "wrapper__skill"

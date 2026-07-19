@@ -22,7 +22,7 @@ def test_env_bool_uses_default_for_empty_values(monkeypatch) -> None:
 
     module = load_settings_module("config._settings_empty_bool_test")
 
-    assert module.DEBUG is True
+    assert module.DEBUG is False
 
 
 def test_secure_ssl_redirect_exempts_health_paths(monkeypatch) -> None:
@@ -58,3 +58,22 @@ def test_insecure_secret_key_in_production_raises_error(monkeypatch) -> None:
 
     with pytest.raises(RuntimeError, match="DJANGO_SECRET_KEY must be set"):
         load_settings_module("config._settings_insecure_secret_test")
+
+
+def test_debug_defaults_to_false_for_safety(monkeypatch) -> None:
+    monkeypatch.delenv("DJANGO_DEBUG", raising=False)
+    monkeypatch.setenv("DJANGO_SECRET_KEY", "strong-test-key-for-test")
+
+    module = load_settings_module("config._settings_debug_default")
+
+    assert module.DEBUG is False
+
+
+def test_auth_password_validators_configured(monkeypatch) -> None:
+    monkeypatch.setenv("DJANGO_SECRET_KEY", "strong-test-key-for-test")
+
+    module = load_settings_module("config._settings_validators")
+
+    assert len(module.AUTH_PASSWORD_VALIDATORS) == 4
+    names = [validator["NAME"] for validator in module.AUTH_PASSWORD_VALIDATORS]
+    assert "django.contrib.auth.password_validation.MinimumLengthValidator" in names

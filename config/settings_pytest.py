@@ -19,6 +19,8 @@ os.environ["FIELD_ENCRYPTION_KEY"] = AESSIV.generate_key(256).hex()
 
 from .settings import *  # noqa: F401,F403,E402
 
+DEBUG = True  # Keep verbose test logging regardless of production-safe default.
+
 STORAGES = dict(STORAGES)  # noqa: F405
 STORAGES["staticfiles"] = {  # noqa: F405
     "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
