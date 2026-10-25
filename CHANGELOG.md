@@ -1,3 +1,9 @@
+## [1.10.2-rc.6](https://github.com/disafronov/skilled/compare/v1.10.2-rc.5...v1.10.2-rc.6) (2026-10-25)
+
+### Bug Fixes
+
+* **release:** sign generated releases as GitHub Actions ([766c8d6](https://github.com/disafronov/skilled/commit/766c8d6100176457877ec5403844ef2fe1732e75))
+
 ## [1.10.2-rc.5](https://github.com/disafronov/skilled/compare/v1.10.2-rc.4...v1.10.2-rc.5) (2026-10-25)
 
 ## [1.10.2-rc.4](https://github.com/disafronov/skilled/compare/v1.10.2-rc.3...v1.10.2-rc.4) (2026-10-25)
