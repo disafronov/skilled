@@ -18,8 +18,9 @@ endif
 
 TOOLING_SECRET_KEY = unsafe-secret-key-for-tooling
 
-UV = uv run
-PYTEST_CMD = DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python -m pytest -v -n auto
+UV = uv
+UV_RUN = $(UV) run --locked
+PYTEST_CMD = DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV_RUN) python -m pytest -v -n auto
 COVERAGE_OPTS = --cov-report=html
 
 DOCKER_IMAGE = skilled
@@ -40,43 +41,43 @@ help: ## Show this help message
 
 install: ## Install dependencies
 	@echo "Installing dependencies..."
-	uv python install $(PYTHON_VERSION)
-	uv sync --python $(PYTHON_VERSION)
+	$(UV) python install $(PYTHON_VERSION)
+	$(UV) sync --locked --python $(PYTHON_VERSION)
 	@echo "Installing pre-commit hooks..."
-	uv run pre-commit install
+	$(UV_RUN) pre-commit install
 
 format: ## Format code
 	@echo "Formatting code..."
-	$(UV) black . && \
-	$(UV) isort .
+	$(UV_RUN) black . && \
+	$(UV_RUN) isort .
 
 lint: ## Run linting tools
 	@echo "Running linting tools..."
-	$(UV) black --check . && \
-	$(UV) isort --check-only . && \
-	$(UV) flake8 . --exclude .venv,htmlcov,*/migrations/*.py --max-line-length=88 && \
-	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) mypy . && \
-	$(UV) bandit -r -c pyproject.toml .
+	$(UV_RUN) black --check . && \
+	$(UV_RUN) isort --check-only . && \
+	$(UV_RUN) flake8 . --exclude .venv,htmlcov,*/migrations/*.py --max-line-length=88 && \
+	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV_RUN) mypy . && \
+	$(UV_RUN) bandit -r -c pyproject.toml .
 
 audit: ## Check dependencies for known vulnerabilities
 	@echo "Auditing dependencies..."
-	uv run pip-audit
+	$(UV_RUN) pip-audit
 
 dead-code: ## Check for dead code using vulture
 	@echo "Checking for dead code..."
-	uv run vulture
+	$(UV_RUN) vulture
 
 q2: ## Run django-q2 worker
 	@echo "Running django-q2 worker..."
-	$(UV) python manage.py qcluster
+	$(UV_RUN) python manage.py qcluster
 
 makemigrations: ## Create new migrations
 	@echo "Creating migrations..."
-	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py makemigrations
+	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV_RUN) python manage.py makemigrations
 
 migrate: ## Apply database migrations
 	@echo "Applying migrations..."
-	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py migrate
+	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV_RUN) python manage.py migrate
 
 test: ## Run tests with coverage report
 	@echo "Running tests with coverage..."
@@ -89,11 +90,11 @@ run: migrate ## Apply migrations, create admin, start dev server + qcluster
 	@echo "Running Django dev server + qcluster..."
 	@if [ -n "$$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$$DJANGO_SUPERUSER_PASSWORD" ] && [ -n "$$DJANGO_SUPERUSER_EMAIL" ]; then \
 		echo "Ensuring Django superuser exists..."; \
-		$(UV) python manage.py createsuperuser --noinput || true; \
+		$(UV_RUN) python manage.py createsuperuser --noinput || true; \
 	else \
 		echo "Skipping createsuperuser (set DJANGO_SUPERUSER_USERNAME/PASSWORD/EMAIL to enable)."; \
 	fi
-	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV) python manage.py dev
+	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV_RUN) python manage.py dev
 
 clean: ## Clean caches and coverage outputs
 	@echo "Cleaning cache and temporary files..."
