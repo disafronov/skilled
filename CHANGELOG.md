@@ -1,3 +1,9 @@
+## [1.10.2-rc.4](https://github.com/disafronov/skilled/compare/v1.10.2-rc.3...v1.10.2-rc.4) (2026-10-25)
+
+### Bug Fixes
+
+* cover uv dependencies with Dependabot ([9fe1ebb](https://github.com/disafronov/skilled/commit/9fe1ebbfb3ec789b3e9def7d7773d261278e503b))
+
 ## [1.10.2-rc.3](https://github.com/disafronov/skilled/compare/v1.10.2-rc.2...v1.10.2-rc.3) (2026-07-21)
 
 ## [1.10.2-rc.2](https://github.com/disafronov/skilled/compare/v1.10.2-rc.1...v1.10.2-rc.2) (2026-07-16)
