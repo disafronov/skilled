@@ -1,3 +1,5 @@
+## [1.10.2-rc.5](https://github.com/disafronov/skilled/compare/v1.10.2-rc.4...v1.10.2-rc.5) (2026-10-25)
+
 ## [1.10.2-rc.4](https://github.com/disafronov/skilled/compare/v1.10.2-rc.3...v1.10.2-rc.4) (2026-10-25)
 
 ### Bug Fixes
