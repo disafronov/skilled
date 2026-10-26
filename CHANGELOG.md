@@ -1,3 +1,9 @@
+## [1.10.2-rc.7](https://github.com/disafronov/skilled/compare/v1.10.2-rc.6...v1.10.2-rc.7) (2026-10-26)
+
+### Bug Fixes
+
+* align semantic-release policy and committer sign-off ([4498987](https://github.com/disafronov/skilled/commit/4498987a5b371aaf2439f5e8b3efbad7c9df67b5))
+
 ## [1.10.2-rc.6](https://github.com/disafronov/skilled/compare/v1.10.2-rc.5...v1.10.2-rc.6) (2026-10-25)
 
 ### Bug Fixes
