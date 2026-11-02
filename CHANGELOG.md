@@ -1,3 +1,19 @@
+## [1.10.2](https://github.com/disafronov/skilled/compare/v1.10.1...v1.10.2) (2026-11-02)
+
+### Bug Fixes
+
+* align semantic-release policy and committer sign-off ([4498987](https://github.com/disafronov/skilled/commit/4498987a5b371aaf2439f5e8b3efbad7c9df67b5))
+* **config:** default DEBUG off and enable password validators ([b1daefe](https://github.com/disafronov/skilled/commit/b1daefe64cd89491713db2926ef81ed472e83ea9))
+* cover uv dependencies with Dependabot ([9fe1ebb](https://github.com/disafronov/skilled/commit/9fe1ebbfb3ec789b3e9def7d7773d261278e503b))
+* **ops:** read Q2 retention and graceful timeout from settings ([7646e07](https://github.com/disafronov/skilled/commit/7646e074273f1a17b464102a32582e7b647e237b))
+* **release:** sign generated releases as GitHub Actions ([766c8d6](https://github.com/disafronov/skilled/commit/766c8d6100176457877ec5403844ef2fe1732e75))
+
+### Code Refactoring
+
+* deps ([f4a0ecb](https://github.com/disafronov/skilled/commit/f4a0ecbebefd356b855d05a0aa35bdba3ad24d72))
+* **deps:** bump django-telegram-q2 to 1.1.0rc3 ([041d2dd](https://github.com/disafronov/skilled/commit/041d2dd43179baa0fcd96a84e0dec8154bd8eb5f))
+* use default semantic-release configuration ([14d3776](https://github.com/disafronov/skilled/commit/14d3776d5f9dc368c29d1b828787114fa1819b05))
+
 ## [1.10.2-rc.7](https://github.com/disafronov/skilled/compare/v1.10.2-rc.6...v1.10.2-rc.7) (2026-10-26)
 
 ### Bug Fixes
