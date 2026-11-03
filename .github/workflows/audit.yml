@@ -2,7 +2,7 @@
 name: Audit
 "on":
   pull_request:
-    branches: [main, release]
+    branches: [main, rc]
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
