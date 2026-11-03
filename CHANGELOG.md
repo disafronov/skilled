@@ -1,3 +1,9 @@
+## [1.10.3](https://github.com/disafronov/skilled/compare/v1.10.2...v1.10.3) (2026-11-03)
+
+### Bug Fixes
+
+* **ci:** target rc instead of legacy release branch ([e123975](https://github.com/disafronov/skilled/commit/e1239757f97adbac95fda1be74e43baae5d9e826))
+
 ## [1.10.2](https://github.com/disafronov/skilled/compare/v1.10.1...v1.10.2) (2026-11-02)
 
 ### Bug Fixes
