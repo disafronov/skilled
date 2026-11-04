@@ -57,7 +57,7 @@ lint: ## Run linting tools
 	$(UV_RUN) isort --check-only . && \
 	$(UV_RUN) flake8 . --exclude .venv,htmlcov,*/migrations/*.py --max-line-length=88 && \
 	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV_RUN) mypy . && \
-	$(UV_RUN) bandit -r -c pyproject.toml .
+	$(UV_RUN) bandit -r -c pyproject.toml . && \
 	$(UV_RUN) vulture
 
 audit: ## Check dependencies for known vulnerabilities
