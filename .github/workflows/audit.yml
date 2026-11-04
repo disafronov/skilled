@@ -8,15 +8,18 @@ name: Audit
   workflow_dispatch:
 jobs:
   audit:
+    name: Audit
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
       - name: Read Python version
         id: python_version
         run: echo "version=$(cat .python-version | tr -d '[:space:]')" >> $GITHUB_OUTPUT
-      - uses: astral-sh/setup-uv@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           python-version: ${{ steps.python_version.outputs.version }}
