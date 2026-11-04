@@ -33,7 +33,7 @@ DOCKER_RUN_OPTS = --rm \
 	$(if $(wildcard env.docker),--env-file env.docker,) \
 	$(if $(wildcard .env),--env-file .env,)
 
-.PHONY: all audit clean dead-code dev docker docker-build docker-run format help install lint makemigrations migrate q2 run test
+.PHONY: all audit clean dev docker docker-build docker-run format help install lint makemigrations migrate q2 run test
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -58,14 +58,11 @@ lint: ## Run linting tools
 	$(UV_RUN) flake8 . --exclude .venv,htmlcov,*/migrations/*.py --max-line-length=88 && \
 	DJANGO_SECRET_KEY=$(TOOLING_SECRET_KEY) $(UV_RUN) mypy . && \
 	$(UV_RUN) bandit -r -c pyproject.toml .
+	$(UV_RUN) vulture
 
 audit: ## Check dependencies for known vulnerabilities
 	@echo "Auditing dependencies..."
 	$(UV_RUN) pip-audit
-
-dead-code: ## Check for dead code using vulture
-	@echo "Checking for dead code..."
-	$(UV_RUN) vulture
 
 q2: ## Run django-q2 worker
 	@echo "Running django-q2 worker..."
@@ -83,7 +80,7 @@ test: ## Run tests with coverage report
 	@echo "Running tests with coverage..."
 	$(PYTEST_CMD) $(COVERAGE_OPTS)
 
-all: lint test dead-code ## Run all checks
+all: lint test audit ## Run all checks
 	@echo "All checks completed successfully!"
 
 run: migrate ## Apply migrations, create admin, start dev server + qcluster
