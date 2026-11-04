@@ -33,32 +33,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Install gettext
+        run: sudo apt-get update -y && sudo apt-get install -y gettext
+
       - name: Read Python version
         id: python_version
         run: echo "version=$(cat .python-version | tr -d '[:space:]')" >> $GITHUB_OUTPUT
-
-      - name: Install gettext
-        run: sudo apt-get update -y && sudo apt-get install -y gettext
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          python-version: ${{ steps.python_version.outputs.version }}
           cache-suffix: ${{ steps.python_version.outputs.version }}
 
-      - name: Install dependencies
-        run: uv sync --frozen --python ${{ steps.python_version.outputs.version }}
-        env:
-          UV_PYTHON: ${{ steps.python_version.outputs.version }}
+      - name: Run lint
+        run: make lint
 
-      - name: Run all checks
-        run: make all
+      - name: Run test
+        run: make test
         env:
-          UV_PYTHON: ${{ steps.python_version.outputs.version }}
           DJANGO_DEBUG: "1"
           DATABASE_HOST: 127.0.0.1
           DATABASE_PORT: "5432"
           DATABASE_NAME: database
           DATABASE_USER: user
           DATABASE_PASSWORD: password
-
