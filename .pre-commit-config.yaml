@@ -65,13 +65,6 @@ repos:
         entry: make lint
         pass_filenames: false
 
-      - id: uv-lock
-        name: uv lock (pre-commit)
-        stages: [pre-commit]
-        language: system
-        entry: uv lock
-        pass_filenames: false
-
       - id: make-test
         name: make test (pre-push)
         stages: [pre-push]
