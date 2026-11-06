@@ -11,7 +11,7 @@ dependencies = [
   "gunicorn>=26.2.0,<27.0.0",
   "psycopg2-binary>=2.9.13,<3.0.0",
   "httpx>=0.28.0,<1.0.0",
-  "openai>=1.80.0,<2.0.0",
+  "openai>=3.44.0,<4.0.0",
   "whitenoise>=6.9.0,<7.0.0",
   "cryptography>=50.0.0,<51.0.0"
 ]
