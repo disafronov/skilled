@@ -470,7 +470,7 @@ wheels = [
 
 [[package]]
 name = "django-telegram-q2"
-version = "1.1.0"
+version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -478,9 +478,9 @@ dependencies = [
     { name = "django-q2" },
     { name = "httpx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/16/12/3d7a8f2ef2050162572070c0a8b30fa93bb63d7bb2df6a9812d70c7af979/django_telegram_q2-1.1.0.tar.gz", hash = "sha256:37e8c7e60d93a4d09de486efdb068d22d2159f51935a4b5736d461e19755c73a", size = 50163, upload-time = "2026-11-03T10:41:27.108Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/60/6b/d53a8475e9251a044bc684ec90ac5de36542ea207a7fd35ff65ad56ab3ad/django_telegram_q2-1.1.1.tar.gz", hash = "sha256:92a165e7b2c0671858d943e058601dd254eee2fe1ba7c61110b9f3d2816266b8", size = 50178, upload-time = "2026-11-10T09:39:56.899Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/3d/67960342413fa4add68ff5235045ef3487210cd2f2b5dc19152afa934ce6/django_telegram_q2-1.1.0-py3-none-any.whl", hash = "sha256:d0706f048ed94a58c1e4d2d9a7febd325fbc7880642e643b7d83f5cd9eded43b", size = 59564, upload-time = "2026-11-03T10:41:25.594Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/0a/7573ced24de00f472363d8b6c5f21ab92f6222215a389412b986bdbed952/django_telegram_q2-1.1.1-py3-none-any.whl", hash = "sha256:e2dfd16b1028a26d3b26f561942aa997cbdc860ea3fa1a3c64c721a33695dcd9", size = 59581, upload-time = "2026-11-10T09:39:55.478Z" },
 ]
 
 [[package]]
@@ -1341,7 +1341,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=50.0.0,<51.0.0" },
     { name = "django", specifier = ">=5.2.16,<6.0" },
     { name = "django-q2", specifier = ">=1.11.1,<2.0.0" },
-    { name = "django-telegram-q2", specifier = ">=1.1.0" },
+    { name = "django-telegram-q2", specifier = ">=1.1.1" },
     { name = "gunicorn", specifier = ">=26.2.0,<27.0.0" },
     { name = "httpx", specifier = ">=0.28.0,<1.0.0" },
     { name = "openai", specifier = ">=1.80.0,<2.0.0" },
