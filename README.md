@@ -110,5 +110,5 @@ apps/
 config/       — Django settings, URLs and WSGI entrypoint
 ```
 
-<!-- refactor: deps 2 -->
+<!-- refactor: deps 3 -->
 
