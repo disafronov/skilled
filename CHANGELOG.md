@@ -1,3 +1,9 @@
+## [1.10.7](https://github.com/disafronov/skilled/compare/v1.10.6...v1.10.7) (2026-11-18)
+
+### Code Refactoring
+
+* deps ([dd742d7](https://github.com/disafronov/skilled/commit/dd742d7d8905b816c8284cc12a9b053d43251cfe))
+
 ## [1.10.6](https://github.com/disafronov/skilled/compare/v1.10.5...v1.10.6) (2026-11-15)
 
 ### Code Refactoring
