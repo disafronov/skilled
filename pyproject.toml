@@ -13,7 +13,7 @@ dependencies = [
   "httpx>=0.28.0,<1.0.0",
   "openai>=1.80.0,<2.0.0",
   "whitenoise>=6.9.0,<7.0.0",
-  "cryptography>=50.0.0,<51.0.0"
+  "cryptography>=50.0.0,<51.0.0",
 ]
 
 [dependency-groups]
@@ -26,12 +26,11 @@ dev = [
   "pytest-django>=4.14.0",
   "pytest-cov>=4.1.0",
   "pytest-xdist>=3.6.0",
-  "mypy",
   "django-stubs[compatible-mypy]>=5.2,<5.3",
   "bandit>=1.7.5",
   "pre-commit>=4.7.0",
   "vulture>=2.16",
-  "pip-audit>=2.10.1"
+  "pip-audit>=2.10.1",
 ]
 
 # [tool.uv.sources.django-telegram-q2]
@@ -52,13 +51,13 @@ extend_skip_glob = "*/migrations/*.py"
 
 [tool.flake8]
 max-line-length = 88
-extend-ignore = [ "E203", "W503" ]
-exclude = [ ".venv", "htmlcov", "*/migrations/*.py" ]
-target-version = [ "py314" ]
+extend-ignore = ["E203", "W503"]
+exclude = [".venv", "htmlcov", "*/migrations/*.py"]
+target-version = ["py314"]
 
 [tool.mypy]
 exclude = "(^tests/|^tests\\.py$|.*/tests/|.*/migrations/|^manage\\.py$)"
-plugins = [ "mypy_django_plugin.main" ]
+plugins = ["mypy_django_plugin.main"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -72,18 +71,18 @@ warn_no_return = true
 warn_unreachable = true
 strict_equality = true
 
-  [[tool.mypy.overrides]]
-  module = [ "django_q", "django_q.*" ]
-  ignore_missing_imports = true
+[[tool.mypy.overrides]]
+module = ["django_q", "django_q.*"]
+ignore_missing_imports = true
 
 [tool.django-stubs]
 django_settings_module = "config.settings"
 
 [tool.bandit]
-exclude_dirs = [ ".venv", "htmlcov", "tests", "*/migrations/*" ]
+exclude_dirs = [".venv", "htmlcov", "tests", "*/migrations/*"]
 
 [tool.coverage.run]
-source = [ "." ]
+source = ["."]
 omit = [
   ".venv/*",
   "tests/*",
@@ -91,7 +90,7 @@ omit = [
   "*/migrations/*",
   "manage.py",
   "config/settings_pytest.py",
-  "config/wsgi.py"
+  "config/wsgi.py",
 ]
 branch = true
 parallel = true
@@ -106,7 +105,7 @@ exclude_lines = [
   "@(abc\\.)?abstractmethod",
   "@overload",
   "\\.\\.\\.$",
-  "pragma: no cover"
+  "pragma: no cover",
 ]
 show_missing = true
 skip_covered = false
@@ -116,13 +115,13 @@ directory = "htmlcov"
 
 [tool.vulture]
 min_confidence = 80
-paths = [ "." ]
-exclude = [ ".venv", "htmlcov", "tests/*", "*/tests/*", "*/migrations/*" ]
-ignore_names = [ "cls", "owner", "UserType", "db", "obj", "args", "kwargs" ]
+paths = ["."]
+exclude = [".venv", "htmlcov", "tests/*", "*/tests/*", "*/migrations/*"]
+ignore_names = ["cls", "owner", "UserType", "db", "obj", "args", "kwargs"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings_pytest"
-python_files = [ "test_*.py" ]
+python_files = ["test_*.py"]
 addopts = "--strict-markers --cov --cov-report=term-missing"
-testpaths = [ "." ]
-filterwarnings = [ "ignore::DeprecationWarning" ]
+testpaths = ["."]
+filterwarnings = ["ignore::DeprecationWarning"]
